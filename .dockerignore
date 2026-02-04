@@ -1,0 +1,11 @@
+.git
+.gitignore
+.vscode
+node_modules
+vendor
+uploads
+images
+php/uploads
+*.log
+*.zip
+*.tar
