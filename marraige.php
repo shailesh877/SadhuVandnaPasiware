@@ -130,6 +130,7 @@ filterBtn.addEventListener('click', () => {
 });
 
 // ✅ Load profiles dynamically
+let searchTimer;
 function loadProfiles() {
   const formData = new FormData(document.getElementById('filterForm'));
   fetch('fetch_profiles.php', {
@@ -141,9 +142,17 @@ function loadProfiles() {
       document.getElementById('profilesContainer').innerHTML = html;
     })
     .catch(err => {
-      document.getElementById('profilesContainer').innerHTML = `<div class='text-center text-red-500'>Error: ${err}</div>`;
+        console.error(err);
+      document.getElementById('profilesContainer').innerHTML = `<div class='text-center text-red-500'>Error loading profiles.</div>`;
     });
 }
+
+// Live Search with Debounce
+filterForm.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadProfiles, 500);
+});
+filterForm.addEventListener('change', loadProfiles);
 
 document.getElementById('filterForm').addEventListener('submit', e => {
   e.preventDefault();
@@ -158,49 +167,4 @@ window.addEventListener('load', () => {
   }
   loadProfiles();
 });
-</script>
-
-<script>
-// disable right click
-document.addEventListener("contextmenu", e => e.preventDefault());
-
-// disable drag
-document.addEventListener("dragstart", e => e.preventDefault());
-
-// disable ctrl keys
-document.addEventListener("keydown", function(e){
-
-    // Ctrl + S / U / P / C / X / A
-    if (
-        e.ctrlKey &&
-        ['s','u','p','c','x','a'].includes(e.key.toLowerCase())
-    ) {
-        e.preventDefault();
-    }
-
-    // Print Screen
-    if (e.key === "PrintScreen") {
-        document.body.style.filter = "blur(10px)";
-        setTimeout(() => {
-            document.body.style.filter = "none";
-        }, 2000);
-    }
-
-    // F12
-    if (e.keyCode === 123) {
-        e.preventDefault();
-    }
-});
-
-// mobile screenshot detection (best possible)
-document.addEventListener("visibilitychange", function(){
-    if(document.hidden){
-        document.body.style.filter = "blur(15px)";
-    } else {
-        document.body.style.filter = "none";
-    }
-});
-
-// disable text selection
-document.onselectstart = () => false;
 </script>

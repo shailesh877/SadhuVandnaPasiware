@@ -138,7 +138,8 @@ if(isset($name_parts[1])){
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <!-- language script start -->
 
- 
+ <!-- faw icon link -->
+  <link rel="icon" href="images/logo.png">
   <style>
     body {
       font-family: 'Roboto', sans-serif;
@@ -263,7 +264,7 @@ if(isset($name_parts[1])){
 
   <!-- side navbar start -->
   <aside
-  class="hidden md:flex flex-col justify-center w-20 fixed top-0 left-0 h-[100vh] py-30 items-center gap-4 border-r-2 border-orange-200">
+  class="hidden md:flex flex-col justify-center w-20 fixed top-0 left-0 h-[100vh] py-30 items-center gap-4 border-r-2 border-orange-200 z-[100]">
 
 
     <!-- ✅ TOP CENTER ICONS (SAME AS BEFORE) -->
@@ -332,7 +333,16 @@ if(isset($name_parts[1])){
   <i class="fa-solid fa-briefcase text-xl"></i>
   <span class="text-[11px]">Jobs & Education</span>
 </a>
+<a href="policy.php" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-file-contract text-xl"></i>
+          <span class="text-[11px]">Privacy Policy</span>
+        </a>
 
+
+        <a href="about.php" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-circle-info text-xl"></i>
+          <span class="text-[11px]">About Us</span>
+        </a>
 
       </div>
     </div>
@@ -342,7 +352,7 @@ if(isset($name_parts[1])){
 
 </div>
 <!-- ✅ Mobile Navbar -->
-<nav class="fixed bottom-0 left-0 w-full md:hidden bg-orange-500 shadow-lg z-50">
+<nav class="fixed bottom-0 left-0 w-full md:hidden bg-orange-500 shadow-lg z-[100]">
 
   <div class="grid grid-cols-5 text-center items-center">
 
@@ -375,35 +385,44 @@ if(isset($name_parts[1])){
 
   </div>
 
-  <!-- ✅ MOBILE DROPDOWN (ONLY 3 ITEMS) -->
+  <!-- ✅ MOBILE DROPDOWN (GRID LAYOUT: 4 per row) -->
   <div id="mobileMenuBox"
   class="hidden absolute bottom-14 left-2 right-2 mx-auto
          bg-white border border-orange-300 rounded-xl shadow-lg
-         flex justify-around px-4 py-3 z-50">
+         grid grid-cols-4 gap-y-6 gap-x-2 px-4 py-5 z-50">
 
     <a href="gallery" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
       <i class="fa-solid fa-images text-xl"></i>
-      <span class="text-[11px]">Gallery</span>
+      <span class="text-[11px] mt-1">Gallery</span>
     </a>
     <a href="temple" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
       <i class="fa-solid fa-gopuram text-xl"></i>
-      <span class="text-[11px]">Temple</span>
+      <span class="text-[11px] mt-1">Temple</span>
     </a>
 
     <a href="branch" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
       <i class="fa-solid fa-sitemap text-xl"></i>
-      <span class="text-[11px]">Branch</span>
+      <span class="text-[11px] mt-1">Branch</span>
     </a>
 
     <a href="shok_sanvedana" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
       <i class="fa-solid fa-hands-praying text-xl"></i>
-      <span class="text-[11px]">Shok Sandesh</span>
+      <span class="text-[11px] mt-1">Shok Sandesh</span>
     </a>
     <a href="jobs_education"
   class="flex flex-col items-center text-orange-500">
   <i class="fa-solid fa-briefcase text-xl"></i>
-  <span class="text-[11px]">Jobs & Education</span>
+  <span class="text-[11px] mt-1 text-center">Jobs</span>
 </a>
+<a href="policy.php" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-file-contract text-xl"></i>
+          <span class="text-[11px] mt-1 text-center">Privacy Profile</span>
+        </a>
+
+    <a href="about.php" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+      <i class="fa-solid fa-circle-info text-xl"></i>
+      <span class="text-[11px] mt-1 text-center">About Us</span>
+    </a>
 
   </div>
 </nav>
@@ -555,31 +574,109 @@ document.addEventListener("click", function () {
 
 
 
-      // 🔥 Update unread count badge
-      function updateNotifCount() {
-        fetch("notification_count.php")
-          .then(res => res.text())
-          .then(count => {
+      // 🔥 Update global status (Unread messages + Incoming Calls)
+      function updateGlobalStatus() {
+        if (window.location.pathname.includes('message.php')) {
+            // If on message page, only update count, call is handled by message.php
+            fetch("notification_count.php")
+              .then(res => res.text())
+              .then(count => updateBadge(count));
+            return;
+        }
 
-            let badge = document.getElementById("notifCount");
-
-            if (parseInt(count) > 0) {
-              badge.innerText = count;
-              badge.classList.remove("hidden");
-            } else {
-              badge.classList.add("hidden");
+        fetch("get_global_status.php")
+          .then(res => res.json())
+          .then(data => {
+            updateBadge(data.unread_count);
+            
+            if (data.incoming_call) {
+                showGlobalIncomingCall(data.incoming_call);
             }
-          });
+          })
+          .catch(e => console.error("Global status error:", e));
+      }
+
+      function updateBadge(count) {
+        let badge = document.getElementById("notifCount");
+        if (parseInt(count) > 0) {
+          badge.innerText = count;
+          badge.classList.remove("hidden");
+        } else {
+          badge.classList.add("hidden");
+        }
+      }
+
+      function showGlobalIncomingCall(data) {
+        const modal = document.getElementById('globalIncomingCallModal');
+        if (!modal || !modal.classList.contains('hidden')) return;
+
+        document.getElementById('g_incCallName').innerText = data.caller_name;
+        document.getElementById('g_incCallImg').src = data.caller_photo;
+        document.getElementById('g_incCallType').innerText = "Incoming " + data.type + " Call...";
+        modal.classList.remove('hidden');
+        
+        const ring = document.getElementById('globalRingtone');
+        if (ring) {
+            ring.play().catch(e => console.log("Audio play blocked until user interaction."));
+        }
+
+        // Store data for buttons
+        modal.dataset.callId = data.call_id;
+        modal.dataset.callerId = data.caller_id;
+      }
+
+      function acceptGlobalCall() {
+        const modal = document.getElementById('globalIncomingCallModal');
+        const callId = modal.dataset.callId;
+        const callerId = modal.dataset.callerId;
+        window.location.href = `message.php?receiver_id=${callerId}&accept_call_id=${callId}`;
+      }
+
+      async function rejectGlobalCall() {
+        const modal = document.getElementById('globalIncomingCallModal');
+        const callId = modal.dataset.callId;
+        
+        const fd = new FormData();
+        fd.append('call_id', callId);
+        fd.append('status', 'rejected');
+        await fetch('update_call_status.php', { method:'POST', body:fd });
+        
+        modal.classList.add('hidden');
+        const ring = document.getElementById('globalRingtone');
+        if (ring) { ring.pause(); ring.currentTime = 0; }
       }
 
       // Auto refresh every 4 seconds
-      setInterval(updateNotifCount, 4000);
-      updateNotifCount();
+      setInterval(updateGlobalStatus, 4000);
+      updateGlobalStatus();
     </script>
  
+<!-- GLOBAL CALL MODAL -->
+<div id="globalIncomingCallModal" class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl p-6 text-center shadow-2xl w-80 animate-bounce-slow">
+        <div class="mb-4 relative inline-block">
+            <img id="g_incCallImg" src="" class="w-24 h-24 rounded-full border-4 border-orange-500 object-cover mx-auto">
+            <div class="absolute inset-0 rounded-full border-4 border-orange-400 animate-ping opacity-75"></div>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800" id="g_incCallName">Name</h3>
+        <p class="text-gray-500 mb-6" id="g_incCallType">Incoming Call...</p>
+        <div class="flex justify-center gap-6">
+            <button onclick="rejectGlobalCall()" class="w-14 h-14 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 shadow-lg transition">
+                <i class="fa-solid fa-phone-slash fa-xl"></i>
+            </button>
+            <button onclick="acceptGlobalCall()" class="w-14 h-14 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 shadow-lg transition">
+                <i class="fa-solid fa-phone fa-xl"></i>
+            </button>
+        </div>
+    </div>
+</div>
+<audio id="globalRingtone" loop src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+
 <!-- clock and calender script  -->
 <script>
 function updateClock() {
+...
+
   const now = new Date();
 
   let hours = now.getHours();
@@ -611,4 +708,3 @@ function openCalendar(){
   document.getElementById("hiddenCalendar").showPicker();
 }
 </script>
- 

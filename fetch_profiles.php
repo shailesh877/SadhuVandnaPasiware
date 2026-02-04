@@ -30,15 +30,16 @@ WHERE m.status != 'Blocked' AND mp.id != '$my_profile_id'
 ";
 
 // Apply Filters
-if($gender) $query .= " AND gender='$gender'";
-if($city) $query .= " AND city LIKE '%$city%'";
-if($education) $query .= " AND education LIKE '%$education%'";
+// Apply Filters
+if($gender) $query .= " AND mp.gender='$gender'";
+if($city) $query .= " AND mp.city LIKE '%$city%'";
+if($education) $query .= " AND mp.education LIKE '%$education%'";
 if($ageRange){
     $range = explode('-',$ageRange);
     if(count($range)==2){
         $min = (int)$range[0];
         $max = (int)$range[1];
-        $query .= " AND TIMESTAMPDIFF(YEAR, STR_TO_DATE(dob,'%Y-%m-%d'), CURDATE()) BETWEEN $min AND $max";
+        $query .= " AND TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) BETWEEN $min AND $max";
     }
 }
 
