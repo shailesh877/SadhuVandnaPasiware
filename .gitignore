@@ -1,1 +1,6 @@
+/vendor/
+/uploads/
+/php/uploads/
+/images/
+/node_modules/
 .env
