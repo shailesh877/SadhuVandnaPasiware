@@ -1,0 +1,15 @@
+RewriteEngine On
+
+# Remove .php extension
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.php -f
+RewriteRule ^([^/]+)/?$ $1.php [L]
+
+# Custom routes
+RewriteRule ^restaurant/([a-zA-Z0-9_-]+)/?$ user/menu.php?slug=$1 [L]
+RewriteRule ^order/([A-Za-z0-9]+)/?$ user/order.php?track=$1 [L]
+
+php_value upload_max_filesize 2048M
+php_value post_max_size 2050M
+php_value max_execution_time 3000
+php_value max_input_time 3000
