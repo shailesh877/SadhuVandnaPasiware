@@ -1,4 +1,5 @@
 <?php
+header('Content-Type: text/html; charset=UTF-8');
 include("connection.php");
 include("auto_delete_stories.php");
 session_start();
