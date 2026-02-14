@@ -54,15 +54,15 @@ function displayRow($label, $value){
     </div>
 
     <!-- Group: Contact (Maybe hidden for some?) -->
-    <!--<div class="bg-orange-50 p-4 rounded-xl border border-orange-100">-->
-    <!--    <h3 class="text-lg font-bold text-orange-800 border-b border-orange-200 mb-2 pb-1">Contact Details</h3>-->
-    <!--    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">-->
-    <!--        <?php -->
-    // <!--        displayRow("Phone", $profile['phone']);-->
-    // <!--        displayRow("Email", $profile['email']);-->
-    <!--        ?>-->
-    <!--    </div>-->
-    <!--</div>-->
+    <!-- <div class="bg-orange-50 p-4 rounded-xl border border-orange-100">
+        <h3 class="text-lg font-bold text-orange-800 border-b border-orange-200 mb-2 pb-1">Contact Details</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            <?php 
+            displayRow("Phone", $profile['phone']);
+            displayRow("Email", $profile['email']);
+            ?>
+        </div>
+    </div> -->
 
     <!-- Group: Education & Career -->
     <div class="bg-orange-50 p-4 rounded-xl border border-orange-100">
