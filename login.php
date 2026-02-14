@@ -3,122 +3,211 @@
 <head>
 <meta charset="UTF-8">
 <title>Login - Sadhu Vandana</title>
+<link rel="icon" href="images/logo.png">
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
   body { font-family: 'Roboto', sans-serif; }
-  .gradient-bg { background: linear-gradient(110deg, #ffedd5 10%, #fffbe1 90%); }
-  .glassmin { background: rgba(255,255,255,0.93); box-shadow: 0 3px 40px 0 rgba(251,146,60,.09); }
+  .gradient-bg { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); }
+  .glassmin { background: rgba(255,255,255,0.95); box-shadow: 0 10px 40px -10px rgba(251,146,60,0.2); }
   .modal-bg { background: rgba(0,0,0,0.5); }
+  /* Animation for inputs */
+  .slide-down { animation: slideDown 0.3s ease-out forwards; }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
-<body class="gradient-bg min-h-screen flex justify-center items-center px-4 py-6">
+<body class="gradient-bg min-h-screen flex justify-center items-center px-4 py-6 relative overflow-hidden">
 
-<div class="glassmin rounded-xl border border-orange-200 w-full max-w-md p-6 flex flex-col gap-4">
-  <h2 class="text-xl font-bold text-orange-800 text-center flex items-center justify-center gap-2">
-    <i class="fa fa-sign-in"></i> Member Login
-  </h2>
-  <form  action="logcode.php" method="post" id="loginForm" class="flex flex-col gap-3">
-    <input required type="text" name="user" placeholder="Email/Mobile No." class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ring-orange-200 w-full" />
-    <input required type="password" name="password" placeholder="Password" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ring-orange-200 w-full" />
-    <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg py-2 w-full shadow-md transition">Login</button>
-    <div class="flex justify-between text-xs text-gray-600 mt-1">
-      <button type="button" id="forgotBtn" class="text-orange-600 font-bold underline hover:text-orange-800">Forgot Password?</button>
-      <a href="registration" class="text-orange-600 font-bold underline hover:text-orange-800">Create Account</a>
+<!-- Decorative Blobs -->
+<div class="absolute top-0 left-0 w-64 h-64 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 -translate-x-1/2 -translate-y-1/2"></div>
+<div class="absolute bottom-0 right-0 w-64 h-64 bg-red-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 translate-x-1/2 translate-y-1/2"></div>
+
+<div class="glassmin rounded-2xl border border-white/50 w-full max-w-md p-8 flex flex-col gap-6 relative z-10 transition-all duration-300">
+  
+  <div class="text-center">
+      <div class="w-16 h-16 bg-orange-100/50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-orange-200">
+        <i class="fa-solid fa-users-viewfinder text-3xl text-orange-600"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-800">Welcome Back</h2>
+      <p class="text-sm text-gray-500 mt-1">Enter your email to login or create account</p>
+  </div>
+
+  <form id="loginForm" class="flex flex-col gap-4">
+    
+    <!-- STEP 1: EMAIL -->
+    <div id="stepEmail" class="group transition-all">
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Email Address</label>
+        <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-orange-500 transition-colors">
+                <i class="fa-regular fa-envelope"></i>
+            </span>
+            <input type="email" id="email" placeholder="name@example.com" 
+                   class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" required />
+        </div>
     </div>
+
+    <!-- STEP 2: OTP (Hidden initially) -->
+    <div id="stepOtp" class="hidden slide-down group transition-all">
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Verification Code</label>
+        <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-orange-500 transition-colors">
+                <i class="fa-solid fa-key"></i>
+            </span>
+            <input type="text" id="otp" placeholder="Enter 6-digit OTP" maxlength="6"
+                   class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm font-mono tracking-widest text-lg" />
+        </div>
+        <div class="flex justify-between items-center mt-2">
+            <span class="text-xs text-green-600 font-medium"><i class="fa-solid fa-paper-plane mr-1"></i> OTP Sent to email</span>
+            <button type="button" id="resendBtn" class="text-xs text-orange-600 hover:text-orange-800 font-semibold underline disabled:opacity-50 disabled:cursor-not-allowed">Resend OTP</button>
+        </div>
+    </div>
+
+    <button type="submit" id="submitBtn" 
+            class="mt-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold rounded-xl py-3.5 w-full shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex justify-center items-center gap-2">
+        <span>Get Login Code</span> <i class="fa-solid fa-arrow-right"></i>
+    </button>
   </form>
-  <div id="loginMsg" class="text-center text-sm text-red-600 mt-1 select-none"></div>
-</div>
+  
+  <div id="loginMsg" class="text-center text-sm font-medium min-h-[20px] transition-all"></div>
 
-<!-- Forgot Password Modal -->
-<div id="forgotModal" class="fixed inset-0 hidden items-center justify-center modal-bg px-4">
-  <div class="bg-white rounded-xl p-5 w-full max-w-md relative flex flex-col gap-4">
-    <h3 class="text-orange-700 font-bold text-lg text-center">Reset Password</h3>
-
-    <div id="fpMsg" class="text-sm text-red-600 text-center select-none"></div>
-
-    <!-- Step 1: Email -->
-    <div id="stepEmail" class="flex flex-col gap-2">
-      <input type="email" id="fpEmail" placeholder="Enter registered email" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ring-orange-200 w-full" />
-      <button id="sendFpOtp" class="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg py-2 w-full flex justify-center items-center gap-2">
-        <span>Send OTP</span> <i class="fa fa-paper-plane"></i>
-      </button>
-    </div>
-
-    <!-- Step 2: OTP -->
-    <div id="stepOtp" class="flex flex-col gap-2 hidden">
-      <input type="text" id="fpOtp" placeholder="Enter OTP" maxlength="6" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ring-orange-200 w-full" />
-      <button id="verifyFpOtp" class="bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg py-2 w-full flex justify-center items-center gap-2">
-        <span>Verify OTP</span> <i class="fa fa-check"></i>
-      </button>
-    </div>
-
-    <!-- Step 3: Reset Password -->
-    <div id="stepReset" class="flex flex-col gap-2 hidden">
-      <input type="password" id="newPassword" placeholder="New Password" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ring-orange-200 w-full" />
-      <input type="password" id="confirmNewPassword" placeholder="Confirm Password" class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ring-orange-200 w-full" />
-      <button id="resetPasswordBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg py-2 w-full">Reset Password</button>
-    </div>
-
-    <button id="closeModal" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-xl">&times;</button>
+  <div class="text-center text-xs text-gray-400 mt-4 border-t pt-4">
+    <p>By continuing, you agree to our <a href="child_safety" class="text-gray-600 hover:text-orange-600 underline">Child Safety</a> & <a href="https://sadhuvandna.co.in/policy" class="text-gray-600 hover:text-orange-600 underline">Privacy Policy</a></p>
   </div>
 </div>
 
 <script>
-$(function(){
-  function showMsg(selector, msg, color='red') {
-    $(selector).text(msg).fadeIn().delay(2500).fadeOut();
-  }
+$(document).ready(function(){
+    let isOtpSent = false;
+    let timerInterval;
 
-  $('#forgotBtn').click(function(){ $('#forgotModal').removeClass('hidden').addClass('flex'); });
-  $('#closeModal').click(function(){ 
-    $('#forgotModal').addClass('hidden').removeClass('flex'); 
-    $('#stepEmail').show(); $('#stepOtp, #stepReset').hide();
-    $('#fpEmail,#fpOtp,#newPassword,#confirmNewPassword').val('');
-  });
+    function showMsg(msg, type='error') {
+        const color = type === 'success' ? 'text-green-600' : 'text-red-500';
+        $('#loginMsg').removeClass('text-red-500 text-green-600').addClass(color).html(msg).fadeIn();
+        // Clear message after 3 seconds if success
+        if(type === 'success') setTimeout(() => $('#loginMsg').fadeOut(), 3000);
+    }
 
-  // Send OTP
-  $('#sendFpOtp').click(function(e){
-    e.preventDefault();
-    let email = $('#fpEmail').val().trim();
-    if(!email){ showMsg('#fpMsg','Enter your email'); return; }
-    $(this).prop('disabled',true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
-    $.post('forgot_send_otp.php',{email}, function(res){
-      $('#sendFpOtp').prop('disabled',false).html('Send OTP <i class="fa fa-paper-plane"></i>');
-      if(res.trim()=='sent'){ $('#stepEmail').hide(); $('#stepOtp').show(); showMsg('#fpMsg','OTP sent!','green'); }
-      else showMsg('#fpMsg',res);
+    function startTimer(duration) {
+        let timer = duration, minutes, seconds;
+        $('#resendBtn').prop('disabled', true);
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(function () {
+            minutes = parseInt(timer / 60, 10);
+            seconds = parseInt(timer % 60, 10);
+
+            minutes = minutes < 10 ? "0" + minutes : minutes;
+            seconds = seconds < 10 ? "0" + seconds : seconds;
+
+            $('#resendBtn').text("Resend in " + minutes + ":" + seconds);
+
+            if (--timer < 0) {
+                clearInterval(timerInterval);
+                $('#resendBtn').prop('disabled', false).text("Resend OTP");
+            }
+        }, 1000);
+    }
+
+    $('#loginForm').submit(function(e){
+        e.preventDefault();
+        
+        let email = $('#email').val().trim();
+        let otp = $('#otp').val().trim();
+        let btn = $('#submitBtn');
+
+        if(!isOtpSent) {
+            // --- STATE 1: SEND OTP ---
+            if(!email){ showMsg('Please enter your email address'); return; }
+            if(!validateEmail(email)){ showMsg('Invalid email format'); return; }
+
+            // UI Loading
+            btn.prop('disabled', true).html('<i class="fa-solid fa-circle-notch fa-spin"></i> Sending OTP...');
+            $('#email').prop('readonly', true).addClass('opacity-70 cursor-not-allowed');
+
+            $.post('login_send_otp.php', {email: email}, function(response){
+                btn.prop('disabled', false).html('Get Login Code <i class="fa-solid fa-arrow-right"></i>');
+                
+                if(response.trim() === 'sent'){
+                    // Success
+                    isOtpSent = true;
+                    $('#stepOtp').removeClass('hidden');
+                    $('#otp').focus();
+                    btn.html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
+                    showMsg('OTP sent successfully!', 'success');
+                    startTimer(60); // 1 minute timer
+                } else if(response.trim() === 'invalid_email') {
+                    showMsg('Please enter a valid email address');
+                    $('#email').prop('readonly', false).removeClass('opacity-70 cursor-not-allowed').focus();
+                } else {
+                    showMsg('Failed to send OTP. Please try again.');
+                    $('#email').prop('readonly', false).removeClass('opacity-70 cursor-not-allowed');
+                }
+            }).fail(function(){
+                btn.prop('disabled', false).html('Get Login Code <i class="fa-solid fa-arrow-right"></i>');
+                $('#email').prop('readonly', false).removeClass('opacity-70 cursor-not-allowed');
+                showMsg('Connection error. Please check internet.');
+            });
+
+        } else {
+            // --- STATE 2: VERIFY OTP ---
+            if(!otp){ showMsg('Please enter the 6-digit OTP'); return; }
+            if(otp.length !== 6 || isNaN(otp)){ showMsg('OTP must be 6 digits'); return; }
+
+            // UI Loading
+            btn.prop('disabled', true).html('<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...');
+
+            $.post('login_verify_otp.php', {otp: otp}, function(response){
+                let res = response.trim();
+                if(res.includes('success_login')){
+                    showMsg('Login Successful! Redirecting...', 'success');
+                    setTimeout(() => window.location.href = 'index.php', 1000);
+                } else if(res.includes('success_register')) {
+                    showMsg('Account Created! Redirecting...', 'success');
+                    setTimeout(() => window.location.href = 'profile.php', 1000); // Redirect to profile to fill details
+                } else if(res === 'invalid_otp') {
+                    showMsg('Invalid OTP. Please try again.');
+                    btn.prop('disabled', false).html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
+                } else if(res === 'expired_otp') {
+                    showMsg('OTP Expired. Please resend.');
+                    btn.prop('disabled', false).html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
+                } else if(res === 'blocked') {
+                    showMsg('Your account is blocked. Contact support Team.');
+                    btn.prop('disabled', false).html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
+                } else {
+                    showMsg('Login failed: ' + res);
+                    btn.prop('disabled', false).html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
+                }
+            }).fail(function(){
+                showMsg('Connection error.');
+                btn.prop('disabled', false).html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
+            });
+        }
     });
-  });
 
-  // Verify OTP
-  $('#verifyFpOtp').click(function(e){
-    e.preventDefault();
-    let otp = $('#fpOtp').val().trim();
-    if(!otp){ showMsg('#fpMsg','Enter OTP'); return; }
-    $(this).prop('disabled',true).html('<i class="fa fa-spinner fa-spin"></i> Verifying...');
-    $.post('forgot_verify_otp.php',{otp}, function(res){
-      $('#verifyFpOtp').prop('disabled',false).html('Verify OTP <i class="fa fa-check"></i>');
-      if(res.trim()=='verified'){ $('#stepOtp').hide(); $('#stepReset').show(); showMsg('#fpMsg','OTP verified!','green'); }
-      else showMsg('#fpMsg','Invalid or expired OTP');
+    // Resend Logic
+    $('#resendBtn').click(function(){
+        let email = $('#email').val().trim();
+        if(!email){ showMsg('Enter email first'); return; }
+        
+        $(this).prop('disabled', true).text('Sending...');
+        
+        $.post('login_send_otp.php', {email: email}, function(response){
+            if(response.trim() === 'sent'){
+                showMsg('OTP Resent!', 'success');
+                startTimer(60);
+            } else {
+                showMsg('Failed to send OTP');
+                $('#resendBtn').prop('disabled', false).text('Resend OTP');
+            }
+        });
     });
-  });
 
-  // Reset Password
-  $('#resetPasswordBtn').click(function(e){
-    e.preventDefault();
-    let pass=$('#newPassword').val(), cpass=$('#confirmNewPassword').val();
-    if(!pass||!cpass){ showMsg('#fpMsg','Enter all fields'); return; }
-    if(pass!==cpass){ showMsg('#fpMsg','Passwords do not match'); return; }
-    $(this).prop('disabled',true).html('<i class="fa fa-spinner fa-spin"></i> Resetting...');
-    $.post('forgot_reset_password.php',{password:pass}, function(res){
-      $('#resetPasswordBtn').prop('disabled',false).html('Reset Password');
-      if(res.trim()=='success'){ showMsg('#fpMsg','Password reset successful!','green'); 
-        $('#forgotModal').addClass('hidden').removeClass('flex'); $('#stepEmail').show(); $('#stepReset').hide(); $('#newPassword,#confirmNewPassword').val(''); 
-      } else showMsg('#fpMsg','Failed to reset password'); 
-    });
-  });
+    function validateEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
 });
 </script>
 </body>
