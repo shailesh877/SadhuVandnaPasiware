@@ -24,18 +24,18 @@ $branches = mysqli_query($con, "SELECT * FROM tbl_branch ORDER BY id DESC");
 
             <!-- TITLE / MAHANT NAME -->
             <h2 class="text-[24px] font-extrabold text-gray-900 leading-snug mb-1 tracking-tight px-6 pt-6">
-                <?= htmlspecialchars($row['mahant_name']) ?>
+                <?= htmlspecialchars($row['mahant_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
             </h2>
 
             <!-- BRANCH NAME -->
             <p class="text-[16px] font-semibold text-gray-800 px-6 mb-1">
-                Branch: <?= htmlspecialchars($row['branch_name']) ?>
+                Branch: <?= htmlspecialchars($row['branch_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
             </p>
 
             <!-- VILLAGE & MOBILE -->
             <p class="text-[14px] text-orange-600 font-semibold px-6 mb-3">
-                <i class="fa-solid fa-location-dot mr-1"></i> <?= htmlspecialchars($row['branch_village']) ?> |
-                <i class="fa-solid fa-phone mr-1"></i> <?= htmlspecialchars($row['mahant_mobile']) ?>
+                <i class="fa-solid fa-location-dot mr-1"></i> <?= htmlspecialchars($row['branch_village'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> |
+                <i class="fa-solid fa-phone mr-1"></i> <?= htmlspecialchars($row['mahant_mobile'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
             </p>
 
             <!-- IMAGE -->
@@ -48,7 +48,7 @@ $branches = mysqli_query($con, "SELECT * FROM tbl_branch ORDER BY id DESC");
             <!-- DETAILS -->
             <div class="p-6">
                 <p class="branch-text text-gray-700 text-[16px] leading-[1.65] mb-2 overflow-hidden max-h-28 transition-all duration-500">
-                    <?= nl2br(htmlspecialchars($row['details'])) ?>
+                    <?= nl2br(htmlspecialchars($row['details'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) ?>
                 </p>
                 <button class="read-btn text-orange-600 font-semibold text-[15px] mt-1 hover:underline">
                     Read More
