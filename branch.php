@@ -20,7 +20,7 @@ $branches = mysqli_query($con, "SELECT * FROM tbl_branch ORDER BY id DESC");
 
         <?php while($row = mysqli_fetch_assoc($branches)) { ?>
 
-        <div class="bg-white border border-orange-300 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 w-full mx-auto">
+        <div class="branch-card bg-white border border-orange-300 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 w-full mx-auto">
 
             <!-- TITLE / MAHANT NAME -->
             <h2 class="text-[24px] font-extrabold text-gray-900 leading-snug mb-1 tracking-tight px-6 pt-6">
@@ -84,30 +84,37 @@ $branches = mysqli_query($con, "SELECT * FROM tbl_branch ORDER BY id DESC");
 </style>
 
 <script>
-// Read More / Less toggle function
-function toggleDescription(text, btn) {
-    if (text.style.maxHeight && text.style.maxHeight !== "7rem") {
-        text.style.maxHeight = "7rem";
-        btn.textContent = "Read More";
-    } else {
-        text.style.maxHeight = text.scrollHeight + "px";
-        btn.textContent = "Read Less";
-    }
-}
+document.addEventListener("DOMContentLoaded", function () {
 
-// Loop through all branch cards
-document.querySelectorAll(".p-6").forEach((container) => {
-    const text = container.querySelector(".branch-text");
-    const btn = container.querySelector(".read-btn");
+    document.querySelectorAll(".branch-card").forEach((card) => {
 
-    // Hide Read More button if text is short
-    if (text.scrollHeight <= 112) { // 7rem
-        btn.style.display = "none";
-    } else {
-        btn.onclick = function () {
-            toggleDescription(text, btn);
-        };
-    }
+        const text = card.querySelector(".branch-text");
+        const btn = card.querySelector(".read-btn");
+
+        if (!text || !btn) return;
+
+        // Hide button if text small
+        if (text.scrollHeight <= text.clientHeight + 5) {
+            btn.style.display = "none";
+        }
+
+        btn.addEventListener("click", function () {
+
+            if (text.classList.contains("expanded")) {
+                text.style.maxHeight = "7rem";
+                btn.textContent = "Read More";
+                text.classList.remove("expanded");
+
+            } else {
+                text.style.maxHeight = text.scrollHeight + "px";
+                btn.textContent = "Read Less";
+                text.classList.add("expanded");
+            }
+
+        });
+
+    });
+
 });
 
 // Image Modal
