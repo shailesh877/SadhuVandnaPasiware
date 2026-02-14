@@ -3,7 +3,14 @@ include("header.php");
 include("connection.php");
 
 $news   = mysqli_query($con, "SELECT * FROM tbl_news ORDER BY id DESC");
+if (!$news) {
+    die("News Query Failed: " . mysqli_error($con));
+}
+
 $ticker = mysqli_query($con, "SELECT title FROM tbl_news ORDER BY id DESC LIMIT 5");
+if (!$ticker) {
+    die("Ticker Query Failed: " . mysqli_error($con));
+}
 ?>
 <style>
 /* ===== PREMIUM TICKER DESIGN ===== */
@@ -111,7 +118,7 @@ body {
 
             <!-- TITLE -->
             <h2 class="text-[26px] font-extrabold text-gray-900 leading-snug mb-1 tracking-tight px-6 pt-6">
-                <?= $row['title'] ?>
+                <?= htmlspecialchars($row['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
             </h2>
 
             <!-- DATE -->
@@ -156,7 +163,7 @@ body {
             <!-- DESCRIPTION -->
             <div class="p-6">
                 <p class="premium-text text-gray-700 text-[17px] leading-[1.65] mb-2 overflow-hidden max-h-28 transition-all duration-500">
-                    <?= nl2br($row['description']) ?>
+                    <?= nl2br(htmlspecialchars($row['description'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) ?>
                 </p>
                 <button class="read-btn text-orange-600 font-semibold text-[15px] mt-1 hover:underline">
                     Read More
