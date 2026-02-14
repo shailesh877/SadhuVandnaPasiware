@@ -1,9 +1,7 @@
 <?php
 include("connection.php");
 include("auto_delete_stories.php");
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+session_start();
 
 if(!isset($_SESSION['sadhu_user_id']) || empty($_SESSION['sadhu_user_id'])){
     
@@ -22,7 +20,7 @@ if(!isset($_SESSION['sadhu_user_id']) || empty($_SESSION['sadhu_user_id'])){
 
 $uid = $_SESSION['sadhu_user_id'];
 
-$stmt = $con->prepare("SELECT status FROM tbl_members WHERE email=? LIMIT 1");
+$stmt = $con->prepare("SELECT status, name, mobile FROM tbl_members WHERE email=? LIMIT 1");
 $stmt->bind_param("s", $uid);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -40,6 +38,17 @@ if($res->num_rows == 1){
 
         echo "<script>alert('Your account has been blocked.'); window.location.href = 'login';</script>";
         exit;
+    }
+
+    // Check for incomplete profile (New User)
+    $showProfilePopup = false;
+    $current_page = basename($_SERVER['PHP_SELF'], '.php'); 
+    
+    // Normalize check for both with/without extension
+    if($current_page != 'edit_profile' && $current_page != 'edit_profile.php' && $current_page != 'login' && $current_page != 'logout'){
+        if($row['name'] == 'New Member' || strpos($row['mobile'], 'TMP') === 0){
+            $showProfilePopup = true;
+        }
     }
 }
 // -------------------------------------
@@ -211,12 +220,12 @@ if(isset($name_parts[1])){
     <div class="flex flex-col leading-tight cursor-pointer" onclick="openCalendar()">
       <div id="liveClock"
         class="text-xs sm:text-sm font-bold text-orange-700 flex items-center gap-1">
-        <i class="fa-regular fa-clock"></i> --:--
+        <i class="fa-regular fa-clock"></i>  --:--
       </div>
 
       <div id="liveDate"
-        class="text-[10px] sm:text-[11px] text-gray-500 flex items-center gap-1">
-        <i class="fa-regular fa-calendar"></i> -- ---
+        class="text-[11px] sm:text-[12px] text-gray-500 flex items-center left-1 gap-1">
+        <i class="fa-regular fa-calendar"></i>  -- ---
       </div>
     </div>
   </div>
@@ -244,9 +253,9 @@ if(isset($name_parts[1])){
 
       <div id="profileDropdown"
         class="hidden absolute right-0 mt-2 w-60 bg-white border border-orange-200 rounded-lg shadow-lg z-50">
-        <a href="change_password" class="block px-4 py-2 text-orange-700 hover:bg-orange-100">
+        <!-- <a href="change_password" class="block px-4 py-2 text-orange-700 hover:bg-orange-100">
           Change Password
-        </a>
+        </a> -->
         <a href="logout" class="block px-4 py-2 text-orange-700 hover:bg-orange-100">
           Logout
         </a>
@@ -307,10 +316,11 @@ if(isset($name_parts[1])){
 
       <!-- ✅ DROPDOWN: ONLY  ITEMS -->
       <div id="menuBox"
-  class="hidden absolute left-full bottom-0 ml-7
+  class="hidden absolute left-full top-1/2 -translate-y-1/2 ml-7
          bg-white border border-orange-200 rounded-xl shadow-lg
-         flex flex-col items-center gap-3 px-4 py-3 z-50">
-
+         grid grid-cols-3 gap-5
+         px-5 py-5 z-50
+         w-[260px] max-h-[90vh] overflow-y-auto">
 
         <a href="gallery" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
           <i class="fa-solid fa-images text-xl"></i>
@@ -331,7 +341,7 @@ if(isset($name_parts[1])){
           <span class="text-[11px]"> Shok Sandesh</span>
         </a>
         <a href="festival" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
-          <i class="fa-solid fa-wand-sparkles text-xl"></i>
+         <i class="fa-solid fa-wand-sparkles text-xl"></i>
           <span class="text-[11px]"> Festival Poster</span>
         </a>
         <a href="jobs_education"
@@ -339,13 +349,17 @@ if(isset($name_parts[1])){
   <i class="fa-solid fa-briefcase text-xl"></i>
   <span class="text-[11px]">Jobs & Education</span>
 </a>
-<a href="policy.php" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+<a href="policy" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
           <i class="fa-solid fa-file-contract text-xl"></i>
           <span class="text-[11px]">Privacy Policy</span>
         </a>
+<a href="child_safety" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-file-contract text-xl"></i>
+          <span class="text-[11px]">Child Safety</span>
+        </a>
 
 
-        <a href="about.php" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+        <a href="about" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
           <i class="fa-solid fa-circle-info text-xl"></i>
           <span class="text-[11px]">About Us</span>
         </a>
@@ -416,7 +430,7 @@ if(isset($name_parts[1])){
       <span class="text-[11px] mt-1">Shok Sandesh</span>
     </a>
     <a href="festival" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
-        <i class="fa-solid fa-wand-sparkles text-xl"></i>
+      <i class="fa-solid fa-wand-sparkles text-xl"></i>
       <span class="text-[11px] mt-1">Festival Poster</span>
     </a>
     <a href="jobs_education"
@@ -424,12 +438,16 @@ if(isset($name_parts[1])){
   <i class="fa-solid fa-briefcase text-xl"></i>
   <span class="text-[11px] mt-1 text-center">Jobs</span>
 </a>
-<a href="policy.php" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+<a href="policy" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
           <i class="fa-solid fa-file-contract text-xl"></i>
           <span class="text-[11px] mt-1 text-center">Privacy Profile</span>
         </a>
+<a href="child_safety" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-file-contract text-xl"></i>
+          <span class="text-[11px] mt-1 text-center">Child Safety</span>
+        </a>
 
-    <a href="about.php" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+    <a href="about" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
       <i class="fa-solid fa-circle-info text-xl"></i>
       <span class="text-[11px] mt-1 text-center">About Us</span>
     </a>
@@ -684,14 +702,19 @@ document.addEventListener("click", function () {
 
 <!-- clock and calender script  -->
 <script>
+document.addEventListener("DOMContentLoaded", function () {
+
 function updateClock() {
-...
+
+  const clock = document.getElementById("liveClock");
+  const date = document.getElementById("liveDate");
+
+  if(!clock || !date) return; // safety
 
   const now = new Date();
 
   let hours = now.getHours();
   let minutes = now.getMinutes();
-  let seconds = now.getSeconds();
   let ampm = hours >= 12 ? 'PM' : 'AM';
 
   hours = hours % 12;
@@ -703,18 +726,47 @@ function updateClock() {
   const options = { day: '2-digit', month: 'short', year: 'numeric' };
   const dateString = now.toLocaleDateString('en-IN', options);
 
-  document.getElementById("liveClock").innerHTML =
-    '<i class="fa-regular fa-clock"></i> ' + timeString;
-
-  document.getElementById("liveDate").innerHTML =
-    '<i class="fa-regular fa-calendar"></i> ' + dateString;
+  clock.innerHTML = '<i class="fa-regular fa-clock"></i> ' + timeString;
+  date.innerHTML = '<i class="fa-regular fa-calendar"></i> ' + dateString;
 }
 
 setInterval(updateClock, 1000);
 updateClock();
 
-/* ✅ OPEN CALENDAR ON CLICK */
-function openCalendar(){
-  document.getElementById("hiddenCalendar").showPicker();
+window.openCalendar = function(){
+  document.getElementById("hiddenCalendar")?.showPicker();
 }
+
+});
 </script>
+ 
+
+
+<!-- PROFILE COMPLETION POPUP -->
+<?php if(isset($showProfilePopup) && $showProfilePopup): ?>
+<div id="profileCompletePopup" class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl p-6 md:p-8 text-center shadow-2xl w-full max-w-sm border-2 border-orange-500 relative transform transition-all scale-100">
+        
+        <!-- Close Button -->
+        <button onclick="document.getElementById('profileCompletePopup').remove()" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors bg-gray-100 hover:bg-red-50 rounded-full w-8 h-8 flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+
+        <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-200">
+            <i class="fa-solid fa-user-pen text-3xl text-orange-600"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-800 mb-2">Complete Your Profile</h3>
+        <p class="text-gray-600 mb-6 text-sm">Welcome! Please update your name and details to get the best experience.</p>
+        
+        <div class="flex flex-col gap-3">
+            <a href="edit_profile" class="block w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-95 flex justify-center items-center gap-2">
+                <span>Update Now</span> <i class="fa-solid fa-arrow-right"></i>
+            </a>
+            
+            <button onclick="document.getElementById('profileCompletePopup').remove()" class="text-gray-500 text-sm hover:text-gray-800 font-medium underline decoration-gray-300 underline-offset-4 hover:decoration-gray-500">
+                I'll do it later
+            </button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
