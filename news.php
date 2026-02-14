@@ -186,24 +186,34 @@ body {
 
 
 <script>
-// ✅ READ MORE / LESS
-document.querySelectorAll(".p-6").forEach((container) => {
-    const text = container.querySelector(".premium-text");
-    const btn = container.querySelector(".read-btn");
+document.addEventListener("DOMContentLoaded", function () {
 
-    if (text.scrollHeight <= 112) {
-        btn.style.display = "none";
-    } else {
-        btn.onclick = function () {
-            if (text.style.maxHeight && text.style.maxHeight !== "7rem") {
-                text.style.maxHeight = "7rem";
-                btn.textContent = "Read More";
-            } else {
-                text.style.maxHeight = text.scrollHeight + "px";
-                btn.textContent = "Read Less";
-            }
-        };
-    }
+    document.querySelectorAll(".p-6").forEach((container) => {
+        const text = container.querySelector(".premium-text");
+        const btn = container.querySelector(".read-btn");
+
+        if (!text || !btn) return; // safety
+
+        if (text.scrollHeight <= 112) {
+            btn.style.display = "none";
+        } else {
+
+            btn.addEventListener("click", function () {
+
+                if (text.classList.contains("expanded")) {
+                    text.style.maxHeight = "7rem";
+                    text.classList.remove("expanded");
+                    btn.textContent = "Read More";
+                } else {
+                    text.style.maxHeight = text.scrollHeight + "px";
+                    text.classList.add("expanded");
+                    btn.textContent = "Read Less";
+                }
+
+            });
+        }
+    });
+
 });
 
 // ✅ MANUAL SLIDER LOGIC
