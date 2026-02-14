@@ -409,7 +409,7 @@ document.addEventListener("click", function(e){
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
-  const user_id = <? php echo $user_id; ?>;
+  const user_id = <?php echo $user_id; ?>;
 
   // ✅ Fetch only this user's posts (like old style)
   async function fetchAll() {
@@ -557,7 +557,6 @@ document.addEventListener("click", function(e){
 
   fetchAll();
 </script>
-
 <script>
 // disable right click
 document.addEventListener("contextmenu", e => e.preventDefault());
