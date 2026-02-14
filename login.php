@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login - Sadhu Vandana</title>
 <link rel="icon" href="images/logo.png">
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -11,20 +12,24 @@
 <style>
   body { font-family: 'Roboto', sans-serif; }
   .gradient-bg { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); }
-  .glassmin { background: rgba(255,255,255,0.95); box-shadow: 0 10px 40px -10px rgba(251,146,60,0.2); }
+  /* Glass effect only for Desktop */
+  @media (min-width: 768px) {
+    .glassmin { background: rgba(255,255,255,0.95) !important; box-shadow: 0 10px 40px -10px rgba(251,146,60,0.2); }
+  }
+  
   .modal-bg { background: rgba(0,0,0,0.5); }
   /* Animation for inputs */
   .slide-down { animation: slideDown 0.3s ease-out forwards; }
   @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
-<body class="gradient-bg min-h-screen flex justify-center items-center px-4 py-6 relative overflow-hidden">
+<body class="gradient-bg min-h-screen block md:flex md:justify-center md:items-center p-0 md:px-4 md:py-6 relative overflow-x-hidden">
 
-<!-- Decorative Blobs -->
-<div class="absolute top-0 left-0 w-64 h-64 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 -translate-x-1/2 -translate-y-1/2"></div>
-<div class="absolute bottom-0 right-0 w-64 h-64 bg-red-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 translate-x-1/2 translate-y-1/2"></div>
+<!-- Decorative Blobs (Hidden on Mobile) -->
+<div class="hidden md:block absolute top-0 left-0 w-64 h-64 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 -translate-x-1/2 -translate-y-1/2"></div>
+<div class="hidden md:block absolute bottom-0 right-0 w-64 h-64 bg-red-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 translate-x-1/2 translate-y-1/2"></div>
 
-<div class="glassmin rounded-2xl border border-white/50 w-full max-w-md p-8 flex flex-col gap-6 relative z-10 transition-all duration-300">
+<div class="glassmin bg-white md:rounded-2xl rounded-none border-0 md:border border-white/50 w-full min-h-screen md:min-h-auto md:max-w-md p-6 md:p-8 flex flex-col justify-center md:justify-start gap-6 relative z-10 transition-all duration-300">
   
   <div class="text-center">
       <div class="w-16 h-16 bg-orange-100/50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-orange-200">
