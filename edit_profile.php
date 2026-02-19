@@ -3,13 +3,13 @@ include("header.php");
 include("connection.php");
 
 // Logged-in user
-$user_email = $_SESSION['sadhu_user_id'] ?? '';
-if(!$user_email){
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
+if(!$user_mobile){
     header("Location: login.php");
     exit;
 }
 
-$user = $con->query("SELECT * FROM tbl_members WHERE email='$user_email'")->fetch_assoc();
+$user = $con->query("SELECT * FROM tbl_members WHERE mobile='$user_mobile'")->fetch_assoc();
 ?>
 
 <main class="flex-1 px-2 md:px-10 py-10 bg-white md:ml-20 mb-13 md:mb-0 max-w-8xl overflow-hidden">

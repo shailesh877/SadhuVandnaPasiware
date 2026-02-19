@@ -5,30 +5,15 @@ include("header.php");
 //session_start();
 date_default_timezone_set('Asia/Kolkata');
 
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
+if(!$user_mobile) { echo "<div class='text-center text-red-500 mt-10'>Please login.</div>"; exit; }
 
-$user_email = $_SESSION['sadhu_user_id'] ?? '';
-
-// Auto-login for App WebView (only if session empty)
-if(!$user_email && !empty($_GET['app_user_id'])){
-    $app_pid = intval($_GET['app_user_id']);
-    if($app_pid > 0){
-        $find_u = $con->query("SELECT m.email FROM tbl_members m JOIN tbl_marriage_profiles mp ON mp.user_id=m.id WHERE mp.id='$app_pid' LIMIT 1");
-        if($find_u->num_rows > 0){
-             $u_row = $find_u->fetch_assoc();
-             $_SESSION['sadhu_user_id'] = $u_row['email'];
-             $user_email = $u_row['email'];
-        }
-    }
-}
-
-if(!$user_email) { echo "<div class='text-center text-red-500 mt-10'>Please login.</div>"; exit; }
-
-
-$member = $con->query("SELECT id FROM tbl_members WHERE email='".$con->real_escape_string($user_email)."'")->fetch_assoc();
+$member = $con->query("SELECT id FROM tbl_members WHERE mobile='".$con->real_escape_string($user_mobile)."'")->fetch_assoc();
 $member_id = $member['id'];
 $me = $con->query("SELECT id FROM tbl_marriage_profiles WHERE user_id='$member_id' LIMIT 1")->fetch_assoc();
 $my_profile_id = $me['id'] ?? 0;
 if(!$my_profile_id){ echo "<div class='text-center text-red-500 mt-10'>Create marriage profile first.</div>"; exit; }
+
 $receiver_id = intval($_GET['receiver_id'] ?? 0);
 if(!$receiver_id){ echo "<div class='text-center text-red-500 mt-10'>No chat target.</div>"; exit; }
 
@@ -82,7 +67,7 @@ while($row = $block_check->fetch_assoc()){
 ?>
 <!-- enoji library  -->
  <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
- <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+ <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
 
 <!-- enoji library  -->
 <style>
@@ -162,6 +147,12 @@ while($row = $block_check->fetch_assoc()){
     100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0); }
 }
 .ringing-btn { animation: pulse-ring 2s infinite; }
+/* AGORA VIDEO FIX */
+.agora_video_player {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
 </style>
 
 <main class="flex-1 px-2 md:px-10  bg-white md:ml-20  md:mb-0">
@@ -305,15 +296,16 @@ while($row = $block_check->fetch_assoc()){
 <!-- ACTIVE CALL MODAL -->
 <div id="callModal" class="fixed inset-0 z-[60] bg-gray-900 hidden flex flex-col">
     <!-- Main Video (Remote) -->
-    <div class="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
+    <div class="flex-1 relative bg-black flex items-center justify-center overflow-hidden" id="remoteVideoContainer">
         <div class="text-white absolute z-10 top-1/2 text-center" id="callStatusText">Connecting...</div>
         <div id="callTimer" class="absolute top-4 left-4 text-white text-lg font-mono bg-black bg-opacity-50 px-3 py-1 rounded hidden z-50">00:00</div>
         
-        <video id="remoteVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+        <!-- Agora appends video here -->
+        <div id="remoteVideo" class="w-full h-full absolute inset-0"></div>
         
         <!-- My Video (PIP) -->
-        <div id="localVideoContainer" class="absolute bottom-24 right-4 w-32 h-48 bg-gray-800 rounded-xl border-2 border-white overflow-hidden shadow-xl transition-all duration-300">
-             <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+        <div id="localVideoContainer" class="absolute bottom-24 right-4 w-32 h-48 bg-gray-800 rounded-xl border-2 border-white overflow-hidden shadow-xl transition-all duration-300 z-40">
+             <div id="localVideo" class="w-full h-full"></div>
         </div>
 
         <!-- Audio Call Placeholder (Overlay) -->
@@ -328,7 +320,12 @@ while($row = $block_check->fetch_assoc()){
     </div>
     
     <!-- Controls -->
-    <div class="h-24 bg-gray-900 flex items-center justify-center gap-8 pb-4 safe-area-bottom">
+    <div class="h-24 bg-gray-900 flex items-center justify-center gap-6 pb-4 safe-area-bottom z-50">
+        <!-- Switch Camera (Video only) -->
+        <button onclick="switchCamera()" id="btnSwitchCamera" class="hidden p-4 rounded-full bg-gray-700 text-white hover:bg-gray-600 transition shadow-lg w-12 h-12 flex items-center justify-center">
+            <i class="fa-solid fa-camera-rotate"></i>
+        </button>
+
         <button onclick="toggleVideo()" id="btnVideoToggle" class="p-4 rounded-full bg-gray-700 text-white hover:bg-gray-600 transition shadow-lg w-14 h-14 flex items-center justify-center">
             <i class="fa-solid fa-video" id="iconVideo"></i>
         </button>
@@ -345,86 +342,86 @@ while($row = $block_check->fetch_assoc()){
 
 
 <script>
-const myProfile = <?php echo json_encode($my_profile_id); ?>;
-const receiverProfile = <?php echo json_encode($receiver_id); ?>;
+const myProfile = parseInt(<?php echo json_encode($my_profile_id); ?>);
+const receiverProfile = parseInt(<?php echo json_encode($receiver_id); ?>);
 const POLL = 2500;
 let typingTimer = null;
 let isTyping = false;
 
-// CALL GLOBALS
-let peer = null;
-let myPeerId = null;
-let currentCall = null;
-let localStream = null;
-let activeCallId = null; // DB id of the call
+// AGORA CONFIG
+// -----------------------------------------------------------
+// PLEASE REPLACE THE APP ID BELOW WITH YOUR OWN FROM AGORA CONSOLE
+const AGORA_APP_ID = "f73e45e4817540ceaaf195805919f08e"; 
+// If your project is in "Secure Mode", you need a Temp Token. 
+// Generate one in Agora Console for the channel name shown in browser console, and paste it below.
+// If in "Testing Mode", leave this as null.
+const AGORA_TOKEN = null; 
+// -----------------------------------------------------------
+
+let client = AgoraRTC.createClient({ mode: "rtc", codec: "h264" });
+let localTracks = {
+    video: null,
+    audio: null
+};
+let remoteUsers = {};
+let activeCallId = null; 
 let incomingCallData = null;
-let callCheckInterval = null;
 let callTimerInterval = null;
 let callSeconds = 0;
 
-// Initialize Peer
-function initPeer(){
-    if(peer) return;
-    
-    // Check for HTTPS
-    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-        console.warn("Calling may fail on non-HTTPS connections.");
+// Channel Name: Deterministic (min_max)
+const channelName = "call_" + (myProfile < receiverProfile ? myProfile + "_" + receiverProfile : receiverProfile + "_" + myProfile);
+console.log("Agora Channel Name:", channelName); // Use this name if generating a Temp Token
+
+// EVENTS
+client.on("user-published", async (user, mediaType) => {
+    await client.subscribe(user, mediaType);
+    console.log("subscribe success");
+
+    if (mediaType === "video") {
+        const remoteVideoTrack = user.videoTrack;
+        remoteVideoTrack.play("remoteVideo");
+        document.getElementById('callStatusText').innerText = "";
+        document.getElementById('callingAudio').pause();
+        startCallTimer();
     }
 
-    // Improved config with reliable STUN servers
-    peer = new Peer({
-        config: {
-            'iceServers': [
-                { url: 'stun:stun.l.google.com:19302' },
-                { url: 'stun:stun1.l.google.com:19302' },
-                { url: 'stun:stun2.l.google.com:19302' }
-            ]
+    if (mediaType === "audio") {
+        const remoteAudioTrack = user.audioTrack;
+        remoteAudioTrack.play();
+        // If audio only, we might want to start timer here too if video never comes
+        if(!user.hasVideo){
+             document.getElementById('callStatusText').innerText = "";
+             document.getElementById('callingAudio').pause();
+             startCallTimer();
         }
-    });
+    }
+});
 
-    peer.on('open', id => {
-        myPeerId = id;
-        console.log("My Peer ID: " + id);
-        
-        // Check for pending auto-call from URL
-        if(window.pendingAutoCallType){
-            console.log("Processing pending auto-call: " + window.pendingAutoCallType);
-            const type = window.pendingAutoCallType;
-            window.pendingAutoCallType = null;
-            setTimeout(() => { initiateCall(type); }, 500);
-        }
-    });
-    
-    peer.on('error', err => {
-        console.error("PeerJS Error:", err);
-        if(err.type === 'browser-incompatible') {
-             alert("Your browser does not support calling feature. Please use Chrome or Firefox.");
-        }
-    });
+client.on("user-unpublished", (user, mediaType) => {
+    console.log("unpublished " + mediaType);
+    if(mediaType === 'video'){
+         // maybe show avatar?
+    }
+});
 
-    peer.on('call', call => {
-        if(activeCallId && localStream) {
-             console.log("Auto-answering return connection...");
-             call.answer(localStream);
-             handleStream(call, localStream);
-        } else {
-             // If we are already in the ringing state but haven't accepted yet,
-             // we'll handle this once the user clicks "Accept".
-             // For now, if someone calls unexpectedly, we ignore or alert.
-             console.log("Unexpected incoming PeerJS call.");
-        }
-    });
-}
-// Initialize immediately
-initPeer();
+client.on("user-left", (user) => {
+    console.log("user left");
+    // End call if it's 1-on-1
+    endCall();
+});
+
 
 // INITIATE CALL
 async function initiateCall(type){
-    if(!myPeerId) { alert("Call service not ready. Please wait."); return; }
-    
-    // 1. Show User Interface
-    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-        alert("Video calling requires a secure connection (HTTPS) or localhost. Please check your browser address bar.");
+    if(AGORA_APP_ID === "YOUR_AGORA_APP_ID_HERE"){
+        alert("Please configure Agora App ID in the code first!");
+        return;
+    }
+
+    // Check for HTTPS
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        alert("Video calling requires a secure connection (HTTPS) or localhost.");
         return;
     }
 
@@ -432,46 +429,48 @@ async function initiateCall(type){
     document.getElementById('callStatusText').innerText = "Calling...";
     document.getElementById('callingAudio').play();
     
-    // Get local stream
-    stopLocalStream(); // Ensure no previous stream is hogging device
-    try{
-        localStream = await navigator.mediaDevices.getUserMedia({
-            video: (type==='video'),
-            audio: true
-        });
-        document.getElementById('localVideo').srcObject = localStream;
+    // 1. Join Agora Channel
+    try {
+        await client.join(AGORA_APP_ID, channelName, AGORA_TOKEN, myProfile);
         
-        if(type === 'audio'){
-            // tracking that we are in audio mode for logic, though stream has video=false
-            document.getElementById('btnVideoToggle').classList.add('opacity-50', 'pointer-events-none');
-            updateCallUI('audio');
-        } else {
-             updateCallUI('video');
+        // 2. Create Local Tracks
+        try {
+            if(type === 'video'){
+                 [localTracks.audio, localTracks.video] = await AgoraRTC.createMicrophoneAndCameraTracks();
+            } else {
+                 localTracks.audio = await AgoraRTC.createMicrophoneAudioTrack();
+            }
+        } catch(mediaErr){
+            console.error(mediaErr);
+            alert("Camera/Microphone access failed: " + mediaErr.message);
+            closeCallModal();
+            return;
         }
-    }catch(e){
-        console.error("Media Error:", e);
-        if(e.name === 'NotAllowedError'){
-             alert("Access denied! Please check your browser permission settings for Camera and Microphone.");
-             closeCallModal();
-        } else if(e.name === 'NotFoundError'){
-             alert("No camera/microphone found on this device.");
-             closeCallModal();
-        } else if(e.name === 'NotReadableError' || e.name === 'OverconstrainedError'){
-             retryAudioOnly();
-        } else {
-             alert("Camera/Mic access failed: " + e.name + " - " + e.message);
-             closeCallModal();
+        
+        // 3. Play Local
+        if(localTracks.video){
+            localTracks.video.play("localVideo");
+            await client.publish([localTracks.audio, localTracks.video]);
+        } else if(localTracks.audio){
+            await client.publish([localTracks.audio]);
         }
+        
+        updateCallUI(type);
+
+    } catch (error) {
+        console.error(error);
+        alert("Failed to join call: " + error);
+        closeCallModal();
         return;
     }
     
-    // 2. Register Call in DB
+    // 4. Register in DB
     try {
         const fd = new FormData();
         fd.append('caller_id', myProfile);
         fd.append('receiver_id', receiverProfile);
         fd.append('type', type);
-        fd.append('peer_id', myPeerId);
+        fd.append('peer_id', "agora_v1"); // Dummy value for compatibility
         
         const res = await fetch('initiate_call.php', { method:'POST', body:fd });
         const text = await res.text();
@@ -480,7 +479,6 @@ async function initiateCall(type){
             closeCallModal();
         } else {
             activeCallId = text.trim();
-            // Now wait for polling to tell us "Accepted" or "Rejected"
         }
     } catch(e) { console.error(e); closeCallModal(); }
 }
@@ -497,6 +495,11 @@ function showIncomingCall(data){
 
 async function acceptIncomingCall(){
     if(!incomingCallData) return;
+    if(AGORA_APP_ID === "YOUR_AGORA_APP_ID_HERE"){
+        alert("Please configure Agora App ID!");
+        return;
+    }
+
     document.getElementById('ringtoneAudio').pause();
     document.getElementById('incomingCallModal').classList.add('hidden');
     
@@ -504,40 +507,42 @@ async function acceptIncomingCall(){
     document.getElementById('callModal').classList.remove('hidden');
     document.getElementById('callStatusText').innerText = "Connecting...";
     
-    const isVideo = (incomingCallData.type === 'video');
-    
-    // Get Local Stream
-    stopLocalStream();
-    try{
-        localStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
-        document.getElementById('localVideo').srcObject = localStream;
-        document.getElementById('localVideo').srcObject = localStream;
-        if(!isVideo) {
-            document.getElementById('btnVideoToggle').classList.add('opacity-50', 'pointer-events-none');
-            updateCallUI('audio');
-        } else {
-             updateCallUI('video');
-        }
-    }catch(e){
-        console.error("Media Error:", e);
-        if(e.name === 'NotReadableError' || e.name === 'OverconstrainedError'){
-            retryAudioOnly();
-            return;
-        }
-        alert("Camera/Mic error: " + e.name + ". Please ensure you have allowed permissions.");
-        rejectIncomingCall();
-        return;
-    }
-    
     // Update DB to 'accepted'
     await updateCallStatus(incomingCallData.call_id, 'accepted');
     activeCallId = incomingCallData.call_id;
-    
-    // CONNECT VIA PEERJS
-    // I am receiver. I have caller's Peer ID (incomingCallData.peer_id).
-    // I will CALL them to establish the media stream.
-    const call = peer.call(incomingCallData.peer_id, localStream);
-    handleStream(call);
+
+    // Join Agora
+    const isVideo = (incomingCallData.type === 'video');
+    try {
+        await client.join(AGORA_APP_ID, channelName, AGORA_TOKEN, myProfile);
+        
+        if(isVideo){
+             try {
+                [localTracks.audio, localTracks.video] = await AgoraRTC.createMicrophoneAndCameraTracks();
+                localTracks.video.play("localVideo");
+                await client.publish([localTracks.audio, localTracks.video]);
+             } catch(err){
+                alert("Media access failed: " + err);
+                closeCallModal();
+                return;
+             }
+        } else {
+             try {
+                localTracks.audio = await AgoraRTC.createMicrophoneAudioTrack();
+                await client.publish([localTracks.audio]);
+             } catch(err){
+                alert("Mic access failed: " + err);
+                closeCallModal();
+                return;
+             }
+        }
+        updateCallUI(incomingCallData.type);
+        
+    } catch (error) {
+        console.error(error);
+        alert("Failed to join call: " + error);
+        closeCallModal();
+    }
 }
 
 async function rejectIncomingCall(){
@@ -556,29 +561,10 @@ async function updateCallStatus(id, status){
     await fetch('update_call_status.php', { method:'POST', body:fd });
 }
 
-// HANDLE STREAM EVENTS
-function handleStream(call, predefinedStream){
-    currentCall = call;
-    
-    call.on('stream', remoteStream => {
-        document.getElementById('remoteVideo').srcObject = remoteStream;
-        document.getElementById('callStatusText').innerText = "";
-        document.getElementById('callingAudio').pause();
-        startCallTimer();
-    });
-    
-    call.on('close', () => { // remote peer closed
-        closeCallModal();
-    });
-    
-    call.on('error', err => { // peer error
-        console.error(err);
-        alert("Connection error: " + err);
-        closeCallModal();
-    });
-}
 
+// UTILS
 function startCallTimer(){
+    if(callTimerInterval) return; // FIX: Don't restart if already running
     stopCallTimer();
     callSeconds = 0;
     const timerEl = document.getElementById('callTimer');
@@ -600,94 +586,84 @@ function stopCallTimer(){
     document.getElementById('callTimer').classList.add('hidden');
 }
 
-
-// END CALL
 async function endCall(){
-    if(currentCall) currentCall.close();
+    // Leave Agora
+    try {
+        if(localTracks.audio) { localTracks.audio.close(); localTracks.audio = null; }
+        if(localTracks.video) { localTracks.video.close(); localTracks.video = null; }
+        await client.leave();
+    } catch(e) { console.error(e); }
+
     if(activeCallId) await updateCallStatus(activeCallId, 'ended');
     closeCallModal();
 }
 
 function closeCallModal(){
     stopCallTimer();
-    stopLocalStream();
     document.getElementById('callModal').classList.add('hidden');
-    document.getElementById('remoteVideo').srcObject = null;
-    document.getElementById('localVideo').srcObject = null;
-    document.getElementById('callStatusText').innerText = "";
     
+    document.getElementById('localVideo').innerHTML = "";
+    document.getElementById('remoteVideo').innerHTML = "";
+    
+    document.getElementById('callStatusText').innerText = "";
     document.getElementById('callingAudio').pause();
     document.getElementById('callingAudio').currentTime = 0;
     document.getElementById('ringtoneAudio').pause();
     document.getElementById('ringtoneAudio').currentTime = 0;
     
     activeCallId = null;
-    currentCall = null;
     incomingCallData = null;
 }
 
-function stopLocalStream(){
-    if(localStream){
-        localStream.getTracks().forEach(track => {
-            track.stop();
-        });
-        localStream = null;
-    }
-}
-
-async function retryAudioOnly(){
-    if(confirm("Video device is busy or not readable. Try Audio-only call?")){
-        // Close current attempt cleanup
-        stopLocalStream();
-        // Retry with audio only
-        if(incomingCallData){ // we were accepting a call
-             // We can't easily change the "type" of the incoming call in DB, 
-             // but we can answer with audio-only stream.
-             // modify incomingCallData type locally to handle UI
-             incomingCallData.type = 'audio';
-             acceptIncomingCall(); 
-        } else {
-             // we were initiating
-             initiateCall('audio');
-        }
-    } else {
-        closeCallModal();
-        if(incomingCallData) rejectIncomingCall();   
-    }
-}
-
 function toggleVideo(){
-    if(localStream){
-        const track = localStream.getVideoTracks()[0];
-        if(track) {
-            track.enabled = !track.enabled;
-            const btn = document.getElementById('btnVideoToggle');
-            const icon = document.getElementById('iconVideo');
-            
-            btn.classList.toggle('bg-red-500');
-            if(track.enabled){
-                icon.className = 'fa-solid fa-video';
-            } else {
-                icon.className = 'fa-solid fa-video-slash';
-            }
+    if(localTracks.video){
+        const isEnabled = localTracks.video.enabled; // current state
+        localTracks.video.setEnabled(!isEnabled);
+        
+        const btn = document.getElementById('btnVideoToggle');
+        const icon = document.getElementById('iconVideo');
+        
+        if(!isEnabled){ // NOW enabled
+             btn.classList.remove('bg-red-500');
+             icon.className = 'fa-solid fa-video';
+        } else {
+             btn.classList.add('bg-red-500');
+             icon.className = 'fa-solid fa-video-slash';
         }
     }
 }
+
 function toggleAudio(){
-    if(localStream){
-        const track = localStream.getAudioTracks()[0];
-        if(track) {
-            track.enabled = !track.enabled;
-            const btn = document.getElementById('btnAudioToggle');
-            const icon = document.getElementById('iconAudio');
-            
-            btn.classList.toggle('bg-red-500');
-            if(track.enabled){
-                icon.className = 'fa-solid fa-microphone';
-            } else {
-                icon.className = 'fa-solid fa-microphone-slash';
-            }
+    if(localTracks.audio){
+        const isEnabled = localTracks.audio.enabled;
+        localTracks.audio.setEnabled(!isEnabled);
+        
+        const btn = document.getElementById('btnAudioToggle');
+        const icon = document.getElementById('iconAudio');
+        
+        if(!isEnabled){ 
+             btn.classList.remove('bg-red-500');
+             icon.className = 'fa-solid fa-microphone';
+        } else {
+             btn.classList.add('bg-red-500');
+             icon.className = 'fa-solid fa-microphone-slash';
         }
+    }
+}
+
+let currentCamIndex = 0;
+async function switchCamera(){
+    if(!localTracks.video) return;
+    try {
+        const cams = await AgoraRTC.getCameras();
+        if(cams.length < 2) {
+            // alert("No other camera found");
+            return;
+        }
+        currentCamIndex = (currentCamIndex + 1) % cams.length;
+        await localTracks.video.setDevice(cams[currentCamIndex].deviceId);
+    } catch(e){
+        console.error(e);
     }
 }
 
@@ -695,20 +671,20 @@ function updateCallUI(type){
     const audioPlace = document.getElementById('audioPlaceholder');
     const remoteVid = document.getElementById('remoteVideo');
     const localCont = document.getElementById('localVideoContainer');
+    const btnSwitch = document.getElementById('btnSwitchCamera');
     
     if(type === 'audio'){
         audioPlace.classList.remove('hidden');
-        // Do NOT use 'hidden' (display:none) on video element as it stops playback/audio in many browsers
-        remoteVid.classList.add('opacity-0'); 
-        remoteVid.classList.remove('hidden');
-        
+        remoteVid.classList.add('invisible'); 
         localCont.classList.add('hidden');
+        document.getElementById('btnVideoToggle').classList.add('opacity-50', 'pointer-events-none');
+        btnSwitch.classList.add('hidden');
     } else {
         audioPlace.classList.add('hidden');
-        remoteVid.classList.remove('opacity-0');
-        remoteVid.classList.remove('hidden');
-        
+        remoteVid.classList.remove('invisible');
         localCont.classList.remove('hidden');
+        document.getElementById('btnVideoToggle').classList.remove('opacity-50', 'pointer-events-none');
+        btnSwitch.classList.remove('hidden');
     }
 }
 
@@ -824,6 +800,7 @@ async function fetchStatus(){
                  }
             }
         }
+
         // Update SEEN status for my messages
         if(j.max_seen_id > 0){
             // find all my sent messages that are NOT yet marked seen (optimization: or just all)
@@ -1087,6 +1064,7 @@ async function toggleBlock(){
     fd.append('my_id', myProfile);
     fd.append('target_id', receiverProfile);
     fd.append('action', 'block');
+    
     try{
         const res = await fetch('block_user.php', { method:'POST', body:fd });
         const text = await res.text();

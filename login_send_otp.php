@@ -1,60 +1,76 @@
 <?php
 session_start();
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
-require 'src/Exception.php';
-require 'src/PHPMailer.php';
-require 'src/SMTP.php';
+if (isset($_POST['mobile']) && isset($_POST['name']) && isset($_POST['caste'])) {
+    $mobile = trim($_POST['mobile']);
+    $name = trim($_POST['name']);
+    $caste = trim($_POST['caste']);
 
-if (isset($_POST['email'])) {
-    $email = trim($_POST['email']);
+    // Allowed Castes List
+    $allowed_castes = [
+        "Kapdi", "Deshani", "Dudhrejia", "Danidhariya", "Gondaliya", "Mesvaniya", 
+        "Ramkabir", "Ramsnehi", "Vaghani", "Chapbai", "Parabiya", "Hariyani", 
+        "Sarpadadiya", "Ramdevputra", "Ravibhan", "Baroliya"
+    ];
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        echo "invalid_email";
+    // Validate Caste
+    if (!in_array($caste, $allowed_castes)) {
+        echo "invalid_caste";
         exit;
     }
 
-    $otp = rand(100000, 999999);
-
-    $_SESSION['login_otp'] = $otp;
-    $_SESSION['login_email'] = $email;
-    $_SESSION['login_otp_expiry'] = time() + 300; // 5 minutes
-
-    $mail = new PHPMailer(true);
-    try {
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.hostinger.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'info@sadhuvandna.co.in';
-        $mail->Password   = 'Info$%^&*756'; 
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 587;
-
-        $mail->setFrom('info@sadhuvandna.co.in', 'Sadhu Vandna Login');
-        $mail->addAddress($email);
-
-        $mail->isHTML(true);
-        $mail->Subject = 'Your Login OTP - Sadhu Vandna';
-        $mail->Body = "
-            <div style='font-family:Arial,sans-serif; padding:20px; text-align:center;'>
-                <h2 style='color:#ea580c;'>Login Verification</h2>
-                <p>Use the OTP below to log in or create your account.</p>
-                <div style='font-size:24px; font-weight:bold; letter-spacing:5px; color:#ea580c; margin:20px 0;'>
-                    $otp
-                </div>
-                <p style='color:#666; font-size:12px;'>Valid for 5 minutes.</p>
-            </div>";
-
-        if ($mail->send()) {
-            echo "sent";
-        } else {
-            echo "error_send";
-        }
-    } catch (Exception $e) {
-        echo "error_mailer";
+    // Basic Mobile Validation
+    if (!preg_match('/^[0-9]{10}$/', $mobile)) {
+        echo "invalid_mobile";
+        exit;
     }
+    
+    // --- Rate Limiting (Max 2 OTPs per day - DB Based) ---
+    include("connection.php");
+    date_default_timezone_set('Asia/Kolkata');
+    $today = date('Y-m-d');
+    
+    // Create table if not exists (One-time setup)
+    $createTable = "CREATE TABLE IF NOT EXISTS tbl_otp_attempts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        mobile VARCHAR(15) NOT NULL,
+        sent_time DATETIME NOT NULL
+    )";
+    mysqli_query($con, $createTable);
+
+    // Count attempts for this mobile today
+    $stmt = $con->prepare("SELECT COUNT(*) FROM tbl_otp_attempts WHERE mobile=? AND DATE(sent_time)=?");
+    $stmt->bind_param("ss", $mobile, $today);
+    $stmt->execute();
+    $stmt->bind_result($attempt_count);
+    $stmt->fetch();
+    $stmt->close();
+
+    if ($attempt_count >= 10) { // Production Limit
+        echo "limit_exceeded";
+        exit;
+    }
+
+    // Insert attempt
+    $now = date('Y-m-d H:i:s');
+    $ins = $con->prepare("INSERT INTO tbl_otp_attempts (mobile, sent_time) VALUES (?, ?)");
+    $ins->bind_param("ss", $mobile, $now);
+    $ins->execute();
+    $ins->close();
+
+    // Generate OTP (NOT USED WITH WIDGET, BUT KEPT FOR BACKEND REFERENCE IF NEEDED)
+    // $otp = rand(100000, 999999);
+    // $_SESSION['login_otp'] = $otp;
+    
+    $_SESSION['login_mobile'] = $mobile;
+    $_SESSION['login_name'] = $name;
+    $_SESSION['login_caste'] = $caste;
+    $_SESSION['login_otp_expiry'] = time() + 300; 
+
+    // With Widget Flow, we just return 'allowed' to let frontend proceed
+    echo "allowed";
+
 } else {
-    echo "missing_email";
+    echo "missing_mobile";
 }
 ?>

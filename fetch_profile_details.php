@@ -2,8 +2,8 @@
 include("connection.php");
 session_start();
 
-$user_email = $_SESSION['sadhu_user_id'] ?? '';
-if(!$user_email) die("Unauthorized");
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
+if(!$user_mobile) die("Unauthorized");
 
 $profile_id = intval($_GET['id']);
 if(!$profile_id) die("Invalid ID");

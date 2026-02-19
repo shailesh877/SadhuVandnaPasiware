@@ -1,0 +1,35 @@
+2026-02-15 09:15:47 - Mobile: 9569853390 - Response: {"status_code":999,"message":"You need to complete one transaction of 100 INR or more before using API route."} - Error: 
+2026-02-15 09:19:17 - Mobile: 9569853390 - Response: {"status_code":999,"message":"You need to complete one transaction of 100 INR or more before using API route."} - Error: 
+2026-02-15 09:24:39 - Response: {"status_code":999,"message":"You need to complete one transaction of 100 INR or more before using API route."} - Error: 
+2026-02-15 09:32:48 - Response: {"status_code":999,"message":"You need to complete one transaction of 100 INR or more before using API route."} - Error: 
+2026-02-15 09:34:45 - Response: {"status_code":999,"message":"You need to complete one transaction of 100 INR or more before using API route."} - Error: 
+2026-02-15 09:50:14 - Response: {"status_code":999,"message":"You need to complete one transaction of 100 INR or more before using API route."} - Error: 
+2026-02-15 09:59:32 - Response: {"status_code":999,"message":"You need to complete one transaction of 100 INR or more before using API route."} - Error: 
+2026-02-15 10:02:26 - Response: {"status_code":999,"message":"You need to complete one transaction of 100 INR or more before using API route."} - Error: 
+2026-02-15 10:25:33 - Response: {"return":true,"request_id":"STi4dEk2GaSYsGq","message":["SMS sent successfully."]} - Error: 
+2026-02-15 11:02:28 - Response: {"return":true,"request_id":"SrzmIYQE1RzJLEQ","message":["SMS sent successfully."]} - Error: 
+2026-02-15 11:07:30 - Response: {"return":false,"status_code":406,"message":"Invalid Sender ID"} - Error: 
+2026-02-15 11:28:47 - Response: {"return":false,"status_code":406,"message":"Invalid Sender ID"} - Error: 
+2026-02-17 08:17:41 - Response: {"return":false,"status_code":406,"message":"Invalid Sender ID"} - Error: 
+2026-02-17 08:29:27 - Response: {"return":false,"status_code":406,"message":"Invalid Sender ID"} - Error: 
+2026-02-17 08:48:45 - Response: {"return":true,"request_id":"S7i6aR9MlYn5ga9","message":["SMS sent successfully."]} - Error: 
+2026-02-17 08:53:25 - Response: {"return":true,"request_id":"SuSP6LLXSx1wJ1l","message":["SMS sent successfully."]} - Error: 
+2026-02-18 17:40:25 - Response: {"return":false,"status_code":406,"message":"Invalid Sender ID"} - Error: 
+2026-02-19 16:50:10 - Requesting: https://control.msg91.com/api/v5/widget/verifyAccessToken?mobile=919569853390&access_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyZXF1ZXN0SWQiOiIzNjYyNzM2YjczNTYzNDMzMzAzMDMyMzMiLCJjb21wYW55SWQiOjQ5NTIzNn0.Vv11kVKudyBN_k4X1I5qGgdQozxuogXFJx7NlUDytkA
+2026-02-19 16:50:11 - Verify Response: {"message":"AuthenticationFailure","type":"error","code":"418"} Error: 
+2026-02-19 16:51:45 - Requesting: https://control.msg91.com/api/v5/widget/verifyAccessToken?mobile=919569853390&access_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyZXF1ZXN0SWQiOiIzNjYyNzM2Yjc1NDIzNTM2MzAzNTM3MzgiLCJjb21wYW55SWQiOjQ5NTIzNn0.97fyoY9CrxxKyU9gbnNreqCIDKkEOgX3PAUoGTGvkd8
+2026-02-19 16:51:45 - Verify Response: {"message":"AuthenticationFailure","type":"error","code":"418"} Error: 
+2026-02-19 17:02:57 - Requesting: https://control.msg91.com/api/v5/widget/verifyAccessToken?mobile=919569853390&access_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyZXF1ZXN0SWQiOiIzNjYyNzM2YjQ1NDkzMTM4MzkzNTMzMzciLCJjb21wYW55SWQiOjQ5NTIzNn0.plxfAWFAd64gJ89cF2N3M9WXs3aQXTvLfKw2tLY07bc
+2026-02-19 17:03:00 - Verify Response: {"message":"AuthenticationFailure","type":"error","code":"418"} Error: 
+2026-02-19 17:06:59 - Requesting: https://control.msg91.com/api/v5/widget/verifyAccessToken?mobile=919696479679&access_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyZXF1ZXN0SWQiOiIzNjYyNzM2YjRhNTAzNjMzMzQzNzM4MzIiLCJjb21wYW55SWQiOjQ5NTIzNn0.nIJs6-nW1qiJ9GiS41kv6_ayS2K0liHb-Z7Hj2CzLPM
+2026-02-19 17:07:01 - Verify Response: {"message":"AuthenticationFailure","type":"error","code":"201"} Error: 
+2026-02-19 17:15:59 - Requesting (POST): https://control.msg91.com/api/v5/widget/verifyAccessToken Data: {"authkey":"495236Ar0Le3hg86996e6d6P1","access-token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyZXF1ZXN0SWQiOiIzNjYyNzM2YjUzNGIzNzM0MzczMzMwMzQiLCJjb21wYW55SWQiOjQ5NTIzNn0.2qBXf8edRphFkexKXE7yrhsnw7zsks_poBM3Y6Gl3YA","mobile":"919648022011"}
+2026-02-19 17:16:00 - Verify Response: {"message":"AuthenticationFailure","type":"error","code":"418"} Error: 
+2026-02-19 17:36:44 - Requesting (POST): https://control.msg91.com/api/v5/widget/verifyAccessToken Data: {"authkey":"495236Ar0Le3hg86996e6d6P1","access-token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyZXF1ZXN0SWQiOiIzNjYyNzM2YzY2NzQzNDMzMzUzMzM0MzEiLCJjb21wYW55SWQiOjQ5NTIzNn0.-Lt5NM01Q4xM-Lsjs8M7RJRatbdCEmqcCebYO8ZWsSU","mobile":"919648022011"}
+2026-02-19 17:36:45 - Verify Response: {"message":"AuthenticationFailure","type":"error","code":"418"} Error: 
+2026-02-19 17:36:45 - WARNING: Backend Verify Failed (Auth Key Issue?) but PROCEEDING. Msg: AuthenticationFailure
+2026-02-19 17:45:48 - Requesting (POST): https://control.msg91.com/api/v5/widget/verifyAccessToken Data: {"authkey":"495236Ar0Le3hg86996e6d6P1","access-token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyZXF1ZXN0SWQiOiIzNjYyNzM2YzZmNjYzNDMyMzEzODM2MzkiLCJjb21wYW55SWQiOjQ5NTIzNn0.5-0fRKMieyEzCE8LJ_6h3XxrXvHET47rM3fkxMEbKTE"}
+2026-02-19 17:45:50 - Verify Response: {"message":"AuthenticationFailure","type":"error","code":"418"} Error: 
+2026-02-19 18:00:33 - PROD WARNING: Auth Failed but PROCEEDING. Msg: SSL certificate problem: unable to get local issuer certificate
+2026-02-19 18:07:01 - PROD WARNING: Auth Failed but PROCEEDING. Msg: SSL certificate problem: unable to get local issuer certificate
+2026-02-19 18:17:56 - PROD WARNING: Auth Failed but PROCEEDING. Msg: SSL certificate problem: unable to get local issuer certificate

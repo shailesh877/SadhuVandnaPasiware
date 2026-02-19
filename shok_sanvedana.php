@@ -24,6 +24,7 @@ include("header.php");
                                     </label>
                                     <input type="file" id="photoUpload" accept="image/*" style="display:none;">
                                 </div>
+
                                 <!-- Language select -->
                                 <div class="flex-1">
                                     <label id="labelLang" class="block text-orange-700 font-semibold mb-1">Choose
@@ -138,7 +139,7 @@ include("header.php");
                         <div class="w-full rounded-xl py-4 px-4 text-center z-10" id="cardTextArea">
                             <!-- Demo content initially -->
                             <div >
-                                <div class="inline-block rounded-md px-4 py-2 font-bold text-md text-orange-900 flex justify-center items-center text-md">
+                                <div class="inline-block rounded-md px-4 py-2 font-bold text-md text-white flex justify-center items-center text-md">
                                     Samajik Sadagyashri [Name]
                                 </div>
                             </div>
@@ -268,7 +269,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 return `
                 <div class="mt-8">
                   <div class="inline-block rounded-md  font-bold text-md text-orange-900 flex justify-center items-center text-lg">
-                    સમાધિસ્થ સાધુશ્રી ${DEMO.name}
+                    સામાજિક સાદગ્યશ્રી ${DEMO.name}
                   </div>
                 </div>
                 <div class="mt-1 text-gray-800 text-sm md:text-md">(ઉ.વર્ષ.-${DEMO.age}) (ગામ-${DEMO.village})</div>
@@ -389,89 +390,17 @@ document.addEventListener("DOMContentLoaded", function () {
             };
 
             // templates object: try to use templates[selectedLang], fallback to LANGUAGES demo
-form.addEventListener('submit', function(e){
-    e.preventDefault();
-
-    const d = {
-        name: document.getElementById('name').value,
-        age: age.value,
-        village: village.value,
-        samadhi: samadhi.value,
-        vidhi: vidhi.value,
-        family: family.value,
-        location: document.getElementById('location').value
-    };
-
-    const TEXT = {
-        en: {
-            title: "Samajik Sadagyashri",
-            age: "Age",
-            village: "Village",
-            samadhi: "Samadhi",
-            ceremony: "Samadhi Ceremony",
-            location: "Location"
-        },
-        hi: {
-            title: "सामाजिक सादग्यश्री",
-            age: "उ.वर्ष",
-            village: "गांव",
-            samadhi: "समाधि",
-            ceremony: "समाधि विधि",
-            location: "स्थान"
-        },
-        gu: {
-            title: "સમાધિસ્થ સાધુશ્રી",
-            age: "ઉ.વર્ષ",
-            village: "ગામ",
-            samadhi: "સમાધિ",
-            ceremony: "સમાધિ વિધી",
-            location: "સ્થાન"
-        }
-    };
-
-    const t = TEXT[selectedLang];
-
-    cardTextArea.innerHTML = `
-        <div>
-            <div class="inline-block rounded-md px-4 py-2 font-bold text-md text-orange-800">
-                ${t.title} ${d.name}
-            </div>
-        </div>
-
-        <div class="mt-1 text-gray-800 text-md">
-            (${t.age}: ${d.age}) (${t.village}: ${d.village})
-        </div>
-
-        <div class="mt-1 text-gray-800 text-md">
-            ${t.samadhi}: ${d.samadhi}
-        </div>
-
-        <hr class="my-2 border-orange-400">
-
-        <div class="text-gray-900 mb-2 text-md">
-            ${LANGUAGES[selectedLang].prayer}
-        </div>
-
-        <hr class="my-2 border-orange-300">
-
-        <div class="text-red-600 font-semibold text-md">
-            ${t.ceremony}: ${d.vidhi} (${d.village})
-        </div>
-
-        <div class="mt-1 text-orange-700 font-medium text-sm">
-            ${d.family}
-        </div>
-
-        <div class="mt-1 text-orange-700 text-sm">
-            ${t.location}: ${d.location}
-        </div>
-    `;
-
-    cardProfileImg.src = profileImg;
-    isGenerated = true;
-});
-
-
+            try {
+                if (typeof templates !== 'undefined' && templates[selectedLang]) {
+                    document.getElementById('cardTextArea').innerHTML = templates[selectedLang](d);
+                } else {
+                    document.getElementById('cardTextArea').innerHTML = LANGUAGES[selectedLang].demoCard();
+                }
+            } catch(err) {
+                // fallback safe
+                document.getElementById('cardTextArea').innerHTML = LANGUAGES[selectedLang].demoCard();
+                console.error('template render error', err);
+            }
 
             const cardImg = document.getElementById('cardProfileImg');
             if(cardImg) cardImg.src = profileImg;
@@ -496,6 +425,7 @@ form.addEventListener('submit', function(e){
             });
         });
     }
+
     // Delete resets preview + form
     const deleteBtn = document.getElementById('deleteBtn');
     if(deleteBtn){
@@ -508,6 +438,7 @@ form.addEventListener('submit', function(e){
             isGenerated = false;
         });
     }
+
 });
 </script>
 
@@ -516,6 +447,3 @@ form.addEventListener('submit', function(e){
 
 
         </main>
-        
-        </body>
-        </html>

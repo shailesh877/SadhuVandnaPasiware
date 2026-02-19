@@ -6,13 +6,13 @@ if(!isset($_SESSION['sadhu_user_id'])){
     die("Login required!");
 }
 
-$user_email = $_SESSION['sadhu_user_id']; // email stored in session
+$user_mobile = $_SESSION['sadhu_user_id']; // mobile stored in session
 $status = isset($_POST['status']) ? trim($_POST['status']) : '';
 $link = isset($_POST['link']) ? trim($_POST['link']) : '';
 
-// Fetch numeric user_id from email
-$stmt = $con->prepare("SELECT id FROM tbl_members WHERE email=? LIMIT 1");
-$stmt->bind_param("s", $user_email);
+// Fetch numeric user_id from mobile
+$stmt = $con->prepare("SELECT id FROM tbl_members WHERE mobile=? LIMIT 1");
+$stmt->bind_param("s", $user_mobile);
 $stmt->execute();
 $res = $stmt->get_result();
 

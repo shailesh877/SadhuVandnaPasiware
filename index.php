@@ -14,7 +14,7 @@ if(!isset($_SESSION['sadhu_user_id'])){
 }
 
 $user_id = $_SESSION['sadhu_user_id'];
-$user_q = $con->query("SELECT * FROM tbl_members WHERE email='$user_id' LIMIT 1");
+$user_q = $con->query("SELECT * FROM tbl_members WHERE mobile='$user_id' LIMIT 1");
 $user = $user_q->fetch_assoc();
 
 $story_q = $con->query("

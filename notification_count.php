@@ -2,16 +2,16 @@
 include("connection.php");
 session_start();
 
-// SESSION me email store hai
-$session_email = $_SESSION['sadhu_user_id'] ?? '';
+// SESSION me mobile store hai
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
 
-if(!$session_email){
+if(!$user_mobile){
     echo 0;
     exit;
 }
 
-// Step 1: Get user_id from email
-$userQ = $con->query("SELECT id FROM tbl_members WHERE email = '$session_email' LIMIT 1");
+// Step 1: Get user_id from mobile
+$userQ = $con->query("SELECT id FROM tbl_members WHERE mobile = '$user_mobile' LIMIT 1");
 
 if($userQ->num_rows == 0){
     echo 0;

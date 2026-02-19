@@ -4,8 +4,8 @@ include("connection.php");
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-$user_email = $_SESSION['sadhu_user_id'] ?? '';
-if(!$user_email){
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
+if(!$user_mobile){
     header("Location: login.php");
     exit;
 }
@@ -13,7 +13,7 @@ if(!$user_email){
 date_default_timezone_set("Asia/Kolkata");
 
 /* ================= USER ================= */
-$user = $con->query("SELECT * FROM tbl_members WHERE email='$user_email'")->fetch_assoc();
+$user = $con->query("SELECT * FROM tbl_members WHERE mobile='$user_mobile'")->fetch_assoc();
 $user_id = (int)$user['id'];
 
 /* ================= PROFILE ================= */
@@ -330,7 +330,7 @@ if(isset($_POST['save_profile'])){
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Caste/Community</label>
                     <input type="text" name="caste" value="<?= htmlspecialchars($profile['caste'] ?? ''); ?>"
-                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required="true">
+                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
                 <div>
@@ -343,7 +343,7 @@ if(isset($_POST['save_profile'])){
                     <label class="block text-orange-700 font-bold mb-1">Father Occupation</label>
                     <input type="text" name="father_occupation"
                         value="<?= htmlspecialchars($profile['father_occupation'] ?? '') ?>"
-                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required="true">
+                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
                 <div>
@@ -367,46 +367,46 @@ if(isset($_POST['save_profile'])){
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Nature</label>
                     <input type="text" name="nature" value="<?= htmlspecialchars($profile['nature'] ?? '') ?>"
-                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required="true">
+                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Food Habit</label>
                     <input type="text" name="food" value="<?= htmlspecialchars($profile['food'] ?? '') ?>"
-                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required="true">
+                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Habits</label>
                     <input type="text" name="habits" value="<?= htmlspecialchars($profile['habits'] ?? '') ?>"
-                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required="true">
+                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Hobbies</label>
                     <input type="text" name="hobbies" value="<?= htmlspecialchars($profile['hobbies'] ?? '') ?>"
-                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required="true">
+                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Partner Age From</label>
                     <input type="text" name="partner_age_from"
                         value="<?= htmlspecialchars($profile['partner_age_from'] ?? '') ?>"
-                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required="true">
+                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Partner Age To</label>
                     <input type="text" name="partner_age_to"
                         value="<?= htmlspecialchars($profile['partner_age_to'] ?? '') ?>"
-                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required="true">
+                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Partner Education</label>
                     <input type="text" name="partner_education"
                         value="<?= htmlspecialchars($profile['partner_education'] ?? '') ?>"
-                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required="true">
+                        class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
                 <div class="md:col-span-2">
@@ -429,6 +429,7 @@ if(isset($_POST['save_profile'])){
                     <i class="fa fa-save"></i>
                     <?= $profile ? 'Update Profile' : 'Save Marriage Profile'; ?>
                 </button>
+
                 <a href="profile.php"
                     class="w-full bg-orange-100 text-orange-700 font-bold border border-orange-300 hover:bg-orange-200 py-3 px-7 rounded-lg flex items-center gap-2 justify-center shadow transition text-base">
                     Cancel

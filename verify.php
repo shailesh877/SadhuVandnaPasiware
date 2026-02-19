@@ -6,8 +6,8 @@ include("config.php");
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors\SignatureVerificationError;
 
-$uesr_email= $_SESSION['sadhu_user_id'] ?? '';
-$query = $con->query("SELECT id FROM tbl_members WHERE email='".$con->real_escape_string($uesr_email)."' LIMIT 1");
+$user_mobile= $_SESSION['sadhu_user_id'] ?? '';
+$query = $con->query("SELECT id FROM tbl_members WHERE mobile='".$con->real_escape_string($user_mobile)."' LIMIT 1");
 $res=mysqli_fetch_assoc($query);
 $logged_user_id = $res['id'] ?? 0;
 $sender_id = intval($_SESSION['sender_id'] ?? 0);

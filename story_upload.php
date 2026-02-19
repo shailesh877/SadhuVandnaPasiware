@@ -7,8 +7,8 @@ if(!isset($_SESSION['sadhu_user_id'])){
   exit;
 }
 
-$user_email = $_SESSION['sadhu_user_id'];
-$user = $con->query("SELECT * FROM tbl_members WHERE email='$user_email'")->fetch_assoc();
+$user_mobile = $_SESSION['sadhu_user_id'];
+$user = $con->query("SELECT * FROM tbl_members WHERE mobile='$user_mobile'")->fetch_assoc();
 $user_id = $user['id'];
 $file = $_FILES['story'];
 

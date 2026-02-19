@@ -22,6 +22,20 @@
   .slide-down { animation: slideDown 0.3s ease-out forwards; }
   @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
+<script type="text/javascript">
+  var configuration = {
+    widgetId: "3662736a6146383834383833",
+    tokenAuth: "495236TgKMhDKHXV6996e94bP1",
+    exposeMethods: true,
+    captchaRenderId: "msg91-captcha", 
+    success: (data) => {
+        console.log('success response', data);
+    },
+    failure: (error) => {
+        console.log('failure reason', error);
+    },
+};
+</script>
 </head>
 <body class="gradient-bg min-h-screen block md:flex md:justify-center md:items-center p-0 md:px-4 md:py-6 relative overflow-x-hidden">
 
@@ -41,14 +55,62 @@
 
   <form id="loginForm" class="flex flex-col gap-4">
     
-    <!-- STEP 1: EMAIL -->
+    <!-- STEP 0: NAME & CASTE -->
+    <div id="stepDetails" class="group transition-all flex flex-col gap-4">
+        <!-- Name Field -->
+        <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Full Name</label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-orange-500 transition-colors">
+                    <i class="fa-solid fa-user"></i>
+                </span>
+                <input type="text" id="name" placeholder="Enter your Name" 
+                       class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" required />
+            </div>
+        </div>
+
+        <!-- Caste Field -->
+        <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Caste (Samaj)</label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-orange-500 transition-colors">
+                    <i class="fa-solid fa-users"></i>
+                </span>
+                <select id="caste" class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm appearance-none" required>
+                    <option value="" disabled selected>Select Caste</option>
+                    <option value="Kapdi">Kapdi</option>
+                    <option value="Deshani">Deshani</option>
+                    <option value="Dudhrejia">Dudhrejia</option>
+                    <option value="Danidhariya">Danidhariya</option>
+                    <option value="Gondaliya">Gondaliya</option>
+                    <option value="Mesvaniya">Mesvaniya</option>
+                    <option value="Ramkabir">Ramkabir</option>
+                    <option value="Ramsnehi">Ramsnehi</option>
+                    <option value="Vaghani">Vaghani</option>
+                    <option value="Chapbai">Chapbai</option>
+                    <option value="Parabiya">Parabiya</option>
+                    <option value="Hariyani">Hariyani</option>
+                    <option value="Sarpadadiya">Sarpadadiya</option>
+                    <option value="Ramdevputra">Ramdevputra</option>
+                    <option value="Ravibhan">Ravibhan</option>
+                    <option value="Baroliya">Baroliya</option> 
+                    <option value="Other">Other</option>
+                </select>
+                <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
+                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- STEP 1: MOBILE -->
     <div id="stepEmail" class="group transition-all">
-        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Email Address</label>
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Mobile Number</label>
         <div class="relative">
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-orange-500 transition-colors">
-                <i class="fa-regular fa-envelope"></i>
+                <i class="fa-solid fa-mobile-screen"></i>
             </span>
-            <input type="email" id="email" placeholder="name@example.com" 
+            <input type="tel" id="mobile" placeholder="Enter 10-digit Mobile Number" maxlength="10" 
                    class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" required />
         </div>
     </div>
@@ -64,11 +126,12 @@
                    class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm font-mono tracking-widest text-lg" />
         </div>
         <div class="flex justify-between items-center mt-2">
-            <span class="text-xs text-green-600 font-medium"><i class="fa-solid fa-paper-plane mr-1"></i> OTP Sent to email</span>
+            <span class="text-xs text-green-600 font-medium"><i class="fa-solid fa-paper-plane mr-1"></i> OTP Sent to mobile</span>
             <button type="button" id="resendBtn" class="text-xs text-orange-600 hover:text-orange-800 font-semibold underline disabled:opacity-50 disabled:cursor-not-allowed">Resend OTP</button>
         </div>
     </div>
 
+    <div id="msg91-captcha" class="mb-4"></div>
     <button type="submit" id="submitBtn" 
             class="mt-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold rounded-xl py-3.5 w-full shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex justify-center items-center gap-2">
         <span>Get Login Code</span> <i class="fa-solid fa-arrow-right"></i>
@@ -82,138 +145,149 @@
   </div>
 </div>
 
+
 <script>
 $(document).ready(function(){
     let isOtpSent = false;
-    let timerInterval;
 
     function showMsg(msg, type='error') {
         const color = type === 'success' ? 'text-green-600' : 'text-red-500';
         $('#loginMsg').removeClass('text-red-500 text-green-600').addClass(color).html(msg).fadeIn();
-        // Clear message after 3 seconds if success
         if(type === 'success') setTimeout(() => $('#loginMsg').fadeOut(), 3000);
-    }
-
-    function startTimer(duration) {
-        let timer = duration, minutes, seconds;
-        $('#resendBtn').prop('disabled', true);
-        
-        clearInterval(timerInterval);
-        timerInterval = setInterval(function () {
-            minutes = parseInt(timer / 60, 10);
-            seconds = parseInt(timer % 60, 10);
-
-            minutes = minutes < 10 ? "0" + minutes : minutes;
-            seconds = seconds < 10 ? "0" + seconds : seconds;
-
-            $('#resendBtn').text("Resend in " + minutes + ":" + seconds);
-
-            if (--timer < 0) {
-                clearInterval(timerInterval);
-                $('#resendBtn').prop('disabled', false).text("Resend OTP");
-            }
-        }, 1000);
     }
 
     $('#loginForm').submit(function(e){
         e.preventDefault();
         
-        let email = $('#email').val().trim();
-        let otp = $('#otp').val().trim();
+        let name = $('#name').val().trim();
+        let caste = $('#caste').val();
+        let mobile = $('#mobile').val().trim();
         let btn = $('#submitBtn');
 
-        if(!isOtpSent) {
-            // --- STATE 1: SEND OTP ---
-            if(!email){ showMsg('Please enter your email address'); return; }
-            if(!validateEmail(email)){ showMsg('Invalid email format'); return; }
+        if(!name){ showMsg('Please enter your full name'); return; }
+        if(!caste){ showMsg('Please select your caste'); return; }
+        if(caste === 'Other'){ showMsg('Only users from authorized castes are allowed in this community.'); return; }
+        if(!mobile){ showMsg('Please enter your mobile number'); return; }
+        if(!validateMobile(mobile)){ showMsg('Invalid mobile number (10 digits required)'); return; }
 
-            // UI Loading
-            btn.prop('disabled', true).html('<i class="fa-solid fa-circle-notch fa-spin"></i> Sending OTP...');
-            $('#email').prop('readonly', true).addClass('opacity-70 cursor-not-allowed');
-
-            $.post('login_send_otp.php', {email: email}, function(response){
-                btn.prop('disabled', false).html('Get Login Code <i class="fa-solid fa-arrow-right"></i>');
-                
-                if(response.trim() === 'sent'){
-                    // Success
-                    isOtpSent = true;
-                    $('#stepOtp').removeClass('hidden');
-                    $('#otp').focus();
-                    btn.html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
-                    showMsg('OTP sent successfully!', 'success');
-                    startTimer(60); // 1 minute timer
-                } else if(response.trim() === 'invalid_email') {
-                    showMsg('Please enter a valid email address');
-                    $('#email').prop('readonly', false).removeClass('opacity-70 cursor-not-allowed').focus();
-                } else {
-                    showMsg('Failed to send OTP. Please try again.');
-                    $('#email').prop('readonly', false).removeClass('opacity-70 cursor-not-allowed');
-                }
-            }).fail(function(){
-                btn.prop('disabled', false).html('Get Login Code <i class="fa-solid fa-arrow-right"></i>');
-                $('#email').prop('readonly', false).removeClass('opacity-70 cursor-not-allowed');
-                showMsg('Connection error. Please check internet.');
-            });
-
-        } else {
-            // --- STATE 2: VERIFY OTP ---
-            if(!otp){ showMsg('Please enter the 6-digit OTP'); return; }
-            if(otp.length !== 6 || isNaN(otp)){ showMsg('OTP must be 6 digits'); return; }
-
-            // UI Loading
-            btn.prop('disabled', true).html('<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...');
-
-            $.post('login_verify_otp.php', {otp: otp}, function(response){
-                let res = response.trim();
-                if(res.includes('success_login')){
-                    showMsg('Login Successful! Redirecting...', 'success');
-                    setTimeout(() => window.location.href = 'index.php', 1000);
-                } else if(res.includes('success_register')) {
-                    showMsg('Account Created! Redirecting...', 'success');
-                    setTimeout(() => window.location.href = 'profile.php', 1000); // Redirect to profile to fill details
-                } else if(res === 'invalid_otp') {
-                    showMsg('Invalid OTP. Please try again.');
-                    btn.prop('disabled', false).html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
-                } else if(res === 'expired_otp') {
-                    showMsg('OTP Expired. Please resend.');
-                    btn.prop('disabled', false).html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
-                } else if(res === 'blocked') {
-                    showMsg('Your account is blocked. Contact support Team.');
-                    btn.prop('disabled', false).html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
-                } else {
-                    showMsg('Login failed: ' + res);
-                    btn.prop('disabled', false).html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
-                }
-            }).fail(function(){
-                showMsg('Connection error.');
-                btn.prop('disabled', false).html('Verify & Login <i class="fa-solid fa-right-to-bracket"></i>');
-            });
-        }
-    });
-
-    // Resend Logic
-    $('#resendBtn').click(function(){
-        let email = $('#email').val().trim();
-        if(!email){ showMsg('Enter email first'); return; }
+        // Check Eligibility with Backend
+        btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> Checking...');
         
-        $(this).prop('disabled', true).text('Sending...');
-        
-        $.post('login_send_otp.php', {email: email}, function(response){
-            if(response.trim() === 'sent'){
-                showMsg('OTP Resent!', 'success');
-                startTimer(60);
+        $.post('login_send_otp.php', {mobile: mobile, name: name, caste: caste}, function(checkRes){
+            let check = checkRes.trim();
+            
+            if(check === 'allowed'){
+                 // --- MSG91 Headless Send ---
+                 // User provided configuration uses '91' + mobile in examples
+                 // window.sendOtp(identifier, success, failure)
+                 
+                 window.sendOtp('91' + mobile, function(data){
+                     console.log('OTP Sent:', data);
+                     showMsg('OTP Sent Successfully', 'success');
+                     
+                     // Helper: Hide Get Code Btn, Show OTP Input
+                     $('#submitBtn').hide();
+                     
+                     // Remove existing OTP div if any
+                     $('#otpDiv').remove();
+                     
+                     // Append OTP Input Form
+                     let otpHtml = `
+                        <div id="otpDiv" class="mt-4 animate-fade-in-up">
+                            <input type="text" id="enteredOtp" placeholder="Enter 6-digit OTP" maxlength="6"
+                                   class="w-full border-2 border-gray-200 p-3 rounded-xl text-center font-bold tracking-[0.5em] text-xl focus:border-orange-500 outline-none transition-colors">
+                            <button type="button" id="verifyOtpBtn" 
+                                    class="mt-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl py-3 w-full shadow-lg transition-transform active:scale-95">
+                                Verify OTP
+                            </button>
+                            <p class="text-xs text-center mt-2 text-gray-400 cursor-pointer hover:text-orange-500" onclick="window.retryOtp('11')">Resend OTP</p>
+                        </div>
+                     `;
+                     
+                     $(otpHtml).insertAfter('#submitBtn');
+                     
+                     // Verify Click Handler
+                     $('#verifyOtpBtn').click(function(){
+                         let otpVal = $('#enteredOtp').val().trim();
+                         if(!otpVal) { showMsg('Enter OTP'); return; }
+                         
+                         $(this).html('<i class="fa-solid fa-spinner fa-spin"></i> Verifying...');
+                         
+                         window.verifyOtp(otpVal, function(vData){
+                             console.log('Verified:', vData);
+                             showMsg('Verified! Logging in...', 'success');
+                             
+                             // Use FETCH as requested, sending JSON payload
+                             fetch('login_verify_otp.php', {
+                                 method: 'POST',
+                                 headers: {
+                                     'Content-Type': 'application/json'
+                                 },
+                                 body: JSON.stringify({
+                                     access_token: vData.message, // Token from MSG91
+                                     mobile: mobile,
+                                     name: name,
+                                     caste: caste,
+                                     via_widget: true
+                                 })
+                             })
+                             .then(response => response.text())
+                             .then(res => {
+                                res = res.trim();
+                                if(res.includes('success_login')){
+                                    showMsg('Login Successful! Redirecting...', 'success');
+                                    setTimeout(() => window.location.href = 'index.php', 1000);
+                                } else if(res.includes('success_register')) {
+                                    showMsg('Account Created! Redirecting...', 'success');
+                                    setTimeout(() => window.location.href = 'profile.php', 1000); 
+                                } else {
+                                    showMsg('Login failed: ' + res);
+                                    $('#verifyOtpBtn').html('Verify OTP');
+                                }
+                             })
+                             .catch(err => {
+                                 console.error("Fetch Error:", err);
+                                 showMsg('Connection Error during Login');
+                                 $('#verifyOtpBtn').html('Verify OTP');
+                             });
+                             
+                         }, function(err){
+                             console.error(err);
+                             showMsg('Invalid OTP. Please try again.');
+                             $('#verifyOtpBtn').html('Verify OTP');
+                         });
+                     });
+
+                 }, function(err){
+                     console.error('SendOTP Error:', err);
+                     // Alert the exact error so user sees "IPBlocked"
+                     alert('OTP Failed: ' + (err.message || JSON.stringify(err)));
+                     showMsg('Failed to send OTP.');
+                     btn.prop('disabled', false).html('Get Login Code <i class="fa-solid fa-arrow-right"></i>');
+                 });
+
+            } else if(check === 'invalid_caste'){
+                showMsg('Only users from authorized castes are allowed.');
+                btn.prop('disabled', false).html('Get Login Code <i class="fa-solid fa-arrow-right"></i>');
+            } else if(check === 'limit_exceeded'){
+                 showMsg('Daily login limit exceeded.'); 
+                 btn.prop('disabled', false).html('Get Login Code <i class="fa-solid fa-arrow-right"></i>');
             } else {
-                showMsg('Failed to send OTP');
-                $('#resendBtn').prop('disabled', false).text('Resend OTP');
+                 showMsg(check);
+                 btn.prop('disabled', false).html('Get Login Code <i class="fa-solid fa-arrow-right"></i>');
             }
+        }).fail(function(){
+            showMsg('Connection error.');
+            btn.prop('disabled', false).html('Get Login Code <i class="fa-solid fa-arrow-right"></i>');
         });
     });
 
-    function validateEmail(email) {
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return re.test(email);
+    function validateMobile(mobile) {
+        const re = /^[0-9]{10}$/;
+        return re.test(mobile);
     }
 });
 </script>
+<script type="text/javascript" onload="initSendOTP(configuration)" src="https://verify.msg91.com/otp-provider.js"></script>
 </body>
 </html>

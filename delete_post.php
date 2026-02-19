@@ -22,7 +22,7 @@ if(!$post){
 }
 
 // ✅ SECURITY: Only owner can delete
-$user = $con->query("SELECT * FROM tbl_members WHERE email='{$_SESSION['sadhu_user_id']}'")->fetch_assoc();
+$user = $con->query("SELECT * FROM tbl_members WHERE mobile='{$_SESSION['sadhu_user_id']}'")->fetch_assoc();
 $user_id = $user['id'];
 
 if($post['user_id'] != $user_id){

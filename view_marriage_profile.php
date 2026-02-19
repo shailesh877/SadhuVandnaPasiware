@@ -2,8 +2,8 @@
 include("connection.php");
 include("header.php");
 
-$user_email = $_SESSION['sadhu_user_id'] ?? '';
-if(!$user_email){
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
+if(!$user_mobile){
     echo "<div class='text-center text-red-500 mt-10'>Please login to continue.</div>";
     exit;
 }
@@ -13,7 +13,7 @@ $user_profile = $con->query("
     SELECT mp.id AS profile_id
     FROM tbl_marriage_profiles mp
     INNER JOIN tbl_members m ON m.id = mp.user_id
-    WHERE m.email='$user_email' LIMIT 1
+    WHERE m.mobile='$user_mobile' LIMIT 1
 ")->fetch_assoc();
 
 $my_profile_id = $user_profile['profile_id'] ?? 0;
@@ -301,6 +301,7 @@ profileModal.addEventListener('click', (e) => {
     }
 });
 </script>
+
 <script>
 // disable right click
 document.addEventListener("contextmenu", e => e.preventDefault());

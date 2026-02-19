@@ -9,8 +9,8 @@ if (!isset($_SESSION['sadhu_user_id'])) {
     exit;
 }
 
-$user_email = $con->real_escape_string($_SESSION['sadhu_user_id']);
-$user_q = $con->query("SELECT id,name,profile_photo FROM tbl_members WHERE email='$user_email' LIMIT 1");
+$user_mobile = $con->real_escape_string($_SESSION['sadhu_user_id']);
+$user_q = $con->query("SELECT id,name,profile_photo FROM tbl_members WHERE mobile='$user_mobile' LIMIT 1");
 if (!$user_q || $user_q->num_rows === 0) {
     die("User not found.");
 }

@@ -2,14 +2,14 @@
 include("header.php");
 include("connection.php");
 
-$user_email = $_SESSION['sadhu_user_id'] ?? '';
-if (!$user_email) {
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
+if (!$user_mobile) {
     header("Location: login.php");
     exit;
 }
 
-// Fetch user info
-$user = $con->query("SELECT * FROM tbl_members WHERE email='$user_email'")->fetch_assoc();
+// Fetch user info using MOBILE
+$user = $con->query("SELECT * FROM tbl_members WHERE mobile='$user_mobile'")->fetch_assoc();
 $user_id = $user['id'];
 
 // Fetch user's posts with comments and likes count

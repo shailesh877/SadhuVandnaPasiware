@@ -2,10 +2,10 @@
 include("connection.php");
 session_start();
 
-$user_email = $_SESSION['sadhu_user_id'] ?? '';
-if(!$user_email) die("Unauthorized");
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
+if(!$user_mobile) die("Unauthorized");
 
-$user = $con->query("SELECT id FROM tbl_members WHERE email='$user_email'")->fetch_assoc();
+$user = $con->query("SELECT id FROM tbl_members WHERE mobile='$user_mobile'")->fetch_assoc();
 $logged_id = $user['id'];
 $story_id = intval($_GET['story_id']);
 

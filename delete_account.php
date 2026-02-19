@@ -2,7 +2,15 @@
 include("header.php");
 
 // Get logged-in user email
-$email = $_SESSION['sadhu_user_id'];
+$mobile = $_SESSION['sadhu_user_id'];
+// Fetch Email for display
+$email = "";
+$e_q = mysqli_query($con, "SELECT email FROM tbl_members WHERE mobile='$mobile'");
+if($e_row = mysqli_fetch_assoc($e_q)){
+    $email = $e_row['email'];
+}
+if(empty($email)) $email = "user@example.com"; 
+
 $success_msg = "";
 $error_msg = "";
 
@@ -23,7 +31,7 @@ if(isset($_POST['confirm_delete_otp'])) {
         // OTP Valid - Proceed with Deletion
         
         // Fetch User ID
-        $u_q = mysqli_query($con, "SELECT id, profile_photo FROM tbl_members WHERE email='$email' LIMIT 1");
+        $u_q = mysqli_query($con, "SELECT id, profile_photo FROM tbl_members WHERE mobile='$mobile' LIMIT 1");
         
         if(mysqli_num_rows($u_q) > 0){
             $u_row = mysqli_fetch_assoc($u_q);

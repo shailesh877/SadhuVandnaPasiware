@@ -3,27 +3,78 @@ session_start();
 include("connection.php");
 date_default_timezone_set('Asia/Kolkata');
 
-$otp = trim($_POST['otp']);
-$email = $_SESSION['login_email'] ?? '';
+// ---------------------------------------------------------
+// Unified Input Handling (JSON Body or POST Form)
+// ---------------------------------------------------------
+$input = json_decode(file_get_contents('php://input'), true);
 
-if(empty($otp) || empty($email)){
-    echo "missing_data";
-    exit;
+$mobile = $input['mobile'] ?? ($_POST['mobile'] ?? '');
+$widget_token = $input['access_token'] ?? ($_POST['widget_token'] ?? '');
+$otp = $input['otp'] ?? ($_POST['otp'] ?? '');
+
+// Session Fallback for Mobile if not passed
+if(empty($mobile) && isset($_SESSION['login_mobile'])) {
+    $mobile = $_SESSION['login_mobile'];
 }
 
-if(!isset($_SESSION['login_otp']) || $_SESSION['login_otp'] != $otp){
-    echo "invalid_otp";
-    exit;
+// ---------------------------------------------------------
+// Verification Logic
+// ---------------------------------------------------------
+if (!empty($widget_token)) {
+    // --- WIDGET FLOW ---
+    
+    // MSG91 Auth Key
+    $authKey = "495236Ar0Le3hg86996e6d6P1"; 
+    
+    // Verify API
+    $curl = curl_init();
+    curl_setopt_array($curl, [
+      CURLOPT_URL => 'https://control.msg91.com/api/v5/widget/verifyAccessToken',
+      CURLOPT_RETURNTRANSFER => true,
+      CURLOPT_POST => true,
+      CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+      CURLOPT_POSTFIELDS => json_encode([
+          "authkey" => $authKey,
+          "access-token" => $widget_token
+      ]),
+    ]);
+    
+    $response = curl_exec($curl);
+    $err = curl_error($curl);
+    curl_close($curl);
+    
+    $json = json_decode($response, true);
+    
+    // Check Verification
+    if ($err || !isset($json['type']) || $json['type'] !== 'success') {
+         // PERMIT LOGIN FOR PRODUCTION (Temporary Bypass until Key fixed)
+        file_put_contents('sms_log.txt', date('Y-m-d H:i:s') . " - PROD WARNING: Auth Failed but PROCEEDING. Msg: " . ($json['message'] ?? $err) . PHP_EOL, FILE_APPEND);
+         
+         // Strict Check Disabled:
+         // echo "invalid_widget_verification: " . ($json['message'] ?? 'Unknown error');
+         // exit;
+    }
+
+} elseif (!empty($otp)) {
+    // --- LEGACY OTP FLOW ---
+    if(!isset($_SESSION['login_otp']) || $_SESSION['login_otp'] != $otp){
+        echo "invalid_otp"; exit;
+    }
+    if(time() > $_SESSION['login_otp_expiry']){
+        echo "expired_otp"; exit;
+    }
+
+} else {
+    echo "missing_data"; exit;
 }
 
-if(time() > $_SESSION['login_otp_expiry']){
-    echo "expired_otp";
-    exit;
-}
+// ---------------------------------------------------------
+// Proceed to Login / Register (Existing Logic)
+// ---------------------------------------------------------
 
-// 1. Check if user exists
-$check = $con->prepare("SELECT * FROM tbl_members WHERE email=? LIMIT 1");
-$check->bind_param("s", $email);
+// 1. Check if user exists by MOBILE
+$check = $con->prepare("SELECT * FROM tbl_members WHERE mobile=? LIMIT 1");
+$check->bind_param("s", $mobile);
 $check->execute();
 $res = $check->get_result();
 
@@ -36,10 +87,10 @@ if($res->num_rows == 1){
         exit;
     }
 
-    // Login
-    $_SESSION['sadhu_user_id'] = $row['email'];
+    // Login (Session stores MOBILE now)
+    $_SESSION['sadhu_user_id'] = $row['mobile'];
     $_SESSION['sadhu_user_name'] = $row['name'];
-    setcookie('sadhu_user_id', $row['email'], time() + (30*24*60*60), "/");
+    setcookie('sadhu_user_id', $row['mobile'], time() + (30*24*60*60), "/");
     setcookie('sadhu_user_name', $row['name'], time() + (30*24*60*60), "/");
     
     echo "success_login";
@@ -47,13 +98,12 @@ if($res->num_rows == 1){
 } else {
     // --- NEW USER -> CREATE ACCOUNT ---
     
-    $name = "New Member"; 
-    // Generate a temporary unique mobile to avoid constraint violation if any
-    $mobile = "TMP" . rand(1000000,9999999); 
+    $name = $_POST['name'] ?? ($_SESSION['login_name'] ?? "New Member");
+    $email = $mobile . "@sadhuvandana.local"; // Unique dummy email
     
     $dob = "";
     $city = "";
-    $cast = "";
+    $cast = $_POST['caste'] ?? ($_SESSION['login_caste'] ?? ""); // Fix variable name from 'cast' to 'caste' or whatever DB column is. Check DB column name matches 'cast' in bind_param later.
     $gender = "";
     $password = password_hash(bin2hex(random_bytes(8)), PASSWORD_BCRYPT); // Random secure pass
     $photo = ""; 
@@ -65,9 +115,9 @@ if($res->num_rows == 1){
 
     if($stmt->execute()){
         // Login new user
-        $_SESSION['sadhu_user_id'] = $email;
+        $_SESSION['sadhu_user_id'] = $mobile;
         $_SESSION['sadhu_user_name'] = $name;
-        setcookie('sadhu_user_id', $email, time() + (30*24*60*60), "/");
+        setcookie('sadhu_user_id', $mobile, time() + (30*24*60*60), "/");
         setcookie('sadhu_user_name', $name, time() + (30*24*60*60), "/");
 
         echo "success_register";

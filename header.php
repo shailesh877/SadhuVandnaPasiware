@@ -1,5 +1,4 @@
 <?php
-header('Content-Type: text/html; charset=UTF-8');
 include("connection.php");
 include("auto_delete_stories.php");
 session_start();
@@ -19,9 +18,12 @@ if(!isset($_SESSION['sadhu_user_id']) || empty($_SESSION['sadhu_user_id'])){
 // -------------------------------------
 // 🔥  CHECK USER BLOCK STATUS EVERY TIME
 
+// -------------------------------------
+// 🔥  CHECK USER BLOCK STATUS EVERY TIME
+
 $uid = $_SESSION['sadhu_user_id'];
 
-$stmt = $con->prepare("SELECT status, name, mobile FROM tbl_members WHERE email=? LIMIT 1");
+$stmt = $con->prepare("SELECT status, name, mobile, email FROM tbl_members WHERE mobile=? LIMIT 1");
 $stmt->bind_param("s", $uid);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -47,7 +49,7 @@ if($res->num_rows == 1){
     
     // Normalize check for both with/without extension
     if($current_page != 'edit_profile' && $current_page != 'edit_profile.php' && $current_page != 'login' && $current_page != 'logout'){
-        if($row['name'] == 'New Member' || strpos($row['mobile'], 'TMP') === 0){
+        if($row['name'] == 'New Member'){
             $showProfilePopup = true;
         }
     }
@@ -55,21 +57,21 @@ if($res->num_rows == 1){
 // -------------------------------------
 // users online activity store 
 if(isset($_SESSION['sadhu_user_id'])){
-    $email = $_SESSION['sadhu_user_id'];
-    $con->query("UPDATE tbl_members SET last_active = NOW() WHERE email='$email'");
+    $mobile_id = $_SESSION['sadhu_user_id'];
+    $con->query("UPDATE tbl_members SET last_active = NOW() WHERE mobile='$mobile_id'");
 }
 
 // Get user info from session
 $user_name = isset($_SESSION['sadhu_user_name']) ? $_SESSION['sadhu_user_name'] : 'Guest';
-$user_id   = $_SESSION['sadhu_user_id'];
+$user_id   = $_SESSION['sadhu_user_id']; // This is MOBILE now
 
 $profile_photo = '';
 
-// Fetch user profile image from DB (assuming column name is 'profile_photo')
+// Fetch user profile image from DB
 if($user_id){
-    $stmt = "SELECT profile_photo FROM tbl_members WHERE email='$user_id' LIMIT 1";
+    $stmt = "SELECT profile_photo FROM tbl_members WHERE mobile='$user_id' LIMIT 1";
     $res = mysqli_query($con,$stmt);
-    if($res->num_rows){
+    if($res && $res->num_rows){
         $row = $res->fetch_assoc();
         if(!empty($row['profile_photo'])){
             $file_path = 'uploads/photo/'.$row['profile_photo'];
@@ -771,3 +773,4 @@ window.openCalendar = function(){
     </div>
 </div>
 <?php endif; ?>
+

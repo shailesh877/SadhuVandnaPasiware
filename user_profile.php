@@ -14,8 +14,8 @@ if(!$user) die("<div class='text-center p-10 text-red-600 text-xl font-bold'>Use
 //   die("<div class='text-center p-10 text-red-600 text-xl font-bold'>User not found!</div>");
 // }
 
-$logged_email = $_SESSION['sadhu_user_id'] ?? '';
-$logged_user = $con->query("SELECT id,email,profile_photo FROM tbl_members WHERE email='$logged_email'")->fetch_assoc();
+$logged_mobile = $_SESSION['sadhu_user_id'] ?? '';
+$logged_user = $con->query("SELECT id,email,profile_photo FROM tbl_members WHERE mobile='$logged_mobile'")->fetch_assoc();
 $logged_id = $logged_user['id'] ?? 0;
 $loged_profile_photo = $logged_user['profile_photo'] ?? '';
 ?>
@@ -50,7 +50,7 @@ $loged_profile_photo = $logged_user['profile_photo'] ?? '';
           </p>
           <button id="moreBtn" class="text-sm text-orange-600 hover:underline mt-1">View More Details</button>
         </div>
-        <?php if($logged_email === $user['email']): ?>
+        <?php if($logged_mobile === $user['mobile']): ?>
         <a href="edit_profile.php" class="bg-orange-500 text-white px-4 py-2 rounded-lg shadow hover:bg-orange-700">Edit
           Profile</a>
         <?php endif; ?>

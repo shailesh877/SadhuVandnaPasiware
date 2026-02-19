@@ -2,11 +2,11 @@
 include("connection.php");
 session_start();
 
-$session_email = $_SESSION['sadhu_user_id'] ?? '';
-if(!$session_email){ echo json_encode([]); exit; }
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
+if(!$user_mobile){ echo json_encode([]); exit; }
 
 // Step 1: get user id
-$userQ = $con->query("SELECT id FROM tbl_members WHERE email='$session_email' LIMIT 1");
+$userQ = $con->query("SELECT id FROM tbl_members WHERE mobile='$user_mobile' LIMIT 1");
 if($userQ->num_rows == 0){ echo json_encode([]); exit; }
 $user_id = $userQ->fetch_assoc()['id'];
 

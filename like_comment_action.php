@@ -4,10 +4,10 @@ session_start();
 header('Content-Type: application/json');
 date_default_timezone_set("Asia/Kolkata");
 
-$user_email = $_SESSION['sadhu_user_id'] ?? '';
-if(!$user_email){ echo json_encode([]); exit; }
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
+if(!$user_mobile){ echo json_encode([]); exit; }
 
-$user = $con->query("SELECT id, name FROM tbl_members WHERE email='$user_email'")->fetch_assoc();
+$user = $con->query("SELECT id, name FROM tbl_members WHERE mobile='$user_mobile'")->fetch_assoc();
 $user_id = $user['id'];
 $action = $_REQUEST['action'] ?? '';
 
@@ -51,6 +51,9 @@ if($action === 'comment'){
 if($action === 'fetch_all'){
   $posts = [];
 
+  $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 2;
+  $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
+
   // ✅ Filter by specific user (if user_id passed)
   $where = "";
   if(isset($_GET['user_id']) && intval($_GET['user_id']) > 0){
@@ -64,6 +67,7 @@ if($action === 'fetch_all'){
     JOIN tbl_members m ON p.user_id = m.id
     $where
     ORDER BY p.created_at DESC
+    LIMIT $limit OFFSET $offset
   ");
 
   while($p = $res->fetch_assoc()){

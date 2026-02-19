@@ -2,10 +2,16 @@
 
 // include("connection.php");
 
-$logged_email = $_SESSION['sadhu_user_id'] ?? '';
-$logged_user = $con->query("SELECT id,email FROM tbl_members WHERE email='$logged_email'")->fetch_assoc();
+$logged_mobile = $_SESSION['sadhu_user_id'] ?? '';
+$logged_user = $con->query("SELECT id, name, profile_photo FROM tbl_members WHERE mobile='$logged_mobile'")->fetch_assoc();
 $logged_id = $logged_user['id'] ?? 0;
+$my_name = htmlspecialchars($logged_user['name'] ?? 'Me');
+$my_photo = htmlspecialchars($logged_user['profile_photo'] ?? '');
 ?>
+<script>
+  const myName = "<?= $my_name ?>";
+  const myPhoto = "<?= $my_photo ?>";
+</script>
 
 
 
@@ -16,120 +22,154 @@ $logged_id = $logged_user['id'] ?? 0;
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
-async function fetchAll() {
-  const res = await fetch('like_comment_action.php?action=fetch_all');
-  const posts = await res.json();
-  const container = document.getElementById("postContainer");
-  container.innerHTML = '';
+let offset = 0;
+const limit = 2;
+let isLoading = false;
+let hasMore = true;
 
-  posts.forEach(p => {
-    // ✅ Heart class: solid red if liked, regular gray if not
-    const likedClass = p.user_liked ? 'fa-solid text-red-500' : 'fa-regular text-gray-400';
+async function fetchPosts(isInitial = false) {
+  if (isLoading || !hasMore) return;
+  isLoading = true;
 
-    const postHTML = `
-      <div class="bg-white max-w-6xl flex-1 w-full mx-auto rounded-xl shadow-lg border border-orange-200 px-6 py-5 mt-5" id="post-${p.id}">
-        <div class="flex items-center gap-4">
-          <a href="user_profile?id=${p.user_id}" class="flex items-center gap-3 hover:opacity-90 transition">
-            <img src="uploads/photo/${p.profile_photo}" class="w-10 h-10 rounded-full border-2 border-orange-300">
-            <div>
-              <div class="font-bold text-orange-700 hover:underline">${p.name}</div>
-              <div class="text-xs text-gray-500">${p.date}</div>
-            </div>
-          </a>
-        </div>
+  if (isInitial) {
+    offset = 0;
+    hasMore = true;
+    document.getElementById("postContainer").innerHTML = '';
+  }
 
-        <div class="mt-3 text-gray-800 text-lg">${p.status}</div>
-        <div class="mt-3 text-gray-800 text-lg break-all">
-  <a href="${p.link}" 
-     class="text-blue-700 break-all" 
-     target="_blank">
-     ${p.link}
-  </a>
-</div>
+  try {
+    const res = await fetch(`like_comment_action.php?action=fetch_all&limit=${limit}&offset=${offset}`);
+    const posts = await res.json();
+    const container = document.getElementById("postContainer");
 
+    if (posts.length < limit) {
+      hasMore = false;
+    }
 
-        ${p.media.map(m => m.match(/\.(jpg|jpeg|png|gif)$/i) ? 
-          `<img src="uploads/posts/${m}" class="rounded-xl mt-3 max-h-[500px] mx-auto">` : 
-          `<video src="uploads/posts/${m}" class="rounded-xl mt-3 max-h-[500px] mx-auto" controls></video>`).join('')}
+    if (posts.length === 0 && isInitial) {
+        container.innerHTML = '<div class="text-center text-gray-500 mt-10">No posts found.</div>';
+        isLoading = false;
+        return;
+    }
 
-       <div class="flex gap-6 mt-3 text-gray-700 text-base">
-  <button class="like-btn flex items-center gap-1" data-id="${p.id}">
-    <i class="${likedClass} fa-heart text-lg"></i>
-    <span class="like-count">${p.likes}</span>
-  </button>
+    posts.forEach(p => {
+      // ✅ Heart class: solid red if liked, regular gray if not
+      const likedClass = p.user_liked ? 'fa-solid text-red-500' : 'fa-regular text-gray-400';
 
-  <button class="comment-toggle hover:text-orange-600 flex items-center gap-1" data-id="${p.id}">
-    <i class="fa-regular fa-comment-dots"></i> 
-    <span class="comment-count">${p.comments.length}</span>
-  </button>
+      const postHTML = `
+        <div class="bg-white max-w-6xl flex-1 w-full mx-auto rounded-xl shadow-lg border border-orange-200 px-6 py-5 mt-5" id="post-${p.id}">
+          <div class="flex items-center gap-4">
+            <a href="user_profile?id=${p.user_id}" class="flex items-center gap-3 hover:opacity-90 transition">
+              <img src="uploads/photo/${p.profile_photo}" class="w-10 h-10 rounded-full border-2 border-orange-300">
+              <div>
+                  <div class="font-bold text-orange-700 hover:underline">${p.name}</div>
+                  <div class="text-xs text-gray-500">${p.date}</div>
+              </div>
+            </a>
+          </div>
 
-  <button class="share-btn hover:text-orange-600 flex items-center gap-1" data-id="${p.id}">
-    <i class="fa-solid fa-share"></i>
-    Share
-  </button>
-</div>
+          <div class="mt-3 text-gray-800 text-lg">${p.status}</div>
+          <div class="mt-3 text-gray-800 text-lg break-all">
+            <a href="${p.link}" class="text-blue-700 break-all" target="_blank">${p.link}</a>
+          </div>
 
+          ${p.media.map(m => m.match(/\.(jpg|jpeg|png|gif)$/i) ? 
+            `<img src="uploads/posts/${m}" class="rounded-xl mt-3 max-h-[500px] mx-auto">` : 
+            `<video src="uploads/posts/${m}" class="rounded-xl mt-3 max-h-[500px] mx-auto" controls></video>`).join('')}
 
-        <div id="comments-${p.id}" class="comment-section hidden mt-4 bg-orange-50/40 rounded-xl border border-orange-200 p-4">
+          <div class="flex gap-6 mt-3 text-gray-700 text-base">
+            <button class="like-btn flex items-center gap-1" data-id="${p.id}">
+              <i class="${likedClass} fa-heart text-lg"></i>
+              <span class="like-count">${p.likes}</span>
+            </button>
 
-    <!-- Add Comment -->
-    <form class="comment-form flex items-center gap-3 mb-3" data-id="${p.id}">
-        <img src="uploads/photo/${p.profile_photo}" class="w-9 h-9 rounded-full border border-orange-300">
-        <input 
-            type="text" 
-            name="comment"
-            class="flex-1 bg-white border border-orange-200 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
-            placeholder="Write a comment..."
-            required
-        >
-        <button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm shadow">
-            Post
-        </button>
-    </form>
+            <button class="comment-toggle hover:text-orange-600 flex items-center gap-1" data-id="${p.id}">
+              <i class="fa-regular fa-comment-dots"></i> 
+              <span class="comment-count">${p.comments.length}</span>
+            </button>
 
-    <!-- Comments List -->
-    <div class="comment-list max-h-64 overflow-y-auto space-y-3 pr-1">
+            <button class="share-btn hover:text-orange-600 flex items-center gap-1" data-id="${p.id}">
+              <i class="fa-solid fa-share"></i>
+              Share
+            </button>
+          </div>
 
-        ${p.comments.map(c => `
-            <div class="flex gap-3 items-start border-b border-orange-100 pb-3">
-                
-                <img src="uploads/photo/${c.profile_photo}" 
-                     class="w-9 h-9 rounded-full border border-orange-300">
+          <div id="comments-${p.id}" class="comment-section hidden mt-4 bg-orange-50/40 rounded-xl border border-orange-200 p-4">
+            <!-- Add Comment -->
+            <form class="comment-form flex items-center gap-3 mb-3" data-id="${p.id}">
+              <img src="uploads/photo/${p.profile_photo}" class="w-9 h-9 rounded-full border border-orange-300">
+              <input type="text" name="comment" class="flex-1 bg-white border border-orange-200 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400" placeholder="Write a comment..." required>
+              <button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm shadow">Post</button>
+            </form>
 
-                <div class="bg-white px-4 py-2 rounded-xl shadow-sm w-full">
+            <!-- Comments List -->
+            <div class="comment-list max-h-64 overflow-y-auto space-y-3 pr-1">
+              ${p.comments.map(c => `
+                <div class="flex gap-3 items-start border-b border-orange-100 pb-3">
+                  <img src="uploads/photo/${c.profile_photo}" class="w-9 h-9 rounded-full border border-orange-300">
+                  <div class="bg-white px-4 py-2 rounded-xl shadow-sm w-full">
                     <div class="flex justify-between items-center">
-                        <span class="font-bold text-orange-700 text-sm">${c.name}</span>
-                        <span class="text-[10px] text-gray-400">${c.date}</span>
+                      <span class="font-bold text-orange-700 text-sm">${c.name}</span>
+                      <span class="text-[10px] text-gray-400">${c.date}</span>
                     </div>
-                    <div class="text-gray-700 text-sm mt-1 leading-tight">
-                        ${c.comment}
-                    </div>
+                    <div class="text-gray-700 text-sm mt-1 leading-tight">${c.comment}</div>
+                  </div>
                 </div>
-
+              `).join('')}
             </div>
-        `).join('')}
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML("beforeend", postHTML);
+    });
 
-    </div>
-
-</div>
-
-      </div>
-    `;
-    container.insertAdjacentHTML("beforeend", postHTML);
-  });
+    offset += posts.length;
+    
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+  } finally {
+    isLoading = false;
+  }
 }
+
+// Initial Load
+fetchPosts(true);
+
+// Infinite Scroll
+window.addEventListener('scroll', () => {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+        fetchPosts();
+    }
+});
 
 // ❤️ Like toggle
 document.addEventListener('click', async e => {
   const btn = e.target.closest('.like-btn');
   if(!btn) return;
   const id = btn.dataset.id;
+  
+  // Optimistic UI Update
+  const icon = btn.querySelector('i');
+  const countSpan = btn.querySelector('.like-count');
+  let count = parseInt(countSpan.textContent);
+  
+  if (icon.classList.contains('fa-regular')) {
+      icon.classList.remove('fa-regular', 'text-gray-400');
+      icon.classList.add('fa-solid', 'text-red-500');
+      count++;
+  } else {
+      icon.classList.remove('fa-solid', 'text-red-500');
+      icon.classList.add('fa-regular', 'text-gray-400');
+      count--;
+  }
+  countSpan.textContent = count;
+
   await fetch('like_comment_action.php', {
     method:'POST',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body:`action=like&id=${id}`
   });
-  fetchAll();
+  // No need to fetchAll(), just update UI locally as above
 });
 
 // 💬 Toggle comment section
@@ -163,11 +203,32 @@ document.addEventListener('submit', async e => {
     });
 
     input.value = ""; // clear input after posting
-    fetchAll();        // reload posts
+    
+    // Append comment locally
+    const commentList = document.querySelector(`#comments-${id} .comment-list`);
+    const newCommentHTML = `
+        <div class="flex gap-3 items-start border-b border-orange-100 pb-3">
+            <img src="uploads/photo/${myPhoto}" class="w-9 h-9 rounded-full border border-orange-300">
+            <div class="bg-white px-4 py-2 rounded-xl shadow-sm w-full">
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-orange-700 text-sm">${myName}</span>
+                    <span class="text-[10px] text-gray-400">Just now</span>
+                </div>
+                <div class="text-gray-700 text-sm mt-1 leading-tight">${text}</div>
+            </div>
+        </div>
+    `;
+    commentList.insertAdjacentHTML('afterbegin', newCommentHTML);
+    
+    // Update comment count
+    const countSpan = document.querySelector(`.comment-toggle[data-id="${id}"] .comment-count`);
+    if(countSpan) {
+        countSpan.textContent = parseInt(countSpan.textContent) + 1;
+    }
 });
 
 
-fetchAll();
+
 
 
 document.addEventListener('click', async e => {

@@ -25,10 +25,10 @@ if($result->num_rows == 1){
     }
 
     if(password_verify($password, $row['password'])){
-        $_SESSION['sadhu_user_id'] = $row['email'];
+        $_SESSION['sadhu_user_id'] = $row['mobile'];
         $_SESSION['sadhu_user_name'] = $row['name'];
 
-        setcookie('sadhu_user_id', $row['email'], time() + (30*24*60*60), "/");
+        setcookie('sadhu_user_id', $row['mobile'], time() + (30*24*60*60), "/");
         setcookie('sadhu_user_name', $row['name'], time() + (30*24*60*60), "/");
 ?>
 <?php

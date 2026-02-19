@@ -3,15 +3,15 @@ include("connection.php");
 include("header.php");
 // session_start();
 
-$user_email = $_SESSION['sadhu_user_id'] ?? '';
-if(!$user_email) die("Unauthorized access!");
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
+if(!$user_mobile) die("Unauthorized access!");
 
 // ✅ Get current user's marriage profile ID
 $sender_profile = $con->query("
     SELECT mp.id AS profile_id
     FROM tbl_marriage_profiles mp
     INNER JOIN tbl_members m ON m.id = mp.user_id
-    WHERE m.email='$user_email' LIMIT 1
+    WHERE m.mobile='$user_mobile' LIMIT 1
 ")->fetch_assoc();
 
 $sender_id = $sender_profile['profile_id'] ?? 0;

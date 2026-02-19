@@ -2,10 +2,7 @@
 include("header.php");
 include("connection.php");
 
-$news   = mysqli_query($con, "SELECT * FROM tbl_news ORDER BY id DESC");
-if (!$news) {
-    die("News Query Failed: " . mysqli_error($con));
-}
+
 
 $ticker = mysqli_query($con, "SELECT title FROM tbl_news ORDER BY id DESC LIMIT 5");
 if (!$ticker) {
@@ -109,77 +106,8 @@ body {
 
     <!-- News Section -->
     <section class="flex flex-col gap-10 mt-3 pb-10">
-
-        <?php while($row = mysqli_fetch_assoc($news)) { 
-            $images = array_filter(explode(",", $row['image']));
-        ?>
-
-        <div class="bg-white border border-orange-300 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 w-full md:max-w-3xl mx-auto">
-
-            <!-- TITLE -->
-            <h2 class="text-[26px] font-extrabold text-gray-900 leading-snug mb-1 tracking-tight px-6 pt-6">
-                <?= htmlspecialchars($row['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
-            </h2>
-
-            <!-- DATE -->
-            <p class="text-[13px] text-orange-600 font-semibold mb-3 tracking-wide px-6">
-                <i class="fa fa-calendar mr-1"></i>
-                <?= date("F d, Y", strtotime($row['created_at'])) ?>
-            </p>
-
-            <!-- ✅ MANUAL IMAGE SLIDER -->
-            <?php if(count($images) > 0){ ?>
-            <div class="w-full cursor-pointer relative overflow-hidden news-slider" data-index="0">
-
-                <?php foreach($images as $k => $img) { ?>
-                    <img src="uploads/news/<?= $img ?>" 
-                         class="slide-img w-full rounded-2xl mx-auto max-h-[420px] object-cover <?= $k==0 ? '' : 'hidden' ?>" />
-                <?php } ?>
-
-                <!-- ✅ Number Buttons -->
-                <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 bg-black/40 px-3 py-1 rounded-full">
-                    <?php foreach($images as $k => $img) { ?>
-                        <button onclick="goToSlide(this.closest('.news-slider'), <?= $k ?>)"
-                            class="w-6 h-6 text-xs rounded-full bg-white/80 hover:bg-orange-500 hover:text-white transition">
-                            <?= $k+1 ?>
-                        </button>
-                    <?php } ?>
-                </div>
-
-                <!-- ✅ Prev / Next Buttons -->
-                <button onclick="prevSlide(this.closest('.news-slider'))"
-                    class="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 text-white w-8 h-8 rounded-full hover:bg-orange-500">
-                    ‹
-                </button>
-
-                <button onclick="nextSlide(this.closest('.news-slider'))"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 text-white w-8 h-8 rounded-full hover:bg-orange-500">
-                    ›
-                </button>
-
-            </div>
-            <?php } ?>
-
-            <!-- DESCRIPTION -->
-            <div class="p-6">
-                <p class="premium-text text-gray-700 text-[17px] leading-[1.65] mb-2 overflow-hidden max-h-28 transition-all duration-500">
-                    <?= nl2br(htmlspecialchars($row['description'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) ?>
-                </p>
-                <button class="read-btn text-orange-600 font-semibold text-[15px] mt-1 hover:underline">
-                    Read More
-                </button>
-            </div>
-
-        </div>
-
-        <?php } ?>
-
-        <?php if(mysqli_num_rows($news) == 0) { ?>
-            <p class="text-center text-gray-500 text-xl font-semibold">
-                No news available.
-            </p>
-        <?php } ?>
-
+        <div id="newsContainer"></div>
+        <div id="loader" class="text-center text-gray-500 hidden">Loading more news...</div>
     </section>
 
 </main>
@@ -190,23 +118,65 @@ body {
     <img id="modalImg" class="max-h-full max-w-full rounded-lg shadow-lg" />
 </div>
 
-
-
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+let offset = 0;
+const limit = 5;
+let isLoading = false;
+let hasMore = true;
 
+function loadNews(isInitial = false) {
+    if (isLoading || (!hasMore && !isInitial)) return;
+    isLoading = true;
+    document.getElementById('loader').classList.remove('hidden');
+
+    if (isInitial) {
+        offset = 0;
+        hasMore = true;
+        document.getElementById('newsContainer').innerHTML = '';
+    }
+
+    const formData = new FormData();
+    formData.append('limit', limit);
+    formData.append('offset', offset);
+
+    fetch('fetch_news.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.text())
+    .then(html => {
+        const trimmedHTML = html.trim();
+        if (isInitial && (trimmedHTML === "" || trimmedHTML.includes("No news available"))) {
+            document.getElementById('newsContainer').innerHTML = trimmedHTML || '<p class="text-center text-gray-500 text-xl font-semibold">No news available.</p>';
+            hasMore = false;
+        } else if (trimmedHTML === "") {
+            hasMore = false;
+        } else {
+            document.getElementById('newsContainer').insertAdjacentHTML('beforeend', trimmedHTML);
+            offset += limit;
+            attachReadMoreListeners();
+        }
+    })
+    .catch(err => console.error(err))
+    .finally(() => {
+        isLoading = false;
+        document.getElementById('loader').classList.add('hidden');
+    });
+}
+
+function attachReadMoreListeners() {
     document.querySelectorAll(".p-6").forEach((container) => {
         const text = container.querySelector(".premium-text");
         const btn = container.querySelector(".read-btn");
 
-        if (!text || !btn) return; // safety
+        if (!text || !btn || btn.dataset.attached) return; 
+
+        btn.dataset.attached = "true"; // Prevent double attachment
 
         if (text.scrollHeight <= 112) {
             btn.style.display = "none";
         } else {
-
             btn.addEventListener("click", function () {
-
                 if (text.classList.contains("expanded")) {
                     text.style.maxHeight = "7rem";
                     text.classList.remove("expanded");
@@ -216,11 +186,21 @@ document.addEventListener("DOMContentLoaded", function () {
                     text.classList.add("expanded");
                     btn.textContent = "Read Less";
                 }
-
             });
         }
     });
+}
 
+// Infinite Scroll
+window.addEventListener('scroll', () => {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+        loadNews();
+    }
+});
+
+// Initial Load
+document.addEventListener("DOMContentLoaded", function () {
+    loadNews(true);
 });
 
 // ✅ MANUAL SLIDER LOGIC

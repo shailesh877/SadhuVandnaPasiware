@@ -9,13 +9,13 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header('Content-Type: application/json');
 ob_clean();
 
-$session_email = $_SESSION['sadhu_user_id'] ?? '';
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
 $response = ['unread_count' => 0, 'incoming_call' => null];
 
-if(!$session_email){ echo json_encode($response); exit; }
+if(!$user_mobile){ echo json_encode($response); exit; }
 
 // Get my IDs
-$userQ = $con->query("SELECT id FROM tbl_members WHERE email = '$session_email' LIMIT 1");
+$userQ = $con->query("SELECT id FROM tbl_members WHERE mobile = '$user_mobile' LIMIT 1");
 if($userQ->num_rows == 0){ echo json_encode($response); exit; }
 $user_id = $userQ->fetch_assoc()['id'];
 
@@ -37,8 +37,7 @@ if($inc && $inc->num_rows > 0){
         'caller_id' => $call['caller_id'],
         'caller_name' => $c_info['full_name'] ?? 'Unknown',
         'caller_photo' => !empty($c_info['photo']) ? "uploads/photo/".$c_info['photo'] : "images/logo.png",
-        'type' => $call['type'],
-        'peer_id' => $call['caller_peer_id']
+        'type' => $call['type']
     ];
 }
 

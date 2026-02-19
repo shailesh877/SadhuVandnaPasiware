@@ -38,20 +38,20 @@ if(isset($_FILES['attachment']) && $_FILES['attachment']['error'] === 0){
     move_uploaded_file($file['tmp_name'], $dest);
 
     // ✅ BROWSER ACCESS PATH
-    $filePath = "/uploads/chat/" . $newName;
+    $filePath = "/sadhu_vandana/uploads/chat/" . $newName;
 
     $fileType = str_starts_with($file['type'], 'image')
                 ? 'image'
                 : 'video';
 }
-// SET time_zone = '';
 $date = date("Y-m-d H:i:s");
 /* INSERT */
 $stmt = $con->prepare("
 INSERT INTO tbl_messages
-(sender_id, receiver_id, message, file, file_type, created_at, seen)
+(sender_id, receiver_id, message, file, file_type,created_at, seen )
 VALUES (?,?,?,?,?,?,0)
 ");
+
 $stmt->bind_param(
     "iissss",
     $my,

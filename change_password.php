@@ -27,8 +27,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST'){
         $msg = ['type'=>'error','text'=>'New password and confirm password do not match!'];
     } else {
         // Fetch current password from DB
-        $stmt = $con->prepare("SELECT password FROM tbl_members WHERE email=? LIMIT 1");
-        $stmt->bind_param("i", $_SESSION['sadhu_user_id']);
+        $stmt = $con->prepare("SELECT password FROM tbl_members WHERE mobile=? LIMIT 1");
+        $stmt->bind_param("s", $_SESSION['sadhu_user_id']);
         $stmt->execute();
         $res = $stmt->get_result();
 
@@ -37,8 +37,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST'){
             if(password_verify($current, $row['password'])){
                 // Update password
                 $hashed = password_hash($new, PASSWORD_DEFAULT);
-                $update = $con->prepare("UPDATE tbl_members SET password=? WHERE email=?");
-                $update->bind_param("si", $hashed, $_SESSION['sadhu_user_id']);
+                $update = $con->prepare("UPDATE tbl_members SET password=? WHERE mobile=?");
+                $update->bind_param("ss", $hashed, $_SESSION['sadhu_user_id']);
                 if($update->execute()){
                     $msg = ['type'=>'success','text'=>'Password changed successfully!'];
                 } else {
