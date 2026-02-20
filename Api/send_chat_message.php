@@ -44,7 +44,7 @@ if(isset($_FILES['attachment']) && $_FILES['attachment']['error'] === 0){
     }
 
     // browser / app accessible path
-    $filePath = "/uploads/chat/" . $newName;
+    $filePath = "../uploads/chat/" . $newName;
     $fileType = str_starts_with($file['type'], 'image') ? 'image' : 'video';
 }
 
