@@ -179,7 +179,6 @@ document.addEventListener("DOMContentLoaded", function () {
         location: "[Location]",
     };
 
-    // language map (kept same keys/strings as your original)
     const LANGUAGES = {
         en: {
             formHeading: "Create Obituary Card",
@@ -197,21 +196,21 @@ document.addEventListener("DOMContentLoaded", function () {
             deleteBtn: "Delete",
             cardTitle: "Heartfelt Tribute",
             prayer: "May the Supreme Almighty grant eternal peace to the divine soul.",
-            demoCard: function () {
+            demoCard: function (data = DEMO) {
                 return `
                 <div class="mt-8">
                   <div class="inline-block rounded-md  font-bold text-md text-orange-900 flex justify-center items-center text-lg">
-                    Samajik Sadagyashri ${DEMO.name}
+                    Samajik Sadagyashri ${data.name}
                   </div>
                 </div>
-                <div class="mt-1 text-gray-800 text-sm md:text-md">(Age: ${DEMO.age}) (Village: ${DEMO.village})</div>
-                <div class="mt-1 text-gray-800 text-sm md:text-md ">Samadhi: ${DEMO.samadhi}</div>
+                <div class="mt-1 text-gray-800 text-sm md:text-md">(Age: ${data.age}) (Village: ${data.village})</div>
+                <div class="mt-1 text-gray-800 text-sm md:text-md ">Samadhi: ${data.samadhi}</div>
                 <hr class="my-2 border-orange-400">
                 <div class="text-gray-900 mb-2 text-sm md:text-md">${LANGUAGES.en.prayer}</div>
                 <hr class="my-2 border-orange-300">
-                <div class="text-red-600 font-semibold text-sm md:text-md">Samadhi Ceremony: ${DEMO.vidhi} at ${DEMO.village}</div>
-                <div class="mt-1 text-orange-700 font-medium text-xs md:text-sm">${DEMO.family}</div>
-                <div class="mt-1 text-orange-700 text-xs md:text-sm">Location: ${DEMO.location}</div>
+                <div class="text-red-600 font-semibold text-sm md:text-md">Samadhi Ceremony: ${data.vidhi} at ${data.village}</div>
+                <div class="mt-1 text-orange-700 font-medium text-xs md:text-sm">${data.family}</div>
+                <div class="mt-1 text-orange-700 text-xs md:text-sm">Location: ${data.location}</div>
                 `;
             }
         },
@@ -231,21 +230,21 @@ document.addEventListener("DOMContentLoaded", function () {
             deleteBtn: "डिलीट",
             cardTitle: "भावभरी श्रद्धांजलि",
             prayer: "परम कृपालु परमात्मा दिव्य आत्मा ने परम शांति आपे एवी प्रभु पासे प्रार्थना",
-            demoCard: function () {
+            demoCard: function (data = DEMO) {
                 return `
                 <div class="mt-8">
                   <div class="inline-block rounded-md font-bold text-md text-orange-900 flex justify-center items-center text-lg">
-                    सामाजिक सादग्यश्री ${DEMO.name}
+                    सामाजिक सादग्यश्री ${data.name}
                   </div>
                 </div>
-                <div class="mt-1 text-gray-800 text-sm md:text-md">(उ.वर्ष.-${DEMO.age}) (गाम-${DEMO.village})</div>
-                <div class="mt-1 text-gray-800 text-sm md:text-md">समाधि: ${DEMO.samadhi}</div>
+                <div class="mt-1 text-gray-800 text-sm md:text-md">(उ.वर्ष.-${data.age}) (गाम-${data.village})</div>
+                <div class="mt-1 text-gray-800 text-sm md:text-md">समाधि: ${data.samadhi}</div>
                 <hr class="my-2 border-orange-400">
                 <div class="text-gray-900 mb-2 text-sm md:text-md">${LANGUAGES.hi.prayer}</div>
                 <hr class="my-2 border-orange-300">
-                <div class="text-red-600 font-semibold text-sm md:text-md">समाधि विधि: ${DEMO.vidhi} पर, ${DEMO.village} मुकामे राखेल छे</div>
-                <div class="mt-1 text-orange-700 font-medium text-xs md:text-sm">${DEMO.family}</div>
-                <div class="mt-1 text-orange-700 text-xs md:text-sm">स्थान: ${DEMO.location}</div>
+                <div class="text-red-600 font-semibold text-sm md:text-md">समाधि विधि: ${data.vidhi} पर, ${data.village} मुकामे राखेल छे</div>
+                <div class="mt-1 text-orange-700 font-medium text-xs md:text-sm">${data.family}</div>
+                <div class="mt-1 text-orange-700 text-xs md:text-sm">स्थान: ${data.location}</div>
                 `;
             }
         },
@@ -265,21 +264,21 @@ document.addEventListener("DOMContentLoaded", function () {
             deleteBtn: "ડિલીટ",
             cardTitle: "ભાવભરી શ્રદ્ધાંજલિ",
             prayer: "પારમ કૃપાળુ પરમાત્મા દિવ્ય આત્માને પરમ શાંતિ આપે તેવી પ્રભુ પાસે પ્રાથના",
-            demoCard: function () {
+            demoCard: function (data = DEMO) {
                 return `
                 <div class="mt-8">
                   <div class="inline-block rounded-md  font-bold text-md text-orange-900 flex justify-center items-center text-lg">
-                    સામાજિક સાદગ્યશ્રી ${DEMO.name}
+                    સામાજિક સાદગ્યશ્રી ${data.name}
                   </div>
                 </div>
-                <div class="mt-1 text-gray-800 text-sm md:text-md">(ઉ.વર્ષ.-${DEMO.age}) (ગામ-${DEMO.village})</div>
-                <div class="mt-1 text-gray-800 text-sm md:text-md">સમાધિ: ${DEMO.samadhi}</div>
+                <div class="mt-1 text-gray-800 text-sm md:text-md">(ઉ.વર્ષ.-${data.age}) (ગામ-${data.village})</div>
+                <div class="mt-1 text-gray-800 text-sm md:text-md">સમાધિ: ${data.samadhi}</div>
                 <hr class="my-2 border-orange-400">
                 <div class="text-gray-900 mb-2 text-sm md:text-md">${LANGUAGES.gu.prayer}</div>
                 <hr class="my-2 border-orange-300">
-                <div class="text-red-600 font-semibold text-sm md:text-md">સમાધિ વિધી: ${DEMO.vidhi}ના રોજ, ${DEMO.village} મુકામે રાખેલ છે</div>
-                <div class="mt-1 text-orange-700 font-medium text-sm">${DEMO.family}</div>
-                <div class="mt-1 text-orange-700 text-sm">સ્થાન: ${DEMO.location}</div>
+                <div class="text-red-600 font-semibold text-sm md:text-md">સમાધિ વિધી: ${data.vidhi}ના રોજ, ${data.village} મુકામે રાખેલ છે</div>
+                <div class="mt-1 text-orange-700 font-medium text-sm">${data.family}</div>
+                <div class="mt-1 text-orange-700 text-sm">સ્થાન: ${data.location}</div>
                 `;
             }
         }
@@ -389,13 +388,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 lang: selectedLang
             };
 
-            // templates object: try to use templates[selectedLang], fallback to LANGUAGES demo
+            // render card using form data
             try {
-                if (typeof templates !== 'undefined' && templates[selectedLang]) {
-                    document.getElementById('cardTextArea').innerHTML = templates[selectedLang](d);
-                } else {
-                    document.getElementById('cardTextArea').innerHTML = LANGUAGES[selectedLang].demoCard();
-                }
+                document.getElementById('cardTextArea').innerHTML = LANGUAGES[selectedLang].demoCard(d);
             } catch(err) {
                 // fallback safe
                 document.getElementById('cardTextArea').innerHTML = LANGUAGES[selectedLang].demoCard();
