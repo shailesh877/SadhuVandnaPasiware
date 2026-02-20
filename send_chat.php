@@ -38,7 +38,7 @@ if(isset($_FILES['attachment']) && $_FILES['attachment']['error'] === 0){
     move_uploaded_file($file['tmp_name'], $dest);
 
     // ✅ BROWSER ACCESS PATH
-    $filePath = "/sadhu_vandana/uploads/chat/" . $newName;
+    $filePath = "/uploads/chat/" . $newName;
 
     $fileType = str_starts_with($file['type'], 'image')
                 ? 'image'
@@ -65,3 +65,4 @@ $stmt->bind_param(
 $stmt->execute();
 
 echo "ok";
+
