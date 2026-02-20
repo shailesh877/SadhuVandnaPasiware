@@ -351,7 +351,7 @@ let isTyping = false;
 // AGORA CONFIG
 // -----------------------------------------------------------
 // PLEASE REPLACE THE APP ID BELOW WITH YOUR OWN FROM AGORA CONSOLE
-const AGORA_APP_ID = "f73e45e4817540ceaaf195805919f08e"; 
+const AGORA_APP_ID = "42eb51e0bc30431cba75efefb9ea15ea"; 
 // If your project is in "Secure Mode", you need a Temp Token. 
 // Generate one in Agora Console for the channel name shown in browser console, and paste it below.
 // If in "Testing Mode", leave this as null.
@@ -1095,3 +1095,4 @@ async function confirmUnblock(){
     }catch(e){console.error(e);}
 }
 </script>
+
