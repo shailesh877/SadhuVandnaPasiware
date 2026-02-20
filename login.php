@@ -58,20 +58,43 @@
     <!-- STEP 0: NAME & CASTE -->
     <div id="stepDetails" class="group transition-all flex flex-col gap-4">
         <!-- Name Field -->
+        <!-- First Name -->
         <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Full Name</label>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">First Name <span class="text-red-500">*</span></label>
             <div class="relative">
                 <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-orange-500 transition-colors">
                     <i class="fa-solid fa-user"></i>
                 </span>
-                <input type="text" id="name" placeholder="Enter your Name" 
+                <input type="text" id="first_name" placeholder="First Name" 
+                       class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" required />
+            </div>
+        </div>
+        <!-- Middle Name -->
+        <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Middle Name <span class="text-red-500">*</span></label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-orange-500 transition-colors">
+                    <i class="fa-solid fa-user-tag"></i>
+                </span>
+                <input type="text" id="middle_name" placeholder="Middle Name" 
+                       class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" required />
+            </div>
+        </div>
+        <!-- Last Name -->
+        <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Last Name <span class="text-red-500">*</span></label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-orange-500 transition-colors">
+                    <i class="fa-solid fa-user-group"></i>
+                </span>
+                <input type="text" id="last_name" placeholder="Last Name" 
                        class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" required />
             </div>
         </div>
 
         <!-- Caste Field -->
         <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Caste (Samaj)</label>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Caste (Samaj) <span class="text-red-500">*</span></label>
             <div class="relative">
                 <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-orange-500 transition-colors">
                     <i class="fa-solid fa-users"></i>
@@ -105,7 +128,7 @@
 
     <!-- STEP 1: MOBILE -->
     <div id="stepEmail" class="group transition-all">
-        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Mobile Number</label>
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Mobile Number <span class="text-red-500">*</span></label>
         <div class="relative">
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 group-focus-within:text-orange-500 transition-colors">
                 <i class="fa-solid fa-mobile-screen"></i>
@@ -159,12 +182,19 @@ $(document).ready(function(){
     $('#loginForm').submit(function(e){
         e.preventDefault();
         
-        let name = $('#name').val().trim();
+        let firstName = $('#first_name').val().trim();
+        let middleName = $('#middle_name').val().trim();
+        let lastName = $('#last_name').val().trim();
+        // Combine for backend storage (First + Middle + Last)
+        let name = firstName + " " + middleName + " " + lastName;
+
         let caste = $('#caste').val();
         let mobile = $('#mobile').val().trim();
         let btn = $('#submitBtn');
 
-        if(!name){ showMsg('Please enter your full name'); return; }
+        if(!firstName){ showMsg('Please enter your First Name'); return; }
+        if(!middleName){ showMsg('Please enter your Middle Name'); return; }
+        if(!lastName){ showMsg('Please enter your Last Name'); return; }
         if(!caste){ showMsg('Please select your caste'); return; }
         if(caste === 'Other'){ showMsg('Only users from authorized castes are allowed in this community.'); return; }
         if(!mobile){ showMsg('Please enter your mobile number'); return; }
