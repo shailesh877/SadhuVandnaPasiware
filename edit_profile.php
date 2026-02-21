@@ -51,7 +51,7 @@ $user = $con->query("SELECT * FROM tbl_members WHERE mobile='$user_mobile'")->fe
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                     <label class="text-md font-bold text-orange-700 mb-1">Full Name</label>
-                    <input type="text" name="name" class="border rounded-lg px-4 py-2 w-full" placeholder="Full Name" value="<?php echo htmlspecialchars($user['name']); ?>" />
+                    <input type="text" name="name" class="border rounded-lg px-4 py-2 w-full" placeholder="Full Name" value="<?php echo htmlspecialchars($user['name'] ?? ''); ?>" />
                 </div>
 
                 <div>
@@ -81,52 +81,52 @@ $user = $con->query("SELECT * FROM tbl_members WHERE mobile='$user_mobile'")->fe
 
                 <div>
                     <label class="text-md font-bold text-orange-700 mb-1">Education</label>
-                    <input type="text" name="education" class="border rounded-lg px-4 py-2 w-full" placeholder="Highest Qualification" value="<?php echo htmlspecialchars($user['education']); ?>" />
+                    <input type="text" name="education" class="border rounded-lg px-4 py-2 w-full" placeholder="Highest Qualification" value="<?php echo htmlspecialchars($user['education'] ?? ''); ?>" />
                 </div>
 
                 <div>
                     <label class="text-md font-bold text-orange-700 mb-1">Occupation</label>
-                    <input type="text" name="occupation" class="border rounded-lg px-4 py-2 w-full" placeholder="Profession/Job" value="<?php echo htmlspecialchars($user['occupation']); ?>" />
+                    <input type="text" name="occupation" class="border rounded-lg px-4 py-2 w-full" placeholder="Profession/Job" value="<?php echo htmlspecialchars($user['occupation'] ?? ''); ?>" />
                 </div>
 
                 <div>
                     <label class="text-md font-bold text-orange-700 mb-1">Phone Number</label>
-                    <input type="text" name="mobile" class="border rounded-lg px-4 py-2 w-full" placeholder="Mobile" value="<?php echo htmlspecialchars($user['mobile']); ?>" />
+                    <input type="text" name="mobile" class="border rounded-lg px-4 py-2 w-full" placeholder="Mobile" value="<?php echo htmlspecialchars($user['mobile'] ?? ''); ?>" />
                 </div>
 
                 <div>
                     <label class="text-md font-bold text-orange-700 mb-1">Email</label>
-                    <input type="email" name="email" class="border rounded-lg px-4 py-2 w-full" readonly placeholder="Email" value="<?php echo htmlspecialchars($user['email']); ?>" />
+                    <input type="email" name="email" class="border rounded-lg px-4 py-2 w-full" readonly placeholder="Email" value="<?php echo htmlspecialchars($user['email'] ?? ''); ?>" />
                     
                 </div>
                 <div>
                     <label class="text-md font-bold text-orange-700 mb-1">Cast/Community</label>
-                    <input type="text" name="cast" class="border rounded-lg px-4 py-2 w-full"  placeholder="community" value="<?php echo htmlspecialchars($user['cast']); ?>" />
+                    <input type="text" name="cast" class="border rounded-lg px-4 py-2 w-full"  placeholder="community" value="<?php echo htmlspecialchars($user['cast'] ?? ''); ?>" />
                     
                 </div>
 
                 <div>
                     <label class="text-md font-bold text-orange-700 mb-1">Address (Present)</label>
-                    <input type="text" name="address" class="border rounded-lg px-4 py-2 w-full" placeholder="Current Address" value="<?php echo htmlspecialchars($user['address']); ?>" />
+                    <input type="text" name="address" class="border rounded-lg px-4 py-2 w-full" placeholder="Current Address" value="<?php echo htmlspecialchars($user['address'] ?? ''); ?>" />
                 </div>
 
                 <div>
                     <label class="text-md font-bold text-orange-700 mb-1">City</label>
-                    <input type="text" name="city" class="border rounded-lg px-4 py-2 w-full" placeholder="City" value="<?php echo htmlspecialchars($user['city']); ?>" />
+                    <input type="text" name="city" class="border rounded-lg px-4 py-2 w-full" placeholder="City" value="<?php echo htmlspecialchars($user['city'] ?? ''); ?>" />
                 </div>
 
                 <div>
                     <label class="text-md font-bold text-orange-700 mb-1">State</label>
-                    <input type="text" name="state" class="border rounded-lg px-4 py-2 w-full" placeholder="State" value="<?php echo htmlspecialchars($user['state']); ?>" />
+                    <input type="text" name="state" class="border rounded-lg px-4 py-2 w-full" placeholder="State" value="<?php echo htmlspecialchars($user['state'] ?? ''); ?>" />
                 </div>
 
                 <div>
                     <label class="text-md font-bold text-orange-700 mb-1">Hobbies & Interests</label>
-                    <input type="text" name="hobbi" class="border rounded-lg px-4 py-2 w-full" placeholder="Singing, Reading..." value="<?php echo htmlspecialchars($user['hobbi']); ?>" />
+                    <input type="text" name="hobbi" class="border rounded-lg px-4 py-2 w-full" placeholder="Singing, Reading..." value="<?php echo htmlspecialchars($user['hobbi'] ?? ''); ?>" />
                 </div>
                 <div>
                 <label class="text-md font-bold text-orange-700 mb-1">About Me / Biodata</label>
-                <textarea name="about" class="border rounded-lg px-4 py-2 w-full min-h-[60px]" placeholder="Your bio..."><?php echo htmlspecialchars($user['about']); ?></textarea>
+                <textarea name="about" class="border rounded-lg px-4 py-2 w-full min-h-[60px]" placeholder="Your bio..."><?php echo htmlspecialchars($user['about'] ?? ''); ?></textarea>
             </div>
             </div>
 
