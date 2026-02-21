@@ -189,7 +189,7 @@ if(isset($_POST['save_profile'])){
             <!-- Profile Photo Upload -->
             <div class="flex justify-center items-center">
                 <label class="relative cursor-pointer">
-                    <input type="file" name="photo" class="hidden" id="marriagePhotoInput" accept="image/*"/>
+                    <input type="file" name="photo" class="hidden" id="marriagePhotoInput" accept="image/*" required/>
 
      
 
@@ -218,7 +218,7 @@ if(isset($_POST['save_profile'])){
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Full Name</label>
                     <input type="text" name="full_name"
-                        value="<?= htmlspecialchars($profile['full_name'] ?? $user['name']); ?>"
+                        value="<?= htmlspecialchars($profile['full_name'] ?? $user['name'] ?? ''); ?>"
                         class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required>
                 </div>
 
@@ -238,7 +238,7 @@ if(isset($_POST['save_profile'])){
 
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Date of Birth</label>
-                    <input type="date" name="dob" value="<?= htmlspecialchars($profile['dob'] ??$user['dob']); ?>"
+                    <input type="date" name="dob" value="<?= htmlspecialchars($profile['dob'] ?? $user['dob'] ?? ''); ?>"
                         class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required>
                 </div>
 
@@ -278,28 +278,28 @@ if(isset($_POST['save_profile'])){
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Phone Number</label>
                     <input type="text" name="phone"
-                        value="<?= htmlspecialchars($profile['phone'] ?? $user['mobile']); ?>"
+                        value="<?= htmlspecialchars($profile['phone'] ?? $user['mobile'] ?? ''); ?>"
                         class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required>
                 </div>
 
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Email ID</label>
                     <input type="email" name="email"
-                        value="<?= htmlspecialchars($profile['email'] ?? $user['email']); ?>" required
+                        value="<?= htmlspecialchars($profile['email'] ?? $user['email'] ?? ''); ?>" required
                         class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Education</label>
                     <input type="text" name="education"
-                        value="<?= htmlspecialchars($profile['education'] ?? $user['education']); ?>" required
+                        value="<?= htmlspecialchars($profile['education'] ?? $user['education'] ?? ''); ?>" required
                         class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">Occupation</label>
                     <input type="text" name="occupation"
-                        value="<?= htmlspecialchars($profile['occupation'] ?? $user['occupation']); ?>" required
+                        value="<?= htmlspecialchars($profile['occupation'] ?? $user['occupation'] ?? ''); ?>" required
                         class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300">
                 </div>
 
@@ -317,7 +317,7 @@ if(isset($_POST['save_profile'])){
 
                 <div>
                     <label class="block text-orange-700 font-bold mb-1">City</label>
-                    <input type="text" name="city" value="<?= htmlspecialchars($profile['city'] ?? $user['city']); ?>"
+                    <input type="text" name="city" value="<?= htmlspecialchars($profile['city'] ?? $user['city'] ?? ''); ?>"
                         class="border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-orange-300" required>
                 </div>
 
@@ -420,7 +420,7 @@ if(isset($_POST['save_profile'])){
                 <label class="block text-orange-700 font-bold mb-1">About / Bio</label>
                 <textarea name="about" required
                     class="border rounded-lg px-4 py-2 w-full min-h-[80px] focus:ring-2 focus:ring-orange-300"
-                    placeholder="Short Bio, lifestyle, partner expectations..."><?= htmlspecialchars($profile['about'] ?? $user['about']); ?></textarea>
+                    placeholder="Short Bio, lifestyle, partner expectations..."><?= htmlspecialchars($profile['about'] ?? $user['about'] ?? ''); ?></textarea>
             </div>
 
             <div>
