@@ -211,3 +211,47 @@ window.addEventListener('load', () => {
   loadProfiles(true);
 });
 </script>
+<script>
+// disable right click
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+// disable drag
+document.addEventListener("dragstart", e => e.preventDefault());
+
+// disable ctrl keys
+document.addEventListener("keydown", function(e){
+
+    // Ctrl + S / U / P / C / X / A
+    if (
+        e.ctrlKey &&
+        ['s','u','p','c','x','a'].includes(e.key.toLowerCase())
+    ) {
+        e.preventDefault();
+    }
+
+    // Print Screen
+    if (e.key === "PrintScreen") {
+        document.body.style.filter = "blur(10px)";
+        setTimeout(() => {
+            document.body.style.filter = "none";
+        }, 2000);
+    }
+
+    // F12
+    if (e.keyCode === 123) {
+        e.preventDefault();
+    }
+});
+
+// mobile screenshot detection (best possible)
+document.addEventListener("visibilitychange", function(){
+    if(document.hidden){
+        document.body.style.filter = "blur(15px)";
+    } else {
+        document.body.style.filter = "none";
+    }
+});
+
+// disable text selection
+document.onselectstart = () => false;
+</script>
