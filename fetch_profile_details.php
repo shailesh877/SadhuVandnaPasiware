@@ -33,9 +33,9 @@ function displayRow($label, $value){
     <!-- Header -->
     <div class="flex flex-col items-center">
         <img src="<?= $photo ?>" class="w-32 h-32 rounded-full border-4 border-orange-400 object-cover shadow-lg mb-3">
-        <h2 class="text-2xl font-bold text-orange-700"><?= htmlspecialchars($profile['full_name']) ?></h2>
-        <div class="text-gray-600 font-semibold"><?= htmlspecialchars($profile['status']) ?> | <?= htmlspecialchars($profile['gender']) ?> | <?= $profile['age'] ?> yrs</div>
-        <div class="text-gray-500 text-sm"><i class="fa fa-location-dot"></i> <?= htmlspecialchars($profile['city']) ?></div>
+        <h2 class="text-2xl font-bold text-orange-700"><?= htmlspecialchars($profile['full_name'] ?? '') ?></h2>
+        <div class="text-gray-600 font-semibold"><?= htmlspecialchars($profile['status'] ?? '') ?> | <?= htmlspecialchars($profile['gender'] ?? '') ?> | <?= $profile['age'] ?> yrs</div>
+        <div class="text-gray-500 text-sm"><i class="fa fa-location-dot"></i> <?= htmlspecialchars($profile['city'] ?? '') ?></div>
     </div>
 
     <!-- Group: Basic Info -->
@@ -107,7 +107,7 @@ function displayRow($label, $value){
      <!-- Group: About -->
      <div class="bg-orange-50 p-4 rounded-xl border border-orange-100">
         <h3 class="text-lg font-bold text-orange-800 border-b border-orange-200 mb-2 pb-1">About</h3>
-        <p class="text-gray-700 text-sm whitespace-pre-wrap"><?= htmlspecialchars($profile['about']) ?></p>
+        <p class="text-gray-700 text-sm whitespace-pre-wrap"><?= htmlspecialchars($profile['about'] ?? '') ?></p>
     </div>
 
     <!-- Group: Partner Preference -->
@@ -122,7 +122,7 @@ function displayRow($label, $value){
         </div>
         <div class="mt-2">
             <span class='text-xs text-orange-600 font-bold uppercase'>Expectations</span>
-            <p class="text-gray-700 text-sm whitespace-pre-wrap"><?= htmlspecialchars($profile['partner_expectations']) ?></p>
+            <p class="text-gray-700 text-sm whitespace-pre-wrap"><?= htmlspecialchars($profile['partner_expectations'] ?? '') ?></p>
         </div>
     </div>
 
