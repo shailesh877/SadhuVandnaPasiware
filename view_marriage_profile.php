@@ -71,10 +71,10 @@ if($status_check && $status_check->num_rows>0){
 
     <!-- Name + Status -->
     <h2 class="font-extrabold text-2xl md:text-3xl text-orange-700 mb-1 text-center">
-        <?= htmlspecialchars($profile['full_name']) ?>
+        <?= htmlspecialchars($profile['full_name'] ?? '') ?>
     </h2>
     <div class="text-orange-500 font-semibold text-lg md:text-xl mb-2 text-center">
-        <?= htmlspecialchars($profile['status']) ?> | <?= htmlspecialchars($profile['gender']) ?>
+        <?= htmlspecialchars($profile['status'] ?? '') ?> | <?= htmlspecialchars($profile['gender'] ?? '') ?>
     </div>
 
     <!-- Basic Info -->
@@ -83,16 +83,16 @@ if($status_check && $status_check->num_rows>0){
             <i class="fa fa-calendar-day"></i> <?= $profile['age'] ?> yrs
         </span>
         <span class="bg-orange-200 text-orange-700 rounded-md px-3 py-1 font-medium flex items-center gap-1 text-sm md:text-base">
-            <i class="fa fa-graduation-cap"></i> <?= htmlspecialchars($profile['education']) ?>
+            <i class="fa fa-graduation-cap"></i> <?= htmlspecialchars($profile['education'] ?? '') ?>
         </span>
         <span class="bg-orange-200 text-orange-700 rounded-md px-3 py-1 font-medium flex items-center gap-1 text-sm md:text-base">
             <i class="fa fa-briefcase"></i> <?= htmlspecialchars($profile['occupation'] ?? 'N/A') ?>
         </span>
         <span class="bg-orange-200 text-orange-700 rounded-md px-3 py-1 font-medium flex items-center gap-1 text-sm md:text-base">
-            <i class="fa fa-location-dot"></i> <?= htmlspecialchars($profile['city']) ?>
+            <i class="fa fa-location-dot"></i> <?= htmlspecialchars($profile['city'] ?? '') ?>
         </span>
         <span class="bg-orange-200 text-orange-700 rounded-md px-3 py-1 font-medium flex items-center gap-1 text-sm md:text-base">
-            <i class="fa fa-users"></i> <?= htmlspecialchars($profile['caste']) ?>
+            <i class="fa fa-users"></i> <?= htmlspecialchars($profile['caste'] ?? '') ?>
         </span>
     </div>
 
@@ -144,7 +144,7 @@ $cp_photo = !empty($community['profile_photo'])
             <!-- PHOTO -->
             <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-orange-400 shadow">
                 <img src="<?= $cp_photo ?>" 
-                     alt="<?= htmlspecialchars($community['name']) ?>" 
+                     alt="<?= htmlspecialchars($community['name'] ?? '') ?>" 
                      class="w-full h-full object-cover">
             </div>
 
@@ -153,14 +153,14 @@ $cp_photo = !empty($community['profile_photo'])
 
                 <!-- NAME -->
                 <div class="font-bold text-orange-700 text-lg leading-tight">
-                    <?= htmlspecialchars($community['name']) ?>
+                    <?= htmlspecialchars($community['name'] ?? '') ?>
                 </div>
 
                 <!-- CITY -->
                 <?php if(!empty($community['city'])): ?>
                 <span class="text-gray-600 text-sm">
                     <i class="fa fa-location-dot mr-1"></i> 
-                    <?= htmlspecialchars($community['city']) ?>
+                    <?= htmlspecialchars($community['city'] ?? '') ?>
                 </span>
                 <?php endif; ?>
 
@@ -168,7 +168,7 @@ $cp_photo = !empty($community['profile_photo'])
                 <?php if(!empty($community['education'])): ?>
                 <span class="text-gray-600 text-sm">
                     <i class="fa fa-graduation-cap mr-1"></i> 
-                    <?= htmlspecialchars($community['education']) ?>
+                    <?= htmlspecialchars($community['education'] ?? '') ?>
                 </span>
                 <?php endif; ?>
 
@@ -176,7 +176,7 @@ $cp_photo = !empty($community['profile_photo'])
                 <?php if(!empty($community['cast'])): ?>
                 <span class="text-gray-600 text-sm">
                     <i class="fa fa-users mr-1"></i> 
-                    <?= htmlspecialchars($community['cast']) ?>
+                    <?= htmlspecialchars($community['cast'] ?? '') ?>
                 </span>
                 <?php endif; ?>
 
