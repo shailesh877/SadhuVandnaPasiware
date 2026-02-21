@@ -66,7 +66,8 @@
                     <i class="fa-solid fa-user"></i>
                 </span>
                 <input type="text" id="first_name" placeholder="First Name" 
-                       class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" required />
+                       class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" 
+                       pattern="^[a-zA-Z\s.]+$" title="Please enter a valid name (letters only)" required />
             </div>
         </div>
         <!-- Middle Name -->
@@ -77,7 +78,8 @@
                     <i class="fa-solid fa-user-tag"></i>
                 </span>
                 <input type="text" id="middle_name" placeholder="Middle Name" 
-                       class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" required />
+                       class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" 
+                       pattern="^[a-zA-Z\s.]+$" title="Please enter a valid name (letters only)" required />
             </div>
         </div>
         <!-- Last Name -->
@@ -88,7 +90,8 @@
                     <i class="fa-solid fa-user-group"></i>
                 </span>
                 <input type="text" id="last_name" placeholder="Last Name" 
-                       class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" required />
+                       class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all shadow-sm" 
+                       pattern="^[a-zA-Z\s.]+$" title="Please enter a valid name (letters only)" required />
             </div>
         </div>
 
@@ -192,9 +195,10 @@ $(document).ready(function(){
         let mobile = $('#mobile').val().trim();
         let btn = $('#submitBtn');
 
-        if(!firstName){ showMsg('Please enter your First Name'); return; }
-        if(!middleName){ showMsg('Please enter your Middle Name'); return; }
-        if(!lastName){ showMsg('Please enter your Last Name'); return; }
+        const nameRegex = /^[a-zA-Z\s.]+$/;
+        if(!firstName || !nameRegex.test(firstName)){ showMsg('Invalid First Name (Letters only)'); return; }
+        if(!middleName || !nameRegex.test(middleName)){ showMsg('Invalid Middle Name (Letters only)'); return; }
+        if(!lastName || !nameRegex.test(lastName)){ showMsg('Invalid Last Name (Letters only)'); return; }
         if(!caste){ showMsg('Please select your caste'); return; }
         if(caste === 'Other'){ showMsg('Only users from authorized castes are allowed in this community.'); return; }
         if(!mobile){ showMsg('Please enter your mobile number'); return; }
