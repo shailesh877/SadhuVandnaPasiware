@@ -26,7 +26,7 @@ $query = "
 SELECT mp.*, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age
 FROM tbl_marriage_profiles mp
 JOIN tbl_members m ON m.id = mp.user_id
-WHERE m.status != 'Blocked' AND mp.id != '$my_profile_id'
+WHERE m.status != 'Blocked' AND mp.id != '$my_profile_id' order by mp.id desc
 ";
 
 // Apply Filters
