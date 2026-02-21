@@ -61,7 +61,7 @@ while($post = $posts_query->fetch_assoc()) {
 
 <!-- Info Block -->
 <div class="w-full bg-white/90 backdrop-blur shadow-xl rounded-2xl border border-orange-100 p-6 pt-16 flex flex-col items-center -mt-10 mb-3">
-    <div class="font-extrabold text-2xl text-orange-700 mb-3"><?php echo htmlspecialchars($user['name']); ?></div>
+    <div class="font-extrabold text-2xl text-orange-700 mb-3"><?php echo htmlspecialchars($user['name'] ?? ''); ?></div>
     <div class="flex flex-wrap gap-3 text-md text-gray-500 mb-4 border-b border-orange-100 pb-3 justify-center">
         <span><i class="fa-solid fa-location-dot mr-1"></i> <?php echo htmlspecialchars($user['city'] ?? ''); ?></span>
         <span><i class="fa-solid fa-home mr-1"></i> From <?php echo htmlspecialchars($user['state'] ?? ''); ?></span>
@@ -130,7 +130,7 @@ if($marriage && !empty($marriage['dob'])) {
         <?php endif; ?>
 
         <div class="mt-4 text-center">
-            <div class="text-xl font-bold text-orange-700"><?= htmlspecialchars($marriage['full_name']); ?></div>
+            <div class="text-xl font-bold text-orange-700"><?= htmlspecialchars($marriage['full_name'] ?? ''); ?></div>
             <div class="text-gray-500 text-sm"><?= $age ? $age.' Years' : 'Age Not Provided'; ?></div>
         </div>
 
@@ -150,32 +150,32 @@ if($marriage && !empty($marriage['dob'])) {
 
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-venus-mars text-orange-500"></i>
-                <span><strong>Gender:</strong> <?= htmlspecialchars($marriage['gender']); ?></span>
+                <span><strong>Gender:</strong> <?= htmlspecialchars($marriage['gender'] ?? ''); ?></span>
             </div>
 
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-graduation-cap text-orange-500"></i>
-                <span><strong>Education:</strong> <?= htmlspecialchars($marriage['education']); ?></span>
+                <span><strong>Education:</strong> <?= htmlspecialchars($marriage['education'] ?? ''); ?></span>
             </div>
 
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-map-pin text-orange-500"></i>
-                <span><strong>City:</strong> <?= htmlspecialchars($marriage['city']); ?></span>
+                <span><strong>City:</strong> <?= htmlspecialchars($marriage['city'] ?? ''); ?></span>
             </div>
 
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-ring text-orange-500"></i>
-                <span><strong>Marital Status:</strong> <?= htmlspecialchars($marriage['status']); ?></span>
+                <span><strong>Marital Status:</strong> <?= htmlspecialchars($marriage['status'] ?? ''); ?></span>
             </div>
 
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-briefcase text-orange-500"></i>
-                <span><strong>Occupation:</strong> <?= htmlspecialchars($marriage['occupation']); ?></span>
+                <span><strong>Occupation:</strong> <?= htmlspecialchars($marriage['occupation'] ?? ''); ?></span>
             </div>
 
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-users text-orange-500"></i>
-                <span><strong>Community:</strong> <?= htmlspecialchars($marriage['caste']); ?></span>
+                <span><strong>Community:</strong> <?= htmlspecialchars($marriage['caste'] ?? ''); ?></span>
             </div>
 
         </div>
@@ -222,13 +222,13 @@ if($marriage && !empty($marriage['dob'])) {
   </a>
 </div>
 
-            <div class="mt-4 text-lg text-gray-800 font-medium"><?php echo htmlspecialchars($post['status']); ?></div>
+            <div class="mt-4 text-lg text-gray-800 font-medium"><?php echo htmlspecialchars($post['status'] ?? ''); ?></div>
             <div class="mt-4 text-lg text-gray-800 font-medium break-all">
   <a href="<?php echo htmlspecialchars($post['link']); ?>" 
      class="text-blue-700 break-all" 
      target="_blank" 
      rel="noopener noreferrer">
-     <?php echo htmlspecialchars($post['link']); ?>
+     <?php echo htmlspecialchars($post['link'] ?? ''); ?>
   </a>
 </div>
 
@@ -276,8 +276,8 @@ if($marriage && !empty($marriage['dob'])) {
                                     <div class="w-10 h-10 rounded-full bg-orange-200 text-white flex items-center justify-center font-bold"><?php echo strtoupper($comment['name'][0] ?? 'U'); ?></div>
                                 <?php endif; ?>
                                 <div>
-                                    <div class="text-sm font-bold text-orange-700"><?php echo htmlspecialchars($comment['name']); ?></div>
-                                    <div class="text-gray-600 text-sm"><?php echo htmlspecialchars($comment['comment']); ?></div>
+                                     <div class="text-sm font-bold text-orange-700"><?php echo htmlspecialchars($comment['name'] ?? ''); ?></div>
+                                     <div class="text-gray-600 text-sm"><?php echo htmlspecialchars($comment['comment'] ?? ''); ?></div>
                                     <div class="text-gray-400 text-xs"><?php echo date("d M Y h:i A", strtotime($comment['date'])); ?></div>
                                 </div>
                             </div>
