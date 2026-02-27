@@ -142,6 +142,13 @@ $user = $con->query("SELECT * FROM tbl_members WHERE mobile='$user_mobile'")->fe
                 Back <i class="fa fa-arrow-right"></i>
             </a>
         </div>
+        
+        <!-- Delete Account Link -->
+        <div class="mt-10 pt-6 border-t border-gray-100 flex justify-center">
+            <a href="delete_account.php" class="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1 opacity-70 hover:opacity-100 transition">
+                <i class="fa-solid fa-user-slash"></i> Need to delete your account?
+            </a>
+        </div>
     </form>
 </main>
 
