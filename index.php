@@ -6,7 +6,7 @@ if($success_msg == 1){
     $success_text = 'Your post has been created successfully!';
 }
 
-// include("connection.php");
+include("connection.php");
 
 if(!isset($_SESSION['sadhu_user_id'])){
   header("Location: login.php");
@@ -64,7 +64,7 @@ window.addEventListener("load", function () {
   <section class="flex flex-col gap-4 flex-1">
     <?php if($success_text){ ?>
     <div class="bg-green-100 text-green-700 px-4 py-1 rounded-lg border border-green-200 text-center">
-      <?= $success_text ?>
+      <?php echo $success_text ?>
     </div>
     <?php } ?>
     <!-- Status Input Card -->
@@ -268,6 +268,5 @@ window.addEventListener("load", function () {
 </script>
 
 </body>
-
 
 </html>
