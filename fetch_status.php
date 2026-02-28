@@ -1,8 +1,9 @@
 <?php
 // fetch_status.php
-error_reporting(0);
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include("connection.php");
-session_start();
 date_default_timezone_set('Asia/Kolkata');
 
 // Prevent caching
@@ -73,6 +74,3 @@ if($my_call && $my_call->num_rows > 0){
 }
 
 echo json_encode($response);
-?>
-
-
