@@ -1,6 +1,8 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include("connection.php");
-session_start();
 
 $story_id = $_GET['story_id'] ?? 0;
 $res = $con->query(
