@@ -1,4 +1,5 @@
 <?php
+include "connection.php";
 // Database Auto-migration / Schema Sync
 // This script ensures all required tables and columns exist automatically.
 
@@ -71,3 +72,4 @@ foreach ($cols as $col => $alter_sql) {
     }
 }
 ?>
+
