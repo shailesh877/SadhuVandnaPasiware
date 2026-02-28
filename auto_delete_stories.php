@@ -15,4 +15,3 @@ if ($now - $last_run > 60) { // har 1 minute me ek baar max chale
         $con->query("DELETE FROM tbl_stories WHERE id=" . $s['id']);
     }
 }
-?>
