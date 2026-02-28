@@ -1,13 +1,18 @@
 <?php
 include("connection.php");
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 header('Content-Type: application/json');
 date_default_timezone_set("Asia/Kolkata");
 
 $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
 if(!$user_mobile){ echo json_encode([]); exit; }
 
-$user = $con->query("SELECT id, name FROM tbl_members WHERE mobile='$user_mobile'")->fetch_assoc();
+if(!$con){ echo json_encode([]); exit; }
+$user_res = $con->query("SELECT id, name FROM tbl_members WHERE mobile='$user_mobile'");
+$user = ($user_res) ? $user_res->fetch_assoc() : null;
+if(!$user){ echo json_encode([]); exit; }
 $user_id = $user['id'];
 $action = $_REQUEST['action'] ?? '';
 
@@ -70,12 +75,20 @@ if($action === 'fetch_all'){
     LIMIT $limit OFFSET $offset
   ");
 
+  if(!$res){
+    echo json_encode([]);
+    exit;
+  }
+
   while($p = $res->fetch_assoc()){
     $pid = $p['id'];
 
     // ✅ Likes count + check if current user liked
-    $likes = $con->query("SELECT COUNT(*) FROM tbl_likes WHERE post_id=$pid")->fetch_row()[0];
-    $user_liked = $con->query("SELECT id FROM tbl_likes WHERE post_id=$pid AND user_id=$user_id")->num_rows > 0;
+    $likes_res = $con->query("SELECT COUNT(*) FROM tbl_likes WHERE post_id=$pid");
+    $likes = ($likes_res) ? $likes_res->fetch_row()[0] : 0;
+    
+    $user_liked_res = $con->query("SELECT id FROM tbl_likes WHERE post_id=$pid AND user_id=$user_id");
+    $user_liked = ($user_liked_res && $user_liked_res->num_rows > 0);
 
     // ✅ Fetch comments
     $comments = [];
@@ -87,13 +100,15 @@ if($action === 'fetch_all'){
       ORDER BY c.date DESC
     ");
 
-    while($c = $cres->fetch_assoc()){
-      $comments[] = [
-        'name' => htmlspecialchars($c['name']),
-        'profile_photo' => htmlspecialchars($c['profile_photo']), // Placeholder for future profile photo
-        'comment' => htmlspecialchars($c['comment']),
-        'date' => date("d M Y, h:i A", strtotime($c['date']))
-      ];
+    if($cres){
+      while($c = $cres->fetch_assoc()){
+        $comments[] = [
+          'name' => htmlspecialchars($c['name']),
+          'profile_photo' => htmlspecialchars($c['profile_photo']), 
+          'comment' => htmlspecialchars($c['comment']),
+          'date' => date("d M Y, h:i A", strtotime($c['date']))
+        ];
+      }
     }
 
     // ✅ Media split fix
@@ -120,4 +135,3 @@ if($action === 'fetch_all'){
   echo json_encode($posts);
   exit;
 }
-?>
