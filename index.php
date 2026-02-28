@@ -6,7 +6,7 @@ if($success_msg == 1){
     $success_text = 'Your post has been created successfully!';
 }
 
-include("connection.php");
+// include("connection.php");
 
 if(!isset($_SESSION['sadhu_user_id'])){
   header("Location: login.php");
@@ -268,5 +268,6 @@ window.addEventListener("load", function () {
 </script>
 
 </body>
+
 
 </html>
