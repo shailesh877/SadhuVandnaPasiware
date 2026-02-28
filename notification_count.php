@@ -6,7 +6,7 @@ session_start();
 $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
 
 if(!$user_mobile){
-    echo 0;
+    echo json_encode(['unread_count' => 0, 'msg_count' => 0]);
     exit;
 }
 
@@ -14,28 +14,36 @@ if(!$user_mobile){
 $userQ = $con->query("SELECT id FROM tbl_members WHERE mobile = '$user_mobile' LIMIT 1");
 
 if($userQ->num_rows == 0){
-    echo 0;
+    echo json_encode(['unread_count' => 0, 'msg_count' => 0]);
     exit;
 }
 
 $user_id = $userQ->fetch_assoc()['id'];
 
-// Step 2: Get marriage_profile_id of this user
+// Get marriage_profile_id
 $mpQ = $con->query("SELECT id FROM tbl_marriage_profiles WHERE user_id = '$user_id' LIMIT 1");
+$my_marriage_id = ($mpQ->num_rows > 0) ? $mpQ->fetch_assoc()['id'] : 0;
 
-if($mpQ->num_rows == 0){
-    echo 0;
-    exit;
-}
+// Count community messages specifically
+$c_msg = $con->query("SELECT COUNT(*) FROM tbl_messages WHERE receiver_id = '$user_id' AND chat_platform = 'community' AND seen = 0")->fetch_row()[0];
 
-$my_profile_id = $mpQ->fetch_assoc()['id'];
-
-// Step 3: Count unread messages
+// Count everything (Messages + Proposals + Follows - or just total notifications)
 $q = $con->query("
-    SELECT COUNT(*) 
-    FROM tbl_messages 
-    WHERE receiver_id = '$my_profile_id' AND seen = 0
+    SELECT (
+        SELECT COUNT(*) FROM tbl_messages 
+        WHERE receiver_id = '$my_marriage_id' AND chat_platform = 'marriage' AND seen = 0
+    ) + (
+        SELECT COUNT(*) FROM tbl_proposals 
+        WHERE receiver_id = '$my_marriage_id' AND status = 'pending'
+    ) + (
+        SELECT COUNT(*) FROM tbl_followers 
+        WHERE following_id = '$user_id' AND status = 'pending'
+    ) as total
 ");
 
-echo $q->fetch_row()[0];
+header('Content-Type: application/json');
+echo json_encode([
+    'unread_count' => intval($q->fetch_row()[0]) + intval($c_msg),
+    'msg_count' => intval($c_msg)
+]);
 ?>

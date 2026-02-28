@@ -9,90 +9,45 @@ $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
 if(!$user_mobile) { echo "<div class='text-center text-red-500 mt-10'>Please login.</div>"; exit; }
 
 $member = $con->query("SELECT id FROM tbl_members WHERE mobile='".$con->real_escape_string($user_mobile)."'")->fetch_assoc();
-$member_id = $member['id'];
+$my_profile_id = $member['id']; 
 
-$platform = $_GET['platform'] ?? 'marriage'; // default to marriage
 $receiver_id = intval($_GET['receiver_id'] ?? 0);
-
 if(!$receiver_id){ echo "<div class='text-center text-red-500 mt-10'>No chat target.</div>"; exit; }
 
-if($platform === 'community'){
-    // --- COMMUNITY MODE ---
-    $my_profile_id = $member_id;
-    
-    // Connection Check (Mutual accepted follows)
-    $check_conn = $con->query("
-        SELECT id FROM tbl_followers 
-        WHERE follower_id = $my_profile_id AND following_id = $receiver_id AND status = 'accepted'
-    ");
-    $check_conn_back = $con->query("
-        SELECT id FROM tbl_followers 
-        WHERE follower_id = $receiver_id AND following_id = $my_profile_id AND status = 'accepted'
-    ");
-    
-    if($check_conn->num_rows == 0 || $check_conn_back->num_rows == 0){
-        echo "<div class='text-center p-10 mt-10 box shadow rounded-xl bg-white max-w-md mx-auto'>
-                <h2 class='text-xl font-bold text-red-500'>Connection Required</h2>
-                <p class='text-gray-500 mt-2 text-sm'>You must be 'Connected' (Mutual) to chat in the community.</p>
-                <a href='user_profile.php?id=$receiver_id' class='text-orange-600 underline mt-4 inline-block font-bold hover:text-orange-700 transition'>Go to Profile</a>
-              </div>";
-        exit;
-    }
+/* ---------------------------------------------------
+   CONNECTION CHECK (MUTUAL FOLLOW)
+--------------------------------------------------- */
+$check_conn = $con->query("
+    SELECT id FROM tbl_followers 
+    WHERE follower_id = $my_profile_id AND following_id = $receiver_id AND status = 'accepted'
+");
+$check_conn_back = $con->query("
+    SELECT id FROM tbl_followers 
+    WHERE follower_id = $receiver_id AND following_id = $my_profile_id AND status = 'accepted'
+");
 
-    $rc = $con->query("SELECT name as full_name, profile_photo as photo, mobile, (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(last_active) < 25) AS is_online 
-                       FROM tbl_members 
-                       WHERE id='$receiver_id' LIMIT 1")->fetch_assoc();
-    
-    $link_back = "user_profile.php?id=".$receiver_id;
-} else {
-    // --- MARRIAGE MODE (Original) ---
-    $me = $con->query("SELECT id FROM tbl_marriage_profiles WHERE user_id='$member_id' LIMIT 1")->fetch_assoc();
-    $my_profile_id = $me['id'] ?? 0;
-    if(!$my_profile_id){ echo "<div class='text-center text-red-500 mt-10'>Create marriage profile first.</div>"; exit; }
-
-    /* WALLET CONNECTION CHECK */
-    $check = $con->query("
-        SELECT id FROM tbl_wallet
-        WHERE 
-            (
-                sender_id = $my_profile_id 
-                AND receiver_id = $receiver_id
-            )
-            OR
-            (
-                sender_id = $receiver_id
-                AND receiver_id = $my_profile_id
-            )
-            AND status = 'success'
-        LIMIT 1
-    ");
-
-    if($check->num_rows == 0){
-        echo "<script>
-            alert('Payment is required for marriage chat. Redirecting to payment page.');
-            window.location.href = 'payment.php?sender=$my_profile_id&receiver=$receiver_id';
-        </script>";
-        exit;
-    }
-
-    $rc = $con->query("SELECT full_name, photo, mobile, (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(last_active) < 25) AS is_online 
-                       FROM tbl_marriage_profiles mp 
-                       JOIN tbl_members m ON mp.user_id=m.id 
-                       WHERE mp.id='$receiver_id' LIMIT 1")->fetch_assoc();
-    
-    $link_back = "view_marriage_profile.php?id=".$receiver_id;
+if($check_conn->num_rows == 0 || $check_conn_back->num_rows == 0){
+    echo "<div class='text-center p-10 mt-10 box shadow rounded-xl bg-white max-w-md mx-auto'>
+            <h2 class='text-xl font-bold text-red-500'>Friends Required</h2>
+            <p class='text-gray-500 mt-2 text-sm'>You must be 'Friends' to chat in the community.</p>
+            <a href='user_profile.php?id=$receiver_id' class='text-orange-600 underline mt-4 inline-block font-bold hover:text-orange-700 transition'>Go to Profile</a>
+          </div>";
+    exit;
 }
 
+$rc = $con->query("SELECT name as full_name, profile_photo as photo, (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(last_active) < 25) AS is_online 
+                   FROM tbl_members 
+                   WHERE id='$receiver_id' LIMIT 1")->fetch_assoc();
+
 $receiver_name = $rc['full_name'] ?? 'User';
-$receiver_photo = !empty($rc['photo']) ? ( (strpos($rc['photo'], 'http') === 0) ? $rc['photo'] : "uploads/photo/".$rc['photo'] ) : "https://via.placeholder.com/150";
-$receiver_mobile = $rc['mobile'] ?? '';
+$receiver_photo = !empty($rc['photo']) ? "uploads/photo/".$rc['photo'] : "https://via.placeholder.com/150";
 $is_online = (!empty($rc['is_online']) && $rc['is_online']);
 
 // Simplified Block Status
-$block_q1 = $con->query("SELECT id FROM tbl_blocked_users WHERE blocker_id='$my_profile_id' AND blocked_id='$receiver_id' AND chat_platform='$platform'");
+$block_q1 = $con->query("SELECT id FROM tbl_blocked_users WHERE blocker_id='$my_profile_id' AND blocked_id='$receiver_id' AND chat_platform='community'");
 $i_blocked_them = ($block_q1->num_rows > 0);
 
-$block_q2 = $con->query("SELECT id FROM tbl_blocked_users WHERE blocker_id='$receiver_id' AND blocked_id='$my_profile_id' AND chat_platform='$platform'");
+$block_q2 = $con->query("SELECT id FROM tbl_blocked_users WHERE blocker_id='$receiver_id' AND blocked_id='$my_profile_id' AND chat_platform='community'");
 $they_blocked_me = ($block_q2->num_rows > 0);
 ?>
 <!-- enoji library  -->
@@ -190,7 +145,7 @@ $they_blocked_me = ($block_q2->num_rows > 0);
 
     <!-- TOP BAR -->
     <div class="chat-topbar mt-10 w-full">
-        <a href="<?php echo $link_back; ?>">
+        <a href="view_marriage_profile.php?id=<?php echo $receiver_id; ?>">
             <img src="<?php echo $receiver_photo; ?>" 
                  class="w-12 h-12 rounded-full border-2 border-orange-500 object-cover secure-image"
                  draggable="false"
@@ -228,10 +183,8 @@ $they_blocked_me = ($block_q2->num_rows > 0);
                      <i class="fa-solid fa-ellipsis-vertical fa-lg"></i>
                 </button>
                 
-                <div id="chatMenuDropdown" class="hidden absolute top-12 right-0 bg-white shadow-xl rounded-lg border w-48 z-50 overflow-hidden animate-fade-in-down">
-                    
-                     
-                     <div onclick="toggleBlock()" class="px-4 py-3 hover:bg-red-50 text-red-600 cursor-pointer flex items-center gap-3">
+                <div id="chatMenuDropdown" class="hidden absolute top-12 right-0 bg-white shadow-xl rounded-lg border w-40 z-50 overflow-hidden animate-fade-in-down">
+                     <div onclick="toggleBlock()" class="px-4 py-3 hover:bg-red-50 text-red-600 cursor-pointer flex items-center gap-3 border-b">
                          <i class="fa-solid fa-ban"></i> 
                          <span class="font-medium text-sm"><?php echo $i_blocked_them ? 'Unblock User' : 'Block User'; ?></span>
                      </div>
@@ -376,7 +329,6 @@ $they_blocked_me = ($block_q2->num_rows > 0);
 <script>
 const myProfile = parseInt(<?php echo json_encode($my_profile_id); ?>);
 const receiverProfile = parseInt(<?php echo json_encode($receiver_id); ?>);
-const chatPlatform = <?php echo json_encode($platform); ?>;
 const POLL = 2500;
 let typingTimer = null;
 let isTyping = false;
@@ -444,6 +396,7 @@ client.on("user-left", (user) => {
     endCall();
 });
 
+
 // INITIATE CALL
 async function initiateCall(type){
     if(AGORA_APP_ID === "YOUR_AGORA_APP_ID_HERE"){
@@ -474,7 +427,7 @@ async function initiateCall(type){
             }
         } catch(mediaErr){
             console.error(mediaErr);
-            // alert("Camera/Microphone access failed: " + mediaErr.message);
+            alert("Camera/Microphone access failed: " + mediaErr.message);
             closeCallModal();
             return;
         }
@@ -491,7 +444,7 @@ async function initiateCall(type){
 
     } catch (error) {
         console.error(error);
-        // alert("Failed to join call: " + error);
+        alert("Failed to join call: " + error);
         closeCallModal();
         return;
     }
@@ -503,7 +456,6 @@ async function initiateCall(type){
         fd.append('receiver_id', receiverProfile);
         fd.append('type', type);
         fd.append('peer_id', "agora_v1"); // Dummy value for compatibility
-        fd.append('platform', chatPlatform);
         
         const res = await fetch('initiate_call.php', { method:'POST', body:fd });
         const text = await res.text();
@@ -544,14 +496,10 @@ async function acceptIncomingCall(){
     await updateCallStatus(incomingCallData.call_id, 'accepted');
     activeCallId = incomingCallData.call_id;
 
-    // Calculate channel name dynamically based on the caller
-    const cId = parseInt(incomingCallData.caller_id);
-    const dynChannelName = "call_" + (myProfile < cId ? myProfile + "_" + cId : cId + "_" + myProfile);
-
     // Join Agora
     const isVideo = (incomingCallData.type === 'video');
     try {
-        await client.join(AGORA_APP_ID, dynChannelName, AGORA_TOKEN, myProfile);
+        await client.join(AGORA_APP_ID, channelName, AGORA_TOKEN, myProfile);
         
         if(isVideo){
              try {
@@ -559,7 +507,7 @@ async function acceptIncomingCall(){
                 localTracks.video.play("localVideo");
                 await client.publish([localTracks.audio, localTracks.video]);
              } catch(err){
-                // alert("Media access failed: " + err);
+                alert("Media access failed: " + err);
                 closeCallModal();
                 return;
              }
@@ -568,7 +516,7 @@ async function acceptIncomingCall(){
                 localTracks.audio = await AgoraRTC.createMicrophoneAudioTrack();
                 await client.publish([localTracks.audio]);
              } catch(err){
-                // alert("Mic access failed: " + err);
+                alert("Mic access failed: " + err);
                 closeCallModal();
                 return;
              }
@@ -577,7 +525,7 @@ async function acceptIncomingCall(){
         
     } catch (error) {
         console.error(error);
-        // alert("Failed to join call: " + error);
+        alert("Failed to join call: " + error);
         closeCallModal();
     }
 }
@@ -591,18 +539,17 @@ async function rejectIncomingCall(){
     }
 }
 
-async function updateCallStatus(id, status, duration = 0){
+async function updateCallStatus(id, status){
     const fd = new FormData();
     fd.append('call_id', id);
     fd.append('status', status);
-    if (duration > 0) fd.append('duration', duration);
     await fetch('update_call_status.php', { method:'POST', body:fd });
 }
 
 
 // UTILS
 function startCallTimer(){
-    if(callTimerInterval) return; 
+    if(callTimerInterval) return; // FIX: Don't restart if already running
     stopCallTimer();
     callSeconds = 0;
     const timerEl = document.getElementById('callTimer');
@@ -625,25 +572,29 @@ function stopCallTimer(){
 }
 
 async function endCall(){
+    // Leave Agora
     try {
         if(localTracks.audio) { localTracks.audio.close(); localTracks.audio = null; }
         if(localTracks.video) { localTracks.video.close(); localTracks.video = null; }
         await client.leave();
     } catch(e) { console.error(e); }
 
-    if(activeCallId) await updateCallStatus(activeCallId, 'ended', callSeconds);
+    if(activeCallId) await updateCallStatus(activeCallId, 'ended');
     closeCallModal();
 }
 
 function closeCallModal(){
     stopCallTimer();
     document.getElementById('callModal').classList.add('hidden');
-    document.getElementById('callingAudio').pause();
-    document.getElementById('ringtoneAudio').pause();
     
     document.getElementById('localVideo').innerHTML = "";
     document.getElementById('remoteVideo').innerHTML = "";
+    
     document.getElementById('callStatusText').innerText = "";
+    document.getElementById('callingAudio').pause();
+    document.getElementById('callingAudio').currentTime = 0;
+    document.getElementById('ringtoneAudio').pause();
+    document.getElementById('ringtoneAudio').currentTime = 0;
     
     activeCallId = null;
     incomingCallData = null;
@@ -651,12 +602,19 @@ function closeCallModal(){
 
 function toggleVideo(){
     if(localTracks.video){
-        const isEnabled = localTracks.video.enabled;
+        const isEnabled = localTracks.video.enabled; // current state
         localTracks.video.setEnabled(!isEnabled);
+        
         const btn = document.getElementById('btnVideoToggle');
         const icon = document.getElementById('iconVideo');
-        if(!isEnabled){ btn.classList.remove('bg-red-500'); icon.className = 'fa-solid fa-video'; }
-        else { btn.classList.add('bg-red-500'); icon.className = 'fa-solid fa-video-slash'; }
+        
+        if(!isEnabled){ // NOW enabled
+             btn.classList.remove('bg-red-500');
+             icon.className = 'fa-solid fa-video';
+        } else {
+             btn.classList.add('bg-red-500');
+             icon.className = 'fa-solid fa-video-slash';
+        }
     }
 }
 
@@ -664,10 +622,17 @@ function toggleAudio(){
     if(localTracks.audio){
         const isEnabled = localTracks.audio.enabled;
         localTracks.audio.setEnabled(!isEnabled);
+        
         const btn = document.getElementById('btnAudioToggle');
         const icon = document.getElementById('iconAudio');
-        if(!isEnabled){ btn.classList.remove('bg-red-500'); icon.className = 'fa-solid fa-microphone'; }
-        else { btn.classList.add('bg-red-500'); icon.className = 'fa-solid fa-microphone-slash'; }
+        
+        if(!isEnabled){ 
+             btn.classList.remove('bg-red-500');
+             icon.className = 'fa-solid fa-microphone';
+        } else {
+             btn.classList.add('bg-red-500');
+             icon.className = 'fa-solid fa-microphone-slash';
+        }
     }
 }
 
@@ -676,10 +641,15 @@ async function switchCamera(){
     if(!localTracks.video) return;
     try {
         const cams = await AgoraRTC.getCameras();
-        if(cams.length < 2) return;
+        if(cams.length < 2) {
+            // alert("No other camera found");
+            return;
+        }
         currentCamIndex = (currentCamIndex + 1) % cams.length;
         await localTracks.video.setDevice(cams[currentCamIndex].deviceId);
-    } catch(e){ console.error(e); }
+    } catch(e){
+        console.error(e);
+    }
 }
 
 function updateCallUI(type){
@@ -716,7 +686,7 @@ async function loadChat(){
             }
         }
 
-        const res = await fetch(`fetch_chat.php?receiver_id=${receiverProfile}&my_profile_id=${myProfile}&platform=${chatPlatform}`);
+        const res = await fetch(`fetch_chat.php?receiver_id=${receiverProfile}&my_profile_id=${myProfile}`);
         const html = await res.text();
         const bottom = (box.scrollTop + box.clientHeight + 50) >= box.scrollHeight;
         // only update DOM when content actually changed to preserve media state
@@ -741,7 +711,7 @@ chatBox.addEventListener('click', async e => {
             const res = await fetch('delete_chat.php', {
                 method:'POST',
                 headers:{'Content-Type':'application/x-www-form-urlencoded'},
-                body:`message_id=${id}&my_profile_id=${myProfile}&platform=${chatPlatform}`
+                body:`message_id=${id}&my_profile_id=${myProfile}`
             });
             const text = await res.text();
             if(text.trim() === 'ok'){
@@ -768,20 +738,20 @@ async function startTyping(){
     isTyping = true;
     await fetch('update_typing.php', {
         method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body:`profile_id=${myProfile}&target_profile_id=${receiverProfile}&is_typing=1&platform=${chatPlatform}`
+        body:`profile_id=${myProfile}&target_profile_id=${receiverProfile}&is_typing=1`
     });
 }
 async function stopTyping(){
     isTyping = false;
     await fetch('update_typing.php', {
         method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body:`profile_id=${myProfile}&target_profile_id=${receiverProfile}&is_typing=0&platform=${chatPlatform}`
+        body:`profile_id=${myProfile}&target_profile_id=${receiverProfile}&is_typing=0`
     });
 }
 
 async function fetchStatus(){
     try{
-        const res = await fetch(`fetch_status.php?profile_id=${receiverProfile}&my_profile_id=${myProfile}&platform=${chatPlatform}`);
+        const res = await fetch(`fetch_status.php?profile_id=${receiverProfile}&my_profile_id=${myProfile}`);
         const j = await res.json();
         
         // Online/Typing status
@@ -793,13 +763,6 @@ async function fetchStatus(){
             // If already in call or ringing, ignore or handle multi-call (ignoring for now)
             if(document.getElementById('incomingCallModal').classList.contains('hidden') && document.getElementById('callModal').classList.contains('hidden')){
                 showIncomingCall(j.incoming_call);
-            }
-        } else {
-            const incMod = document.getElementById('incomingCallModal');
-            if (incMod && !incMod.classList.contains('hidden')) {
-                incMod.classList.add('hidden');
-                document.getElementById('ringtoneAudio').pause();
-                incomingCallData = null;
             }
         }
         
@@ -861,7 +824,7 @@ async function loadNewMessages(){
         }
 
         const lastId = window.lastMessageId || 0;
-        const res = await fetch(`fetch_chat.php?receiver_id=${receiverProfile}&my_profile_id=${myProfile}&last_id=${lastId}&platform=${chatPlatform}`);
+        const res = await fetch(`fetch_chat.php?receiver_id=${receiverProfile}&my_profile_id=${myProfile}&last_id=${lastId}`);
         const ct = res.headers.get('content-type') || '';
         if(ct.includes('application/json')){
             const arr = await res.json();
@@ -897,17 +860,26 @@ async function initialFullLoad(){
     // Auto-accept call if coming from global modal
     const urlParams = new URLSearchParams(window.location.search);
     const acceptId = urlParams.get('accept_call_id');
-    const callType = urlParams.get('type') || 'video';
     if(acceptId){
         console.log("Auto-accepting call ID: " + acceptId);
-        incomingCallData = {
-            call_id: acceptId,
-            caller_id: receiverProfile,
-            caller_name: "Connecting...", 
-            type: callType 
-        };
-        setTimeout(() => {
-            acceptIncomingCall();
+        // Wait for Peer to be ready
+        let retryCount = 0;
+        const checkPeer = setInterval(() => {
+            if(myPeerId || retryCount > 10){
+                clearInterval(checkPeer);
+                if(myPeerId){
+                    // Mock incomingCallData and accept
+                    incomingCallData = {
+                        call_id: acceptId,
+                        caller_name: "Incoming...", // fetchStatus will update it
+                        type: 'video', // default to video, fetchStatus will refine
+                        peer_id: '' // fetchStatus will provide this via polling
+                    };
+                    // We need to wait for fetchStatus to get the peer_id before we can accept media
+                    // Or we just wait for the first fetchStatus to trigger the modal/accept
+                }
+            }
+            retryCount++;
         }, 500);
     }
 
@@ -980,7 +952,6 @@ chatForm.addEventListener('submit', async e => {
     fd.append('message', txt);
     fd.append('receiver_id', receiverProfile);
     fd.append('my_profile_id', myProfile);
-    fd.append('platform', chatPlatform);
     if(file) fd.append('attachment', file);
 
     try{
@@ -1077,7 +1048,7 @@ async function toggleBlock(){
     const fd = new FormData();
     fd.append('my_id', <?php echo $my_profile_id; ?>);
     fd.append('target_id', <?php echo $receiver_id; ?>);
-    fd.append('platform', '<?php echo $platform; ?>');
+    fd.append('platform', 'community');
     fd.append('action', 'block');
     
     try{
@@ -1097,7 +1068,7 @@ async function confirmUnblock(){
     const fd = new FormData();
     fd.append('my_id', <?php echo $my_profile_id; ?>);
     fd.append('target_id', <?php echo $receiver_id; ?>);
-    fd.append('platform', '<?php echo $platform; ?>');
+    fd.append('platform', 'community');
     fd.append('action', 'unblock');
     
     try{
@@ -1110,6 +1081,4 @@ async function confirmUnblock(){
         }
     }catch(e){console.error(e);}
 }
-
-
 </script>

@@ -32,28 +32,63 @@ $loged_profile_photo = $logged_user['profile_photo'] ?? '';
 
   <!-- 👤 Profile -->
   <div class="bg-white rounded-xl shadow-lg border border-orange-200 mt-[-3rem] md:mt-[-4rem] relative z-10 px-6 py-5">
-    <div class="flex flex-col md:flex-row items-center md:items-end gap-4">
-      <img src="uploads/photo/<?php echo htmlspecialchars($user['profile_photo']); ?>"
-        class="w-28 h-28 rounded-full border-4 border-orange-300 shadow-lg bg-white" onclick="openImageModal(this.src)">
-      <div class="flex flex-col md:flex-row justify-between w-full md:items-end">
-        <div>
-          <h1 class="text-2xl font-bold text-orange-700">
-            <?php echo htmlspecialchars($user['name']); ?>
-          </h1>
-          <?php if (!empty($user['about'])): ?>
-          <p class="text-gray-700 italic mt-1">
-            <?php echo htmlspecialchars($user['about']); ?>
-          </p>
-          <?php endif; ?>
-          <p class="text-sm text-gray-500 mt-1">Joined on:
-            <?php echo date("d M, Y", strtotime($user['date'])); ?>
-          </p>
-          <button id="moreBtn" class="text-sm text-orange-600 hover:underline mt-1">View More Details</button>
+    <div class="flex flex-col md:flex-row items-center md:items-end gap-6">
+      <div class="relative">
+        <img src="uploads/photo/<?php echo htmlspecialchars($user['profile_photo']); ?>"
+          class="w-32 h-32 rounded-full border-4 border-orange-300 shadow-xl bg-white object-cover" onclick="openImageModal(this.src)">
+      </div>
+      
+      <div class="flex flex-col flex-1 w-full">
+        <div class="flex flex-col md:flex-row justify-between items-center md:items-start gap-4">
+          <div class="text-center md:text-left">
+            <h1 class="text-2xl font-bold text-orange-700">
+              <?php echo htmlspecialchars($user['name']); ?>
+              <span id="followsMeBadge" class="hidden ml-2 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full uppercase tracking-wider vertical-middle">Follows You</span>
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">
+              <i class="fa-solid fa-calendar-days mr-1"></i> Joined: <?php echo date("d M, Y", strtotime($user['date'])); ?>
+            </p>
+          </div>
+
+          <div class="flex flex-wrap gap-2 items-center justify-center md:justify-start">
+            <?php if($logged_id && $logged_id !== $user_id): ?>
+              <button id="followBtn" data-id="<?php echo $user_id; ?>" class="px-6 py-2 rounded-full font-bold transition-all shadow-md">
+                Connect
+              </button>
+              <a id="msgBtn" href="message.php?receiver_id=<?php echo $user_id; ?>&platform=community" class="hidden px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full font-bold transition-all shadow-md flex items-center gap-2">
+                <i class="fa-solid fa-comments"></i> Message
+              </a>
+            <?php endif; ?>
+            
+            <?php if($logged_mobile === $user['mobile']): ?>
+              <a href="edit_profile.php" class="bg-orange-500 text-white px-6 py-2 rounded-full shadow-md hover:bg-orange-600 transition font-bold">
+                Edit Profile
+              </a>
+            <?php endif; ?>
+          </div>
         </div>
-        <?php if($logged_mobile === $user['mobile']): ?>
-        <a href="edit_profile.php" class="bg-orange-500 text-white px-4 py-2 rounded-lg shadow hover:bg-orange-700">Edit
-          Profile</a>
-        <?php endif; ?>
+
+        <!-- Stats Section -->
+        <div class="flex justify-around md:justify-start md:gap-12 mt-6 border-t border-orange-100 pt-4">
+          <div class="text-center">
+            <div id="postsCount" class="font-bold text-xl text-orange-700">0</div>
+            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Posts</div>
+          </div>
+          <div class="text-center cursor-pointer hover:bg-orange-50 px-3 rounded-xl transition" onclick="openFollowsModal('fetch_followers', 'Followers')">
+            <div id="followersCount" class="font-bold text-xl text-orange-700">0</div>
+            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Followers</div>
+          </div>
+          <div class="text-center cursor-pointer hover:bg-orange-50 px-3 rounded-xl transition" onclick="openFollowsModal('fetch_following', 'Following')">
+            <div id="followingCount" class="font-bold text-xl text-orange-700">0</div>
+            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Following</div>
+          </div>
+        </div>
+
+        <div class="mt-4 text-center md:text-left">
+             <button id="moreBtn" class="text-sm font-semibold text-orange-600 hover:text-orange-700 hover:underline flex items-center gap-1 mx-auto md:mx-0">
+               <i class="fa-solid fa-circle-info"></i> View More Details
+             </button>
+        </div>
       </div>
     </div>
   </div>
@@ -249,6 +284,81 @@ $marriage_profile = $con->query("
   <section id="postContainer" class="mt-6"></section>
 </main>
 
+<!-- Follows Modal -->
+<div id="followsModal" class="fixed inset-0 bg-black/50 z-[1000] hidden items-center justify-center backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+        <div class="p-4 border-b border-orange-100 flex justify-between items-center bg-orange-50">
+            <h3 id="followsModalTitle" class="font-bold text-orange-700 text-lg capitalize">List</h3>
+            <button onclick="closeFollowsModal()" class="text-gray-400 hover:text-orange-600 text-2xl">&times;</button>
+        </div>
+        <div id="followsList" class="max-h-[60vh] overflow-y-auto p-2 space-y-2 custom-scroll">
+            <!-- Items loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+async function openFollowsModal(action, title) {
+    const modal = document.getElementById('followsModal');
+    const list = document.getElementById('followsList');
+    const titleEl = document.getElementById('followsModalTitle');
+    
+    titleEl.innerText = title;
+    list.innerHTML = `<div class="p-10 text-center"><i class="fa-solid fa-spinner fa-spin text-orange-500 text-2xl"></i></div>`;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    const res = await fetch(`follow_action.php?action=${action}&user_id=<?php echo $user_id; ?>`);
+    const data = await res.json();
+    
+    if(data.ok){
+        if(data.list.length === 0){
+            list.innerHTML = `<div class="p-10 text-center text-gray-400 italic">No ${title.toLowerCase()} yet.</div>`;
+            return;
+        }
+        
+        list.innerHTML = data.list.map(u => `
+            <div class="flex items-center justify-between p-3 bg-white border border-gray-50 rounded-xl hover:shadow-sm transition">
+                <a href="user_profile?id=${u.id}" class="flex items-center gap-3">
+                    ${u.profile_photo ? 
+                        `<img src="${u.profile_photo}" class="w-10 h-10 rounded-full object-cover border border-orange-200">` : 
+                        `<div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold border border-orange-200">${u.initials}</div>`
+                    }
+                    <div>
+                        <div class="font-bold text-gray-800 text-sm">${u.name}</div>
+                        <div class="text-[10px] text-gray-400">${u.city || ''} ${u.follows_me ? '• <span class="text-green-600">Follows You</span>' : ''}</div>
+                    </div>
+                </a>
+                <button onclick="toggleFollowInModal(${u.id}, this, '${action}', '${title}')" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${u.i_follow ? 'bg-gray-100 text-gray-600' : 'bg-orange-500 text-white'}">
+                    ${u.i_follow ? (u.my_status === 'accepted' ? 'Friends' : 'Requested') : (u.follows_me ? 'Accept Request' : 'Send Request')}
+                </button>
+            </div>
+        `).join('');
+    }
+}
+
+function closeFollowsModal() {
+    const modal = document.getElementById('followsModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+async function toggleFollowInModal(id, btn, action, title) {
+    const res = await fetch('follow_action.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=follow&user_id=${id}`
+    });
+    const data = await res.json();
+    if(data.ok){
+        // Refresh the list to keep stats accurate
+        openFollowsModal(action, title);
+        // Also refresh page stats in background
+        if(typeof fetchCounts === 'function') fetchCounts();
+    }
+}
+</script>
+
 <!-- Premium Compact Profile Modal -->
 <div id="profileModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
 
@@ -410,6 +520,70 @@ document.addEventListener("click", function(e){
 
 <script>
   const user_id = <?php echo $user_id; ?>;
+  const logged_id = <?php echo $logged_id ?? 0; ?>;
+
+  // Fetch Counts
+  async function fetchCounts() {
+      const res = await fetch(`follow_action.php?action=get_counts&user_id=${user_id}`);
+      const data = await res.json();
+      if(data.ok){
+          if(document.getElementById('followersCount')) document.getElementById('followersCount').innerText = data.followers;
+          if(document.getElementById('followingCount')) document.getElementById('followingCount').innerText = data.following;
+          document.getElementById('postsCount').innerText = data.posts;
+          
+          const followBtn = document.getElementById('followBtn');
+          const msgBtn = document.getElementById('msgBtn');
+          const badge = document.getElementById('followsMeBadge');
+
+          if(followBtn){
+              if(data.is_connected){
+                  followBtn.innerText = "Friends";
+                  followBtn.className = "px-6 py-2 bg-green-100 text-green-700 rounded-full font-bold transition-all shadow-sm border border-green-200";
+                  if(msgBtn) msgBtn.classList.remove('hidden');
+              } else if(data.is_requested){
+                  followBtn.innerText = "Requested";
+                  followBtn.className = "px-6 py-2 bg-gray-100 text-gray-500 rounded-full font-bold transition-all shadow-sm border border-gray-200";
+                  if(msgBtn) msgBtn.classList.add('hidden');
+              } else if(data.follows_me){
+                  followBtn.innerText = "Accept Request";
+                  followBtn.className = "px-6 py-2 bg-orange-500 text-white rounded-full font-bold transition-all shadow-md hover:bg-orange-600";
+                  if(msgBtn) msgBtn.classList.add('hidden');
+              } else if(data.is_following){
+                  // Fallback for simple follow
+                  followBtn.innerText = "Friends";
+                  followBtn.className = "px-6 py-2 bg-green-100 text-green-700 rounded-full font-bold transition-all shadow-sm border border-green-200";
+                  if(msgBtn) msgBtn.classList.remove('hidden');
+              } else {
+                  followBtn.innerText = "Send Request";
+                  followBtn.className = "px-6 py-2 bg-orange-600 text-white rounded-full font-bold transition-all shadow-md hover:bg-orange-700";
+                  if(msgBtn) msgBtn.classList.add('hidden');
+              }
+          }
+
+          if(badge){
+              if(data.follows_me) badge.classList.remove('hidden');
+              else badge.classList.add('hidden');
+          }
+      }
+  }
+
+  // Follow Action
+  if(document.getElementById('followBtn')){
+      document.getElementById('followBtn').onclick = async () => {
+          const btn = document.getElementById('followBtn');
+          const res = await fetch('follow_action.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: `action=follow&user_id=${user_id}`
+          });
+          const data = await res.json();
+          if(data.ok){
+              fetchCounts();
+          } else {
+              alert(data.message);
+          }
+      };
+  }
 
   // ✅ Fetch only this user's posts (like old style)
   async function fetchAll() {
@@ -417,6 +591,11 @@ document.addEventListener("click", function(e){
     const posts = await res.json();
     const container = document.getElementById("postContainer");
     container.innerHTML = '';
+    
+    if(posts.length === 0){
+        container.innerHTML = '<div class="text-center py-10 text-gray-400 bg-white rounded-xl shadow border border-orange-100 italic">No posts yet.</div>';
+        return;
+    }
 
     posts.forEach(p => {
       const likedClass = p.user_liked ? 'fa-solid text-red-500' : 'fa-regular text-gray-400';
@@ -556,6 +735,7 @@ document.addEventListener("click", function(e){
   document.getElementById('closeModal').onclick = () => document.getElementById('profileModal').classList.add('hidden');
 
   fetchAll();
+  fetchCounts();
 </script>
 <script>
 // disable right click

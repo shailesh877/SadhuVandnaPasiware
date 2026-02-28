@@ -121,7 +121,7 @@ $result = $con->query($query);
                    <i class="fa fa-eye"></i> View
                 </a>
 
-                <a href="message.php?sender_id=<?= $my_profile_id ?>&receiver_id=<?= $req['profile_id'] ?>"
+                <a href="message.php?receiver_id=<?= $req['profile_id'] ?>&platform=marriage"
                    class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg py-1 text-xs flex items-center justify-center gap-1">
                    <i class="fa fa-comments"></i> Chat
                 </a>

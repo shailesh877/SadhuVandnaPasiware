@@ -6,7 +6,6 @@ date_default_timezone_set('Asia/Kolkata');
 $my       = intval($_POST['my_profile_id'] ?? 0);
 $receiver = intval($_POST['receiver_id'] ?? 0);
 $msg      = trim($_POST['message'] ?? '');
-$platform = $_POST['platform'] ?? 'marriage';
 
 if(!$my || !$receiver){
     exit("error");
@@ -45,24 +44,22 @@ if(isset($_FILES['attachment']) && $_FILES['attachment']['error'] === 0){
                 ? 'image'
                 : 'video';
 }
-
 $date = date("Y-m-d H:i:s");
 /* INSERT */
 $stmt = $con->prepare("
 INSERT INTO tbl_messages
-(sender_id, receiver_id, message, file, file_type, created_at, seen, chat_platform)
-VALUES (?, ?, ?, ?, ?, ?, 0, ?)
+(sender_id, receiver_id, message, file, file_type,created_at, seen )
+VALUES (?,?,?,?,?,?,0)
 ");
 
 $stmt->bind_param(
-    "iisssss",
+    "iissss",
     $my,
     $receiver,
     $msg,
     $filePath,
     $fileType,
-    $date,
-    $platform
+    $date
 );
 
 $stmt->execute();

@@ -63,9 +63,9 @@ while($row = mysqli_fetch_assoc($news)) {
 
     <!-- DESCRIPTION -->
     <div class="p-6">
-        <p class="premium-text text-gray-700 text-[17px] leading-[1.65] mb-2 overflow-hidden max-h-28 transition-all duration-500">
+        <div class="premium-text text-gray-700 text-[17px] leading-[1.65] mb-2 overflow-hidden max-h-28 transition-all duration-500">
             <?= nl2br(htmlspecialchars($row['description'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) ?>
-        </p>
+        </div>
         <button class="read-btn text-orange-600 font-semibold text-[15px] mt-1 hover:underline">
             Read More
         </button>

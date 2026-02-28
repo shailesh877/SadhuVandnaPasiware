@@ -207,7 +207,7 @@ $cp_photo = !empty($community['profile_photo'])
             </button>
         <?php elseif($proposal_status=='accepted' || $proposal_status=='friend'): ?>
             <!-- Proposal accepted -->
-            <a href="message.php?sender_id=<?= $my_profile_id ?>&receiver_id=<?= $profile['id'] ?>" 
+            <a href="message.php?receiver_id=<?= $profile['id'] ?>&platform=marriage" 
                class="bg-green-600 hover:bg-green-700 text-white px-4 md:px-8 py-3 rounded-xl justify-center font-semibold shadow flex items-center gap-2 w-full transition text-base text-center">
                 <i class="fa fa-comments"></i> Message
             </a>

@@ -61,17 +61,48 @@ while($post = $posts_query->fetch_assoc()) {
 
 <!-- Info Block -->
 <div class="w-full bg-white/90 backdrop-blur shadow-xl rounded-2xl border border-orange-100 p-6 pt-16 flex flex-col items-center -mt-10 mb-3">
-    <div class="font-extrabold text-2xl text-orange-700 mb-3"><?php echo htmlspecialchars($user['name'] ?? ''); ?></div>
-    <div class="flex flex-wrap gap-3 text-md text-gray-500 mb-4 border-b border-orange-100 pb-3 justify-center">
-        <span><i class="fa-solid fa-location-dot mr-1"></i> <?php echo htmlspecialchars($user['city'] ?? ''); ?></span>
-        <span><i class="fa-solid fa-home mr-1"></i> From <?php echo htmlspecialchars($user['state'] ?? ''); ?></span>
+    <div class="font-extrabold text-2xl text-orange-700 mb-1"><?php echo htmlspecialchars($user['name'] ?? ''); ?></div>
+    <div class="flex flex-wrap gap-3 text-sm text-gray-400 mb-4 pb-3 justify-center">
+        <span><i class="fa-solid fa-location-dot mr-1"></i> <?php echo htmlspecialchars($user['city'] ?? ''); ?>, <?php echo htmlspecialchars($user['state'] ?? ''); ?></span>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 w-full">
-        <a href="edit_profile.php" class="text-orange-700 border border-orange-200 px-4 py-1 rounded-lg hover:bg-orange-50 text-sm w-full text-center mb-2 font-medium">
-            <i class="fa-solid fa-pen mr-2"></i>Edit Profile
+
+    <!-- Stats Section -->
+    <div class="flex flex-wrap justify-center gap-4 md:gap-10 w-full py-4 border-y border-orange-50 mb-6">
+        <div class="text-center">
+            <?php
+            $post_count = $con->query("SELECT COUNT(*) FROM tbl_posts WHERE user_id=$user_id")->fetch_row()[0];
+            $followers_count = $con->query("SELECT COUNT(*) FROM tbl_followers WHERE following_id=$user_id")->fetch_row()[0];
+            $following_count = $con->query("SELECT COUNT(*) FROM tbl_followers WHERE follower_id=$user_id")->fetch_row()[0];
+            $requested_count = $con->query("SELECT COUNT(*) FROM tbl_followers WHERE following_id=$user_id AND status='pending'")->fetch_row()[0];
+            ?>
+            <div class="font-bold text-xl text-orange-700"><?php echo $post_count; ?></div>
+            <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-wider font-semibold">Posts</div>
+        </div>
+        <div class="text-center cursor-pointer hover:bg-orange-50 px-2 py-1 rounded-xl transition" onclick="openFollowsModal('fetch_followers', 'Followers')">
+            <div class="font-bold text-xl text-orange-700"><?php echo $followers_count; ?></div>
+            <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-wider font-semibold">Followers</div>
+        </div>
+        <div class="text-center cursor-pointer hover:bg-orange-50 px-2 py-1 rounded-xl transition" onclick="openFollowsModal('fetch_following', 'Following')">
+            <div class="font-bold text-xl text-orange-700"><?php echo $following_count; ?></div>
+            <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-wider font-semibold">Following</div>
+        </div>
+        <div class="text-center cursor-pointer hover:bg-orange-50 px-2 py-1 rounded-xl transition" onclick="openFollowsModal('fetch_requested', 'Requests')">
+            <div class="font-bold text-xl text-orange-700 flex items-center justify-center gap-1">
+                <?php echo $requested_count; ?>
+                <?php if($requested_count > 0): ?>
+                    <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                <?php endif; ?>
+            </div>
+            <div class="text-[10px] md:text-xs text-red-500 uppercase tracking-wider font-semibold">Requests</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 w-full max-w-sm">
+        <a href="edit_profile.php" class="bg-orange-600 text-white px-4 py-2 rounded-xl hover:bg-orange-700 text-sm text-center font-bold shadow-md transition">
+            <i class="fa-solid fa-pen mr-1"></i> Edit
         </a>
-        <a href="family" class="text-orange-700 border border-orange-200 px-4 py-1 rounded-lg hover:bg-orange-50 text-sm w-full text-center mb-2 font-medium">
-            <i class="fa-solid fa-square-plus"></i> Family
+        <a href="family" class="bg-orange-100 text-orange-700 px-4 py-2 rounded-xl hover:bg-orange-200 text-sm text-center font-bold shadow-sm transition border border-orange-200">
+            <i class="fa-solid fa-users mr-1"></i> Family
         </a>
     </div>
 </div>
@@ -303,6 +334,107 @@ if($marriage && !empty($marriage['dob'])) {
 </div>
 
 </main>
+
+<!-- Follows Modal -->
+<div id="followsModal" class="fixed inset-0 bg-black/50 z-[1000] hidden items-center justify-center backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+        <div class="p-4 border-b border-orange-100 flex justify-between items-center bg-orange-50">
+            <h3 id="followsModalTitle" class="font-bold text-orange-700 text-lg capitalize">List</h3>
+            <button onclick="closeFollowsModal()" class="text-gray-400 hover:text-orange-600 text-2xl">&times;</button>
+        </div>
+        <div id="followsList" class="max-h-[60vh] overflow-y-auto p-2 space-y-2 custom-scroll">
+            <!-- Items loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+async function openFollowsModal(action, title) {
+    const modal = document.getElementById('followsModal');
+    const list = document.getElementById('followsList');
+    const titleEl = document.getElementById('followsModalTitle');
+    
+    titleEl.innerText = title;
+    list.innerHTML = `<div class="p-10 text-center"><i class="fa-solid fa-spinner fa-spin text-orange-500 text-2xl"></i></div>`;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    const res = await fetch(`follow_action.php?action=${action}&user_id=<?php echo $user_id; ?>`);
+    const data = await res.json();
+    
+    if(data.ok){
+        if(data.list.length === 0){
+            list.innerHTML = `<div class="p-10 text-center text-gray-400 italic">No ${title.toLowerCase()} yet.</div>`;
+            return;
+        }
+        
+        list.innerHTML = data.list.map(u => `
+            <div class="flex items-center justify-between p-3 bg-white border border-gray-50 rounded-xl hover:shadow-sm transition">
+                <a href="user_profile?id=${u.id}" class="flex items-center gap-3">
+                    ${u.profile_photo ? 
+                        `<img src="${u.profile_photo}" class="w-10 h-10 rounded-full object-cover border border-orange-200">` : 
+                        `<div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold border border-orange-200">${u.initials}</div>`
+                    }
+                    <div>
+                        <div class="font-bold text-gray-800 text-sm">${u.name}</div>
+                        <div class="text-[10px] text-gray-400">${u.city || ''} ${u.follows_me ? '• <span class="text-green-600">Follows You</span>' : ''}</div>
+                    </div>
+                </a>
+                <div class="flex flex-col items-end gap-1">
+                    <button onclick="toggleFollowInModal(${u.id}, this, '${action}', '${title}')" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${u.i_follow ? 'bg-gray-100 text-gray-600' : 'bg-orange-500 text-white'} min-w-[90px]">
+                        ${u.i_follow ? (u.my_status === 'accepted' ? 'Friends' : 'Requested') : (u.follows_me ? 'Accept Request' : 'Send Request')}
+                    </button>
+                    ${action === 'fetch_followers' ? `
+                        <button onclick="removeFollowerInModal(${u.id}, '${action}', '${title}')" class="text-[9px] text-gray-400 hover:text-red-500 font-bold uppercase tracking-wider">
+                            Remove
+                        </button>
+                    ` : ''}
+                    ${action === 'fetch_requested' ? `
+                        <button onclick="removeFollowerInModal(${u.id}, '${action}', '${title}')" class="text-[9px] text-gray-400 hover:text-red-500 font-bold uppercase tracking-wider">
+                            Reject
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+function closeFollowsModal() {
+    const modal = document.getElementById('followsModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+async function toggleFollowInModal(id, btn, action, title) {
+    const res = await fetch('follow_action.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=follow&user_id=${id}`
+    });
+    const data = await res.json();
+    if(data.ok){
+        openFollowsModal(action, title);
+        if(window.location.pathname.includes('profile.php')) location.reload();
+    }
+}
+
+async function removeFollowerInModal(id, action, title) {
+    let msg = action === 'fetch_requested' ? 'Are you sure you want to reject this request?' : 'Are you sure you want to remove this follower? They will no longer follow you.';
+    if(!confirm(msg)) return;
+    
+    const res = await fetch('follow_action.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=remove_follower&user_id=${id}`
+    });
+    const data = await res.json();
+    if(data.ok){
+        openFollowsModal(action, title);
+        location.reload();
+    }
+}
+</script>
 
 <!-- Modal (Hidden by default) profile view-->
 <div id="imageModal" class="modal" onclick="closeImageModal()">

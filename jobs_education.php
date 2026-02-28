@@ -41,9 +41,27 @@ document.getElementById("imgModal").onclick = function(){
 
 <style>
 .job-text {
+  position: relative;
   overflow: hidden;
-  max-height: 7rem;
+  max-height: 112px;
   transition: max-height 0.4s ease;
+}
+/* Gradient fade effect for collapsed text */
+.job-text::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50px;
+  background: linear-gradient(to top, white 10%, transparent);
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+/* Hide gradient when expanded or not needed */
+.job-text.is-expanded::after,
+.job-text.no-fade::after {
+  opacity: 0;
 }
 </style>
 
@@ -99,19 +117,27 @@ function attachReadMoreListeners() {
         btn.dataset.attached = "true";
 
         const text = btn.previousElementSibling;
-        if (text.scrollHeight <= 112) {
-            btn.style.display = "none";
-        } else {
-            btn.onclick = function () {
-                if (text.style.maxHeight && text.style.maxHeight !== "7rem") {
-                    text.style.maxHeight = "7rem";
-                    btn.textContent = "Read More";
-                } else {
-                    text.style.maxHeight = text.scrollHeight + "px";
-                    btn.textContent = "Read Less";
-                }
-            };
-        }
+        
+        // Delay to ensure rendering is complete (especially on mobile)
+        setTimeout(() => {
+            if (text.scrollHeight <= 115) {
+                btn.style.display = "none";
+                text.style.maxHeight = "none";
+                text.classList.add("no-fade");
+            } else {
+                btn.onclick = function () {
+                    if (text.classList.contains("is-expanded")) {
+                        text.style.maxHeight = "112px";
+                        text.classList.remove("is-expanded");
+                        btn.textContent = "Read More";
+                    } else {
+                        text.style.maxHeight = text.scrollHeight + "px";
+                        text.classList.add("is-expanded");
+                        btn.textContent = "Read Less";
+                    }
+                };
+            }
+        }, 200);
     });
 }
 

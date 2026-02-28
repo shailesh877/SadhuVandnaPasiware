@@ -16,52 +16,54 @@ ob_clean();
 
 $profile_id = intval($_GET['profile_id'] ?? 0);
 $my_profile = intval($_GET['my_profile_id'] ?? 0);
+$platform = $_GET['platform'] ?? 'marriage';
 $response = ['online'=>false, 'last_active'=>null, 'is_typing'=>false];
 
 if(!$profile_id){ echo json_encode($response); exit; }
 
 // online check
-$res = $con->query("SELECT (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(m.last_active) < 25) AS online, m.last_active FROM tbl_members m JOIN tbl_marriage_profiles mp ON mp.user_id=m.id WHERE mp.id='$profile_id' LIMIT 1");
+if($platform === 'community'){
+    $res = $con->query("SELECT (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(last_active) < 25) AS online, last_active FROM tbl_members WHERE id='$profile_id' LIMIT 1");
+} else {
+    $res = $con->query("SELECT (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(m.last_active) < 25) AS online, m.last_active FROM tbl_members m JOIN tbl_marriage_profiles mp ON mp.user_id=m.id WHERE mp.id='$profile_id' LIMIT 1");
+}
+
 if($res && $row = $res->fetch_assoc()){
     $response['online'] = !empty($row['online']);
     if(!$response['online'] && !empty($row['last_active'])) $response['last_active'] = date("d M, h:i A", strtotime($row['last_active']));
 }
 
-// typing check (is profile_id typing TO me?)
-$typ = $con->query("SELECT is_typing FROM tbl_typing WHERE profile_id='$profile_id' AND target_profile_id='$my_profile' LIMIT 1");
+// typing check
+$typ = $con->query("SELECT is_typing FROM tbl_typing WHERE profile_id='$profile_id' AND target_profile_id='$my_profile' AND chat_platform='$platform' LIMIT 1");
 if($typ && $typ->num_rows>0){
     $r = $typ->fetch_assoc();
     $response['is_typing'] = (!empty($r['is_typing'])) ? true : false;
 }
 
-// max seen id (messages I sent that they have seen)
-$s = $con->query("SELECT MAX(id) as m FROM tbl_messages WHERE sender_id='$my_profile' AND receiver_id='$profile_id' AND seen=1");
-if($s && $row=$s->fetch_assoc()){
-    $response['max_seen_id'] = $row['m'] ?? 0;
-} else {
-    $response['max_seen_id'] = 0;
-}
+// max seen id
+$s = $con->query("SELECT MAX(id) as m FROM tbl_messages WHERE sender_id='$my_profile' AND receiver_id='$profile_id' AND seen=1 AND chat_platform='$platform'");
+$response['max_seen_id'] = ($s && $row=$s->fetch_assoc()) ? ($row['m'] ?? 0) : 0;
 
-// CHECK FOR INCOMING CALLS (someone calling ME)
-// We check for any ringing call where I am the receiver and it was created in the last 30 seconds
-$inc = $con->query("SELECT * FROM tbl_calls WHERE receiver_id='$my_profile' AND status='ringing' AND created_at > (NOW() - INTERVAL 30 SECOND) ORDER BY id DESC LIMIT 1");
+// INCOMING CALLS
+$inc = $con->query("SELECT * FROM tbl_calls WHERE receiver_id='$my_profile' AND status='ringing' AND chat_platform='$platform' AND created_at > (NOW() - INTERVAL 30 SECOND) ORDER BY id DESC LIMIT 1");
 if($inc && $inc->num_rows > 0){
     $call = $inc->fetch_assoc();
-    // Get caller details
-    $c_info = $con->query("SELECT full_name, photo FROM tbl_marriage_profiles WHERE id='".$call['caller_id']."' LIMIT 1")->fetch_assoc();
+    if($platform === 'community'){
+        $c_info = $con->query("SELECT name as full_name, profile_photo as photo FROM tbl_members WHERE id='".$call['caller_id']."' LIMIT 1")->fetch_assoc();
+    } else {
+        $c_info = $con->query("SELECT full_name, photo FROM tbl_marriage_profiles WHERE id='".$call['caller_id']."' LIMIT 1")->fetch_assoc();
+    }
     $response['incoming_call'] = [
         'call_id' => $call['id'],
         'caller_id' => $call['caller_id'],
         'caller_name' => $c_info['full_name'] ?? 'Unknown',
-        'caller_photo' => !empty($c_info['photo']) ? "uploads/photo/".$c_info['photo'] : "images/logo.png",
-        'type' => $call['type'],
-        'peer_id' => $call['caller_peer_id']
+        'caller_photo' => !empty($c_info['photo']) ? (strpos($c_info['photo'],'http')===0 ? $c_info['photo'] : "uploads/photo/".$c_info['photo']) : "images/logo.png",
+        'type' => $call['type']
     ];
 }
 
-// CHECK FOR CALL STATUS (if I am calling someone, did they accept/reject?)
-// We check for any non-ringing status for my latest call created/updated recently
-$my_call = $con->query("SELECT * FROM tbl_calls WHERE caller_id='$my_profile' AND status IN ('accepted', 'rejected', 'ended') AND updated_at > (NOW() - INTERVAL 10 SECOND) ORDER BY updated_at DESC LIMIT 1");
+// CALL STATUS UPDATE
+$my_call = $con->query("SELECT * FROM tbl_calls WHERE caller_id='$my_profile' AND chat_platform='$platform' AND status IN ('accepted', 'rejected', 'ended') AND updated_at > (NOW() - INTERVAL 10 SECOND) ORDER BY updated_at DESC LIMIT 1");
 if($my_call && $my_call->num_rows > 0){
     $mc = $my_call->fetch_assoc();
     $response['call_update'] = [

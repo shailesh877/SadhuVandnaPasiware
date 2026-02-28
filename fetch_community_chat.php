@@ -6,7 +6,6 @@ date_default_timezone_set('Asia/Kolkata');
 $my = intval($_GET['my_profile_id'] ?? 0);
 $receiver = intval($_GET['receiver_id'] ?? 0);
 $last_id = intval($_GET['last_id'] ?? 0);
-$platform = $_GET['platform'] ?? 'marriage';
 
 if(!$my || !$receiver){
     echo "<div class='text-center text-gray-400'>No chat found.</div>";
@@ -21,23 +20,23 @@ if($last_id == 0) {
     $con->query("
     UPDATE tbl_messages 
     SET seen=1
-    WHERE receiver_id=$my AND sender_id=$receiver AND seen=0 AND chat_platform='$platform'
+    WHERE receiver_id=$my AND sender_id=$receiver AND seen=0
     ");
 } else {
    // Also mark new messages as seen when we fetch them incrementally
     $con->query("
     UPDATE tbl_messages 
     SET seen=1
-    WHERE receiver_id=$my AND sender_id=$receiver AND seen=0 AND id > $last_id AND chat_platform='$platform'
+    WHERE receiver_id=$my AND sender_id=$receiver AND seen=0 AND id > $last_id
     ");
 }
 
 /* Build Query */
 $sql_where = "
 (
- (sender_id=$my AND receiver_id=$receiver AND deleted_by_sender=0 AND chat_platform='$platform')
+ (sender_id=$my AND receiver_id=$receiver AND deleted_by_sender=0)
  OR
- (sender_id=$receiver AND receiver_id=$my AND deleted_by_receiver=0 AND chat_platform='$platform')
+ (sender_id=$receiver AND receiver_id=$my AND deleted_by_receiver=0)
 )
 ";
 
@@ -75,20 +74,10 @@ if($last_id > 0){
     
         /* TEXT */
         if(!empty($r['message'])){
-            if (strpos($r['message'], 'SYSTEM_CALL:') === 0) {
-                $call_text = substr($r['message'], 12);
-                $isMissed = strpos($call_text, 'Missed') !== false;
-                $color = $isMissed ? 'text-red-500 font-semibold' : 'text-gray-700 font-semibold';
-                $msg .= "
-                <div class='mt-2 {$color}'>
-                    ".htmlspecialchars($call_text)."
-                </div>";
-            } else {
-                $msg .= "
-                <div class='mt-2'>
-                    ".nl2br(htmlspecialchars($r['message']))."
-                </div>";
-            }
+            $msg .= "
+            <div class='mt-2'>
+                ".nl2br(htmlspecialchars($r['message']))."
+            </div>";
         }
     
         $time = date("h:i A", strtotime($r['created_at']));
@@ -151,20 +140,10 @@ while($r = $res->fetch_assoc()){
 
     /* TEXT */
     if(!empty($r['message'])){
-        if (strpos($r['message'], 'SYSTEM_CALL:') === 0) {
-            $call_text = substr($r['message'], 12);
-            $isMissed = strpos($call_text, 'Missed') !== false;
-            $color = $isMissed ? 'text-red-500 font-semibold' : 'text-gray-700 font-semibold';
-            $msg .= "
-            <div class='mt-2 {$color}'>
-                ".htmlspecialchars($call_text)."
-            </div>";
-        } else {
-            $msg .= "
-            <div class='mt-2'>
-                ".nl2br(htmlspecialchars($r['message']))."
-            </div>";
-        }
+        $msg .= "
+        <div class='mt-2'>
+            ".nl2br(htmlspecialchars($r['message']))."
+        </div>";
     }
 
     $time = date("h:i A", strtotime($r['created_at']));

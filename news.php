@@ -173,21 +173,25 @@ function attachReadMoreListeners() {
 
         btn.dataset.attached = "true"; // Prevent double attachment
 
-        if (text.scrollHeight <= 112) {
-            btn.style.display = "none";
-        } else {
-            btn.addEventListener("click", function () {
-                if (text.classList.contains("expanded")) {
-                    text.style.maxHeight = "7rem";
-                    text.classList.remove("expanded");
-                    btn.textContent = "Read More";
-                } else {
-                    text.style.maxHeight = text.scrollHeight + "px";
-                    text.classList.add("expanded");
-                    btn.textContent = "Read Less";
-                }
-            });
-        }
+        // Use a short timeout to ensure CSS is applied and layout is calculated
+        setTimeout(() => {
+            if (text.scrollHeight > text.clientHeight + 2) {
+                btn.style.display = "inline-block";
+                btn.addEventListener("click", function () {
+                    if (text.classList.contains("expanded")) {
+                        text.style.maxHeight = "7rem";
+                        text.classList.remove("expanded");
+                        btn.textContent = "Read More";
+                    } else {
+                        text.style.maxHeight = text.scrollHeight + "px";
+                        text.classList.add("expanded");
+                        btn.textContent = "Read Less";
+                    }
+                });
+            } else {
+                btn.style.display = "none";
+            }
+        }, 50);
     });
 }
 

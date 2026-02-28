@@ -211,6 +211,7 @@ window.addEventListener('load', () => {
   loadProfiles(true);
 });
 </script>
+
 <script>
 // disable right click
 document.addEventListener("contextmenu", e => e.preventDefault());

@@ -46,7 +46,7 @@ if (isset($_POST['mobile']) && isset($_POST['name']) && isset($_POST['caste'])) 
     $stmt->fetch();
     $stmt->close();
 
-    if ($attempt_count >= 10) { // Production Limit
+    if ($attempt_count >= 2) {
         echo "limit_exceeded";
         exit;
     }
@@ -58,16 +58,15 @@ if (isset($_POST['mobile']) && isset($_POST['name']) && isset($_POST['caste'])) 
     $ins->execute();
     $ins->close();
 
-    // Generate OTP (NOT USED WITH WIDGET, BUT KEPT FOR BACKEND REFERENCE IF NEEDED)
-    // $otp = rand(100000, 999999);
-    // $_SESSION['login_otp'] = $otp;
-    
+    // Generate OTP (For session fallback)
+    $otp = rand(100000, 999999);
+    $_SESSION['login_otp'] = $otp;
     $_SESSION['login_mobile'] = $mobile;
     $_SESSION['login_name'] = $name;
     $_SESSION['login_caste'] = $caste;
-    $_SESSION['login_otp_expiry'] = time() + 300; 
+    $_SESSION['login_otp_expiry'] = time() + 300;
 
-    // With Widget Flow, we just return 'allowed' to let frontend proceed
+    // Everything is validated, allow the JS widget to take over
     echo "allowed";
 
 } else {

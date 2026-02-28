@@ -23,6 +23,7 @@ $my_photo = htmlspecialchars($logged_user['profile_photo'] ?? '');
 
 <script>
 let offset = 0;
+let renderedCount = 0;
 const limit = 2;
 let isLoading = false;
 let hasMore = true;
@@ -34,6 +35,7 @@ async function fetchPosts(isInitial = false) {
   if (isInitial) {
     offset = 0;
     hasMore = true;
+    renderedCount = 0; 
     document.getElementById("postContainer").innerHTML = '';
   }
 
@@ -52,7 +54,7 @@ async function fetchPosts(isInitial = false) {
         return;
     }
 
-    posts.forEach(p => {
+    posts.forEach((p, index) => {
       // ✅ Heart class: solid red if liked, regular gray if not
       const likedClass = p.user_liked ? 'fa-solid text-red-500' : 'fa-regular text-gray-400';
 
@@ -121,6 +123,11 @@ async function fetchPosts(isInitial = false) {
         </div>
       `;
       container.insertAdjacentHTML("beforeend", postHTML);
+      renderedCount++;
+
+      if(renderedCount === 4){
+          injectSuggestions(container);
+      }
     });
 
     offset += posts.length;
@@ -130,6 +137,84 @@ async function fetchPosts(isInitial = false) {
   } finally {
     isLoading = false;
   }
+}
+
+async function injectSuggestions(container) {
+    const res = await fetch('follow_action.php?action=fetch_suggestions&limit=8');
+    const data = await res.json();
+    if(!data.ok || data.suggestions.length === 0) return;
+
+    const sugHTML = `
+        <div class="bg-gradient-to-r from-orange-50 to-white max-w-6xl w-full mx-auto rounded-xl shadow-lg border border-orange-200 p-6 mt-8 mb-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-orange-700 flex items-center gap-2 text-lg">
+                    <i class="fa-solid fa-user-plus"></i> People You May Know
+                </h3>
+                <a href="find_people" class="text-orange-600 font-bold text-sm border-b-2 border-orange-600 hover:text-orange-700">View More</a>
+            </div>
+            
+            <div class="flex gap-4 overflow-x-auto pb-4 no-scrollbar scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
+                ${data.suggestions.map(s => `
+                    <div id="sug-${s.id}" class="min-w-[160px] bg-white rounded-xl border border-orange-100 p-4 transition-all hover:shadow-md flex flex-col items-center">
+                        <div class="relative mb-3">
+                            ${s.profile_photo ? 
+                                `<img src="${s.profile_photo}" class="w-16 h-16 rounded-full object-cover border-2 border-orange-400 shadow-sm">` :
+                                `<div class="w-16 h-16 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-2xl border-2 border-orange-400 shadow-sm">${s.initials}</div>`
+                            }
+                            ${s.follows_me ? `<span class="absolute -bottom-1 -right-1 bg-green-500 text-white text-[8px] px-1.5 py-0.5 rounded-full uppercase font-bold border border-white">Follows You</span>` : ''}
+                        </div>
+                        
+                        <a href="user_profile?id=${s.id}" class="font-bold text-gray-800 text-sm text-center line-clamp-1 hover:text-orange-600 transition">${s.name}</a>
+                        <p class="text-gray-400 text-[10px] mb-3">${s.city || 'Member'}</p>
+                        
+                        <div class="flex flex-col gap-1.5 w-full mt-auto">
+                            <button onclick="suggestionFollow(${s.id})" class="suggestion-follow-btn w-full bg-orange-500 text-white py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-orange-600 transition">
+                                ${s.follows_me ? 'Accept Request' : 'Send Request'}
+                            </button>
+                            <button onclick="suggestionCancel(${s.id}, ${s.follows_me})" class="w-full bg-gray-50 text-gray-400 py-1 rounded-lg text-[10px] uppercase tracking-wider font-bold hover:bg-gray-100 transition whitespace-nowrap">
+                                ${s.follows_me ? 'Ignore' : 'Cancel'}
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    container.insertAdjacentHTML("beforeend", sugHTML);
+}
+
+async function suggestionFollow(id) {
+    const res = await fetch('follow_action.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=follow&user_id=${id}`
+    });
+    const data = await res.json();
+    if(data.ok){
+        const card = document.getElementById(`sug-${id}`);
+        const btn = card.querySelector('.suggestion-follow-btn');
+        if(data.status === 'requested') {
+            btn.innerText = "Requested";
+            btn.classList.replace('bg-orange-500', 'bg-gray-400');
+            setTimeout(() => card.classList.add('hidden'), 500);
+        } else if(data.status === 'connected') {
+            btn.innerText = "Friends";
+            btn.classList.replace('bg-orange-500', 'bg-green-500');
+            setTimeout(() => card.classList.add('hidden'), 500);
+        }
+    }
+}
+
+async function suggestionCancel(id, followsMe) {
+    if(followsMe && confirm('Removing them as follower? They will no longer follow you.')){
+         await fetch('follow_action.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `action=remove_follower&user_id=${id}`
+        });
+    }
+    const card = document.getElementById(`sug-${id}`);
+    card.classList.add('hidden');
 }
 
 // Initial Load
@@ -264,3 +349,48 @@ if(urlParams.get('post')){
 }
 
 </script>
+<script>
+// disable right click
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+// disable drag
+document.addEventListener("dragstart", e => e.preventDefault());
+
+// disable ctrl keys
+document.addEventListener("keydown", function(e){
+
+    // Ctrl + S / U / P / C / X / A
+    if (
+        e.ctrlKey &&
+        ['s','u','p','c','x','a'].includes(e.key.toLowerCase())
+    ) {
+        e.preventDefault();
+    }
+
+    // Print Screen
+    if (e.key === "PrintScreen") {
+        document.body.style.filter = "blur(10px)";
+        setTimeout(() => {
+            document.body.style.filter = "none";
+        }, 2000);
+    }
+
+    // F12
+    if (e.keyCode === 123) {
+        e.preventDefault();
+    }
+});
+
+// mobile screenshot detection (best possible)
+document.addEventListener("visibilitychange", function(){
+    if(document.hidden){
+        document.body.style.filter = "blur(15px)";
+    } else {
+        document.body.style.filter = "none";
+    }
+});
+
+// disable text selection
+document.onselectstart = () => false;
+</script>
+
