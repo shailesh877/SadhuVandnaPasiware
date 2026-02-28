@@ -1,6 +1,8 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include("connection.php");
-session_start();
 
 $user_id = intval($_GET['user_id'] ?? 0);
 $stories = [];
