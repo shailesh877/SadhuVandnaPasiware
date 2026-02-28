@@ -1,4 +1,5 @@
 <?php
+include "database_schema_updates.php";
 // $con=mysqli_connect("localhost","root","","sadhu_vandana");
 // if (mysqli_connect_errno()) {
 //     echo "Failed to connect to MySQL: " . mysqli_connect_error();
@@ -16,4 +17,5 @@ mysqli_set_charset($con, "utf8mb4");
 mysqli_query($con, "SET NAMES utf8mb4");
 mysqli_query($con, "SET CHARACTER SET utf8mb4");
 mysqli_query($con, "SET SESSION collation_connection = utf8mb4_unicode_ci");
+
 ?>
