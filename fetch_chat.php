@@ -1,6 +1,8 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include("connection.php");
-session_start();
 date_default_timezone_set('Asia/Kolkata');
 
 $my = intval($_GET['my_profile_id'] ?? 0);
