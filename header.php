@@ -257,9 +257,9 @@ if(isset($name_parts[1])){
       <button id="profileBtn"
         class="w-9 h-9 rounded-full overflow-hidden border-2 border-orange-400 flex items-center justify-center bg-orange-200 text-white font-bold">
         <?php if($profile_photo){ ?>
-          <img src="<?= $profile_photo ?>" class="w-full h-full object-cover" />
+          <img src="<?php echo $profile_photo ?>" class="w-full h-full object-cover" />
         <?php } else { ?>
-          <?= $first_letters ?>
+          <?php echo $first_letters ?>
         <?php } ?>
       </button>
 
