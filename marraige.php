@@ -1,5 +1,4 @@
 <?php
-include("connection.php");
 include("header.php");
 
 $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
@@ -81,7 +80,7 @@ $requestCount = $requestCountQuery->fetch_assoc()['total'];
                 <!-- 🔥 Notification Badge -->
                 <?php if($requestCount > 0) { ?>
                     <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
-                        <?= $requestCount ?>
+                        <?php echo $requestCount ?>
                     </span>
                 <?php } ?>
 
