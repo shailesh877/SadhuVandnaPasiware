@@ -1,15 +1,13 @@
 <?php
-include("connection.php");
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+error_reporting(0);
+ini_set('display_errors', 0);
+include_once("connection.php");
 header('Content-Type: application/json');
 date_default_timezone_set("Asia/Kolkata");
 
 $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
-if(!$user_mobile){ echo json_encode([]); exit; }
+if(!$con || !$user_mobile){ echo json_encode([]); exit; }
 
-if(!$con){ echo json_encode([]); exit; }
 $user_res = $con->query("SELECT id, name FROM tbl_members WHERE mobile='$user_mobile'");
 $user = ($user_res) ? $user_res->fetch_assoc() : null;
 if(!$user){ echo json_encode([]); exit; }
@@ -23,10 +21,12 @@ if($action === 'like'){
   $pid = intval($_POST['id']);
   $check = $con->query("SELECT id FROM tbl_likes WHERE post_id=$pid AND user_id=$user_id");
 
-  if($check->num_rows == 0){
+  if($check && $check->num_rows == 0){
     $stmt = $con->prepare("INSERT INTO tbl_likes (post_id, user_id, date) VALUES (?, ?, NOW())");
-    $stmt->bind_param("ii", $pid, $user_id);
-    $stmt->execute();
+    if($stmt){
+        $stmt->bind_param("ii", $pid, $user_id);
+        $stmt->execute();
+    }
   } else {
     $con->query("DELETE FROM tbl_likes WHERE post_id=$pid AND user_id=$user_id");
   }
@@ -43,8 +43,10 @@ if($action === 'comment'){
   $comment = trim($_POST['comment']);
   if($comment != ""){
     $stmt = $con->prepare("INSERT INTO tbl_comments (post_id, user_id, comment, date) VALUES (?, ?, ?, NOW())");
-    $stmt->bind_param("iis", $pid, $user_id, $comment);
-    $stmt->execute();
+    if($stmt){
+        $stmt->bind_param("iis", $pid, $user_id, $comment);
+        $stmt->execute();
+    }
   }
   echo json_encode(["ok" => true]);
   exit;
@@ -55,11 +57,9 @@ if($action === 'comment'){
 ============================ */
 if($action === 'fetch_all'){
   $posts = [];
-
-  $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 2;
+  $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 10;
   $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
 
-  // ✅ Filter by specific user (if user_id passed)
   $where = "";
   if(isset($_GET['user_id']) && intval($_GET['user_id']) > 0){
     $uid = intval($_GET['user_id']);
@@ -83,14 +83,12 @@ if($action === 'fetch_all'){
   while($p = $res->fetch_assoc()){
     $pid = $p['id'];
 
-    // ✅ Likes count + check if current user liked
     $likes_res = $con->query("SELECT COUNT(*) FROM tbl_likes WHERE post_id=$pid");
     $likes = ($likes_res) ? $likes_res->fetch_row()[0] : 0;
     
     $user_liked_res = $con->query("SELECT id FROM tbl_likes WHERE post_id=$pid AND user_id=$user_id");
     $user_liked = ($user_liked_res && $user_liked_res->num_rows > 0);
 
-    // ✅ Fetch comments
     $comments = [];
     $cres = $con->query("
       SELECT c.comment, c.date, m.name, m.profile_photo
@@ -111,7 +109,6 @@ if($action === 'fetch_all'){
       }
     }
 
-    // ✅ Media split fix
     $media = [];
     if(!empty($p['media'])){
       $media = array_filter(explode(',', $p['media']));
@@ -135,3 +132,4 @@ if($action === 'fetch_all'){
   echo json_encode($posts);
   exit;
 }
+exit;
