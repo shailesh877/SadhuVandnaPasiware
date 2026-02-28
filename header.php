@@ -1,7 +1,7 @@
 <?php
 include("connection.php");
 include("auto_delete_stories.php");
-session_start();
+// session_start();
 
 if(!isset($_SESSION['sadhu_user_id']) || empty($_SESSION['sadhu_user_id'])){
     
@@ -818,4 +818,5 @@ window.openCalendar = function(){
     </div>
 </div>
 <?php endif; ?>
+
 
