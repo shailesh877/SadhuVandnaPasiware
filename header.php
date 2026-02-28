@@ -1,8 +1,7 @@
 <?php
-session_start();
 include("connection.php");
 include("auto_delete_stories.php");
-
+session_start();
 
 if(!isset($_SESSION['sadhu_user_id']) || empty($_SESSION['sadhu_user_id'])){
     
@@ -236,13 +235,6 @@ if(isset($name_parts[1])){
 
   <div class="flex items-center gap-4 relative">
 
-    <!-- MESSAGES -->
-    <a href="conversations.php" class="relative group">
-       <i class="fa-solid fa-comment-dots text-orange-600 text-xl sm:text-2xl transition-transform group-hover:scale-110"></i>
-       <span id="msgNotifCount" class="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full hidden"></span>
-    </a>
-
-
     <!-- NOTIFICATION -->
     <button onclick="openNotificationModal()" class="relative">
       <i class="fa-solid fa-bell text-orange-600 text-xl sm:text-2xl"></i>
@@ -301,7 +293,6 @@ if(isset($name_parts[1])){
         <i class="fa-solid fa-user text-2xl mb-1"></i>
         <span class="text-xs">Profile</span>
       </a>
-
 
       <a href="news" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
         <i class="fa-solid fa-newspaper text-2xl mb-1"></i>
@@ -397,7 +388,6 @@ if(isset($name_parts[1])){
       <i class="fa-solid fa-user text-lg"></i>
       <span class="text-[11px] leading-none mt-1">Profile</span>
     </a>
-
 
     <a href="news" class="py-2 flex flex-col items-center text-white hover:bg-orange-600">
       <i class="fa-solid fa-newspaper text-lg"></i>
@@ -577,54 +567,40 @@ document.addEventListener("click", function () {
             let html = "";
 
             data.forEach(n => {
-              let action = "";
-              let badgeText = "";
-              let iconClass = "text-blue-600";
-              
-              if(n.type === 'message'){
-                  action = `openMessage(${n.sender_id}, '${n.platform}')`;
-                  badgeText = `${n.unread_count} message(s)`;
-                  iconClass = "text-blue-600";
-              } else if(n.type === 'proposal'){
-                  action = `window.location.href='view_request.php'`;
-                  badgeText = `Marriage Proposal`;
-                  iconClass = "text-red-600";
-              } else if(n.type === 'follow'){
-                  action = `window.location.href='profile.php'`;
-                  badgeText = `Friend Request`;
-                  iconClass = "text-green-600";
-              }
+
+              let img = "uploads/photo/" + (n.profile && n.profile !== "" ? n.profile : "default.png");
 
               html += `
-                <div onclick="${action}"
-                    class="flex items-center gap-3 p-2 rounded-lg border cursor-pointer hover:bg-orange-50 mb-2">
+    <div onclick="openMessage(${n.sender_id}, ${n.receiver_id})"
+"
+        class="flex items-center gap-3 p-2 rounded-lg border cursor-pointer hover:bg-orange-50">
 
-                    <img src="${n.profile}" 
-                         class="w-10 h-10 rounded-full object-cover border shadow">
+        <img src="${img}" 
+             class="w-10 h-10 rounded-full object-cover border shadow">
 
-                    <div class="flex-1">
-                        <p class="font-semibold text-gray-800 text-sm">${n.name}</p>
-                        <p class="text-xs text-gray-500 line-clamp-1">${n.message}</p>
+        <div class="flex-1">
+            <p class="font-semibold text-gray-800">${n.name}</p>
+            <p class="text-xs text-gray-500 line-clamp-1">${n.message}</p>
 
-                        <span class="text-[10px] ${iconClass} font-bold uppercase tracking-wide">
-                            ${badgeText}
-                        </span>
-                    </div>
+            <span class="text-[11px] text-blue-600 font-semibold">
+                ${n.unread_count} message(s)
+            </span>
+        </div>
 
-                    <span class="text-[9px] text-gray-400 whitespace-nowrap">${n.date}</span>
-                </div>`;
+        <span class="text-[10px] text-gray-400">${n.date}</span>
+    </div>`;
 
             });
 
-            document.getElementById("notifList").innerHTML = html || "<div class='text-center p-5 text-gray-400 italic text-sm'>No new notifications</div>";
+            document.getElementById("notifList").innerHTML = html;
           });
       }
 
 
 
       // 🔥 Redirect to chat
-      function openMessage(sender_id, platform) {
-        window.location.href = `message.php?receiver_id=${sender_id}&platform=${platform}`;
+      function openMessage(sender_id, receiver_id) {
+        window.location.href = "message.php?sender_id=" + receiver_id + "&receiver_id=" + sender_id;
       }
 
 
@@ -634,48 +610,30 @@ document.addEventListener("click", function () {
         if (window.location.pathname.includes('message.php')) {
             // If on message page, only update count, call is handled by message.php
             fetch("notification_count.php")
-              .then(res => res.json())
-              .then(data => updateBadge(data));
+              .then(res => res.text())
+              .then(count => updateBadge(count));
             return;
         }
 
         fetch("get_global_status.php")
           .then(res => res.json())
           .then(data => {
-            updateBadge(data);
+            updateBadge(data.unread_count);
             
             if (data.incoming_call) {
                 showGlobalIncomingCall(data.incoming_call);
-            } else {
-                const modal = document.getElementById('globalIncomingCallModal');
-                if (modal && !modal.classList.contains('hidden')) {
-                    modal.classList.add('hidden');
-                    const ring = document.getElementById('globalRingtone');
-                    if (ring) { ring.pause(); ring.currentTime = 0; }
-                }
             }
           })
           .catch(e => console.error("Global status error:", e));
       }
 
-      function updateBadge(counts) {
+      function updateBadge(count) {
         let badge = document.getElementById("notifCount");
-        let msgBadge = document.getElementById("msgNotifCount");
-        const cNotif = parseInt(counts.unread_count) || 0;
-        const cMsg = parseInt(counts.msg_count) || 0;
-        
-        // General Notification Badge
-        if (cNotif > 0) {
-          if(badge){ badge.innerText = cNotif; badge.classList.remove("hidden"); }
+        if (parseInt(count) > 0) {
+          badge.innerText = count;
+          badge.classList.remove("hidden");
         } else {
-          if(badge) badge.classList.add("hidden");
-        }
-
-        // Community Message Badge
-        if (cMsg > 0) {
-          if(msgBadge){ msgBadge.innerText = cMsg; msgBadge.classList.remove("hidden"); }
-        } else {
-          if(msgBadge) msgBadge.classList.add("hidden");
+          badge.classList.add("hidden");
         }
       }
 
@@ -696,17 +654,13 @@ document.addEventListener("click", function () {
         // Store data for buttons
         modal.dataset.callId = data.call_id;
         modal.dataset.callerId = data.caller_id;
-        modal.dataset.platform = data.platform || 'marriage';
-        modal.dataset.type = data.type || 'video';
       }
 
       function acceptGlobalCall() {
         const modal = document.getElementById('globalIncomingCallModal');
         const callId = modal.dataset.callId;
         const callerId = modal.dataset.callerId;
-        const platform = modal.dataset.platform;
-        const type = modal.dataset.type || 'video';
-        window.location.href = `message.php?receiver_id=${callerId}&accept_call_id=${callId}&platform=${platform}&type=${type}`;
+        window.location.href = `message.php?receiver_id=${callerId}&accept_call_id=${callId}`;
       }
 
       async function rejectGlobalCall() {
@@ -819,7 +773,4 @@ window.openCalendar = function(){
     </div>
 </div>
 <?php endif; ?>
-
-
-
 
