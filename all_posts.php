@@ -9,8 +9,8 @@ $my_name = htmlspecialchars($logged_user['name'] ?? 'Me');
 $my_photo = htmlspecialchars($logged_user['profile_photo'] ?? '');
 ?>
 <script>
-  const myName = "<?= $my_name ?>";
-  const myPhoto = "<?= $my_photo ?>";
+  const myName = "<?php echo $my_name ?>";
+  const myPhoto = "<?php echo $my_photo ?>";
 </script>
 
 
@@ -393,4 +393,3 @@ document.addEventListener("visibilitychange", function(){
 // disable text selection
 document.onselectstart = () => false;
 </script>
-
