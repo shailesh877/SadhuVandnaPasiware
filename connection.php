@@ -18,4 +18,6 @@ mysqli_set_charset($con, "utf8mb4");
 mysqli_query($con, "SET NAMES utf8mb4");
 mysqli_query($con, "SET CHARACTER SET utf8mb4");
 mysqli_query($con, "SET SESSION collation_connection = utf8mb4_unicode_ci");
+date_default_timezone_set('Asia/Kolkata');
 ?>
+
