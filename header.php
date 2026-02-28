@@ -1,6 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+    @session_start();
 }
 include("connection.php");
 include("auto_delete_stories.php");
@@ -505,36 +505,17 @@ document.addEventListener("click", function () {
 
 
     <script>
-      const btn = document.getElementById('profileBtn');
-      const drop = document.getElementById('profileDropdown');
-      btn.onclick = () => drop.classList.toggle('hidden');
-      document.addEventListener('click', function (e) {
-        if (!btn.contains(e.target) && !drop.contains(e.target)) {
-          drop.classList.add('hidden');
-        }
-      });
-    </script>
-    <script>
-      // Message dropdown toggle
-      const msgBtn = document.getElementById('messageBtn');
-      const msgDropdown = document.getElementById('msgDropdown');
-      msgBtn.onclick = (e) => { e.stopPropagation(); msgDropdown.classList.toggle('hidden'); };
-      document.body.addEventListener('click', (e) => {
-        if (!msgDropdown.contains(e.target) && !msgBtn.contains(e.target)) msgDropdown.classList.add('hidden');
-      });
-      // Chat modal logic
-      function openChat(name) {
-        document.getElementById('chatModal').classList.remove("hidden");
-        if (name === "Shilpi Verma") {
-          document.getElementById('chatName').textContent = "Shilpi Verma";
-          document.getElementById('chatAvatar').src = "https://randomuser.me/api/portraits/women/47.jpg";
-        } else {
-          document.getElementById('chatName').textContent = "Rohit Sharma";
-          document.getElementById('chatAvatar').src = "https://randomuser.me/api/portraits/men/45.jpg";
-        }
-        msgDropdown.classList.add('hidden');
+      // Profile dropdown toggle
+      const p_btn = document.getElementById('profileBtn');
+      const p_drop = document.getElementById('profileDropdown');
+      if(p_btn && p_drop) {
+          p_btn.onclick = (e) => { e.stopPropagation(); p_drop.classList.toggle('hidden'); };
+          document.addEventListener('click', function (e) {
+            if (!p_btn.contains(e.target) && !p_drop.contains(e.target)) {
+              p_drop.classList.add('hidden');
+            }
+          });
       }
-      function closeChat() { document.getElementById('chatModal').classList.add("hidden"); }
     </script>
 
 
