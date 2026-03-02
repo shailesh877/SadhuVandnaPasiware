@@ -1,12 +1,16 @@
 <?php
+ob_start();
 error_reporting(0);
 ini_set('display_errors', 0);
 include_once("connection.php");
 header('Content-Type: application/json');
-date_default_timezone_set("Asia/Kolkata");
 
 $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
-if(!$con || !$user_mobile){ echo json_encode([]); exit; }
+if(!$con || !$user_mobile){ 
+    ob_end_clean();
+    echo json_encode([]); 
+    exit; 
+}
 
 $user_res = $con->query("SELECT id, name FROM tbl_members WHERE mobile='$user_mobile'");
 $user = ($user_res) ? $user_res->fetch_assoc() : null;
@@ -31,6 +35,7 @@ if($action === 'like'){
     $con->query("DELETE FROM tbl_likes WHERE post_id=$pid AND user_id=$user_id");
   }
 
+  ob_get_clean();
   echo json_encode(["ok" => true]);
   exit;
 }
@@ -48,6 +53,7 @@ if($action === 'comment'){
         $stmt->execute();
     }
   }
+  ob_get_clean();
   echo json_encode(["ok" => true]);
   exit;
 }
@@ -129,6 +135,7 @@ if($action === 'fetch_all'){
     ];
   }
 
+  ob_get_clean();
   echo json_encode($posts);
   exit;
 }
