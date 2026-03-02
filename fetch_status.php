@@ -18,19 +18,14 @@ header('Content-Type: application/json');
 
 $profile_id = intval($_GET['profile_id'] ?? 0);
 $my_profile = intval($_GET['my_profile_id'] ?? 0);
-$platform = $_GET['platform'] ?? 'marriage';
-$response = ['online'=>false, 'last_active'=>null, 'is_typing'=>false];
+$platform   = $_GET['platform'] ?? 'marriage';
+$response   = ['online'=>false, 'last_active'=>null, 'is_typing'=>false, 'max_seen_id'=>0];
 
 if(!$con || !$profile_id){ 
     ob_end_clean();
     echo json_encode($response); 
     exit; 
 }
-$my_profile = intval($_GET['my_profile_id'] ?? 0);
-$platform = $_GET['platform'] ?? 'marriage';
-$response = ['online'=>false, 'last_active'=>null, 'is_typing'=>false];
-
-if(!$profile_id){ echo json_encode($response); exit; }
 
 // online check
 if($platform === 'community'){
@@ -53,27 +48,35 @@ if($typ && $typ->num_rows>0){
 
 // max seen id
 $s = $con->query("SELECT MAX(id) as m FROM tbl_messages WHERE sender_id='$my_profile' AND receiver_id='$profile_id' AND seen=1 AND chat_platform='$platform'");
-$response['max_seen_id'] = ($s && $row=$s->fetch_assoc()) ? ($row['m'] ?? 0) : 0;
+if($s && $row=$s->fetch_assoc()){
+    $response['max_seen_id'] = $row['m'] ?? 0;
+}
 
 // INCOMING CALLS
 $inc = $con->query("SELECT * FROM tbl_calls WHERE receiver_id='$my_profile' AND status='ringing' AND chat_platform='$platform' AND created_at > (NOW() - INTERVAL 30 SECOND) ORDER BY id DESC LIMIT 1");
 if($inc && $inc->num_rows > 0){
     $call = $inc->fetch_assoc();
+    $c_info = null;
     if($platform === 'community'){
-        $c_info = $con->query("SELECT name as full_name, profile_photo as photo FROM tbl_members WHERE id='".$call['caller_id']."' LIMIT 1")->fetch_assoc();
+        $c_res = $con->query("SELECT name as full_name, profile_photo as photo FROM tbl_members WHERE id='".$call['caller_id']."' LIMIT 1");
+        if($c_res) $c_info = $c_res->fetch_assoc();
     } else {
-        $c_info = $con->query("SELECT full_name, photo FROM tbl_marriage_profiles WHERE id='".$call['caller_id']."' LIMIT 1")->fetch_assoc();
+        $c_res = $con->query("SELECT full_name, photo FROM tbl_marriage_profiles WHERE id='".$call['caller_id']."' LIMIT 1");
+        if($c_res) $c_info = $c_res->fetch_assoc();
     }
-    $response['incoming_call'] = [
-        'call_id' => $call['id'],
-        'caller_id' => $call['caller_id'],
-        'caller_name' => $c_info['full_name'] ?? 'Unknown',
-        'caller_photo' => !empty($c_info['photo']) ? (strpos($c_info['photo'],'http')===0 ? $c_info['photo'] : "uploads/photo/".$c_info['photo']) : "images/logo.png",
-        'type' => $call['type']
-    ];
+    
+    if($c_info){
+        $response['incoming_call'] = [
+            'call_id' => $call['id'],
+            'caller_id' => $call['caller_id'],
+            'caller_name' => $c_info['full_name'] ?? 'Unknown',
+            'caller_photo' => !empty($c_info['photo']) ? (strpos($c_info['photo'],'http')===0 ? $c_info['photo'] : "uploads/photo/".$c_info['photo']) : "images/logo.png",
+            'type' => $call['type']
+        ];
+    }
 }
 
-// CALL STATUS UPDATE
+// CALL STATUS UPDATE (For the person who initiated the call)
 $my_call = $con->query("SELECT * FROM tbl_calls WHERE caller_id='$my_profile' AND chat_platform='$platform' AND status IN ('accepted', 'rejected', 'ended') AND updated_at > (NOW() - INTERVAL 10 SECOND) ORDER BY updated_at DESC LIMIT 1");
 if($my_call && $my_call->num_rows > 0){
     $mc = $my_call->fetch_assoc();
