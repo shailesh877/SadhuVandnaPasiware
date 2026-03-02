@@ -1,14 +1,26 @@
 <?php
+ob_start();
+error_reporting(0);
+ini_set('display_errors', 0);
+
 include("connection.php");
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 date_default_timezone_set('Asia/Kolkata');
 
 $my = intval($_GET['my_profile_id'] ?? 0);
 $receiver = intval($_GET['receiver_id'] ?? 0);
 $last_id = intval($_GET['last_id'] ?? 0);
 
-if(!$my || !$receiver){
-    echo "<div class='text-center text-gray-400'>No chat found.</div>";
+if(!$con || !$my || !$receiver){
+    if($last_id > 0){
+        ob_end_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Invalid IDs or DB connection']);
+    } else {
+        echo "<div class='text-center text-gray-400'>No chat found.</div>";
+    }
     exit;
 }
 
@@ -48,8 +60,19 @@ $sql = "SELECT * FROM tbl_messages WHERE $sql_where ORDER BY created_at ASC";
 
 $res = $con->query($sql);
 
+if(!$res){
+    if($last_id > 0){
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Query failed', 'sql' => $sql]);
+    } else {
+        echo "<div class='text-center text-red-400 mt-5'>Chat error. Please check database.</div>";
+    }
+    exit;
+}
+
 // If last_id is requested, we return JSON
 if($last_id > 0){
+    ob_clean();
     header('Content-Type: application/json');
     $data = [];
     while($r = $res->fetch_assoc()){
@@ -58,7 +81,9 @@ if($last_id > 0){
         
         /* FILE */
         if(!empty($r['file'])){
-            $safe = htmlspecialchars($r['file']);
+            $path = $r['file'];
+            // $path = str_replace('/sadhu_vandana/', '', $path);
+            $safe = htmlspecialchars($path);
             if($r['file_type'] === 'image'){
                 $msg .= "
                 <img src='{$safe}'
@@ -111,6 +136,7 @@ if($last_id > 0){
             'html' => $html
         ];
     }
+    ob_get_clean();
     echo json_encode($data);
     exit;
 }
@@ -123,7 +149,9 @@ while($r = $res->fetch_assoc()){
 
     /* FILE */
     if(!empty($r['file'])){
-        $safe = htmlspecialchars($r['file']);
+        $path = $r['file'];
+        // $path = str_replace('/sadhu_vandana/', '', $path);
+        $safe = htmlspecialchars($path);
 
         if($r['file_type'] === 'image'){
             $msg .= "
