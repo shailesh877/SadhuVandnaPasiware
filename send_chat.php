@@ -38,8 +38,8 @@ if(isset($_FILES['attachment']) && $_FILES['attachment']['error'] === 0){
 
     move_uploaded_file($file['tmp_name'], $dest);
 
-    // ✅ BROWSER ACCESS PATH
-    $filePath = "/sadhu_vandana/uploads/chat/" . $newName;
+    // ✅ BROWSER ACCESS PATH (Relative to project root)
+    $filePath = "uploads/chat/" . $newName;
 
     $fileType = str_starts_with($file['type'], 'image')
                 ? 'image'
