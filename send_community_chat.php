@@ -37,8 +37,8 @@ if(isset($_FILES['attachment']) && $_FILES['attachment']['error'] === 0){
 
     move_uploaded_file($file['tmp_name'], $dest);
 
-    // ✅ BROWSER ACCESS PATH
-    $filePath = "/sadhu_vandana/uploads/chat/" . $newName;
+    // ✅ BROWSER ACCESS PATH (Relative)
+    $filePath = "uploads/chat/" . $newName;
 
     $fileType = str_starts_with($file['type'], 'image')
                 ? 'image'
@@ -48,8 +48,8 @@ $date = date("Y-m-d H:i:s");
 /* INSERT */
 $stmt = $con->prepare("
 INSERT INTO tbl_messages
-(sender_id, receiver_id, message, file, file_type,created_at, seen )
-VALUES (?,?,?,?,?,?,0)
+(sender_id, receiver_id, message, file, file_type, created_at, seen, chat_platform)
+VALUES (?, ?, ?, ?, ?, ?, 0, 'community')
 ");
 
 $stmt->bind_param(
