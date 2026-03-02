@@ -26,10 +26,9 @@ if (!isset($_SESSION['admin_id'])) {
         }
     }
 }
-
 // Still not logged in → redirect to login
 if (!isset($_SESSION['admin_id'])) {
-    header("Location: admin_login");
+    echo "<script>window.location.href = 'admin_login';</script>";
     exit;
 }
 
