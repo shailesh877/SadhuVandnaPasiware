@@ -1,11 +1,18 @@
 <?php
+ob_start();
+error_reporting(0);
+ini_set('display_errors', 0);
 include("connection.php");
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // SESSION me mobile store hai
 $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
 
-if(!$user_mobile){
+if(!$con || !$user_mobile){
+    ob_end_clean();
+    header('Content-Type: application/json');
     echo json_encode(['unread_count' => 0, 'msg_count' => 0]);
     exit;
 }
@@ -42,8 +49,9 @@ $q = $con->query("
 ");
 
 header('Content-Type: application/json');
+ob_get_clean();
 echo json_encode([
-    'unread_count' => intval($q->fetch_row()[0]) + intval($c_msg),
+    'unread_count' => ( ($q) ? intval($q->fetch_row()[0]) : 0 ) + intval($c_msg),
     'msg_count' => intval($c_msg)
 ]);
-?>
+exit;
