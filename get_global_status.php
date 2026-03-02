@@ -1,5 +1,6 @@
 <?php
 // get_global_status.php
+ob_start();
 error_reporting(0);
 ini_set('display_errors', 0);
 include_once("connection.php");
@@ -7,12 +8,12 @@ date_default_timezone_set('Asia/Kolkata');
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header('Content-Type: application/json');
-ob_clean();
 
 $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
 $response = ['unread_count' => 0, 'msg_count' => 0, 'incoming_call' => null];
 
 if(!$con || !$user_mobile){ 
+    ob_end_clean();
     echo json_encode($response); 
     exit; 
 }
@@ -99,5 +100,6 @@ if($inc && $inc->num_rows > 0){
     }
 }
 
+ob_get_clean();
 echo json_encode($response);
 exit;
