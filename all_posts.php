@@ -24,7 +24,7 @@ $my_photo = htmlspecialchars($logged_user['profile_photo'] ?? '');
 <script>
 let offset = 0;
 let renderedCount = 0;
-const limit = 2;
+const limit = 4;
 let isLoading = false;
 let hasMore = true;
 
@@ -125,7 +125,7 @@ async function fetchPosts(isInitial = false) {
       container.insertAdjacentHTML("beforeend", postHTML);
       renderedCount++;
 
-      if(renderedCount === 4){
+      if(renderedCount % 4 === 0 && renderedCount > 0){
           injectSuggestions(container);
       }
     });
