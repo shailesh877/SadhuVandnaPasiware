@@ -16,11 +16,15 @@ if(!$con || !$user_mobile){
 
 // Get my IDs
 $userQ = $con->query("SELECT id FROM tbl_members WHERE mobile='$user_mobile' LIMIT 1");
-if($userQ->num_rows == 0){ echo json_encode([]); exit; }
+if(!$userQ || $userQ->num_rows == 0){ 
+    ob_end_clean();
+    echo json_encode([]); 
+    exit; 
+}
 $user_id = $userQ->fetch_assoc()['id'];
 
 $mp = $con->query("SELECT id FROM tbl_marriage_profiles WHERE user_id='$user_id' LIMIT 1");
-$my_marriage_id = ($mp->num_rows > 0) ? $mp->fetch_assoc()['id'] : 0;
+$my_marriage_id = ($mp && $mp->num_rows > 0) ? $mp->fetch_assoc()['id'] : 0;
 
 /*
   UNION QUERY to get:
