@@ -1,9 +1,18 @@
 <?php
+ob_start();
+error_reporting(0);
+ini_set('display_errors', 0);
 include("connection.php");
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
-if(!$user_mobile){ echo json_encode([]); exit; }
+if(!$con || !$user_mobile){ 
+    ob_end_clean();
+    echo json_encode([]); 
+    exit; 
+}
 
 // Get my IDs
 $userQ = $con->query("SELECT id FROM tbl_members WHERE mobile='$user_mobile' LIMIT 1");
@@ -109,5 +118,6 @@ while($row = $q->fetch_assoc()){
     ];
 }
 
+ob_get_clean();
 echo json_encode($data);
-?>
+exit;
