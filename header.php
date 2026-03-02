@@ -611,10 +611,13 @@ document.addEventListener("click", function () {
 
 
 
+      // Flag to skip global call handling if page provides its own
+      const isChatPage = window.location.href.includes('message.php') || window.location.href.includes('community_chat.php');
+
       // 🔥 Update global status (Unread messages + Incoming Calls)
       function updateGlobalStatus() {
-        if (window.location.pathname.includes('message.php')) {
-            // If on message page, only update count, call is handled by message.php
+        if (isChatPage) {
+            // If on message page, only update count, call is handled by the page itself
             fetch("notification_count.php")
               .then(res => res.json())
               .then(data => updateBadge(data));
