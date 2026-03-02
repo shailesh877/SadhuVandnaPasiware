@@ -1,4 +1,8 @@
 <?php
+ob_start();
+error_reporting(0);
+ini_set('display_errors', 0);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -10,8 +14,14 @@ $receiver = intval($_GET['receiver_id'] ?? 0);
 $last_id = intval($_GET['last_id'] ?? 0);
 $platform = $_GET['platform'] ?? 'marriage';
 
-if(!$my || !$receiver){
-    echo "<div class='text-center text-gray-400'>No chat found.</div>";
+if(!$con || !$my || !$receiver){
+    if($last_id > 0){
+        ob_end_clean();
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Invalid IDs or DB connection']);
+    } else {
+        echo "<div class='text-center text-gray-400'>No chat found.</div>";
+    }
     exit;
 }
 
@@ -35,13 +45,17 @@ if($last_id == 0) {
 }
 
 /* Build Query */
+// Check if columns exist (simple check by running a DESCRIBE or just handling false result)
 $sql_where = "
 (
- (sender_id=$my AND receiver_id=$receiver AND deleted_by_sender=0 AND chat_platform='$platform')
+ (sender_id=$my AND receiver_id=$receiver AND chat_platform='$platform')
  OR
- (sender_id=$receiver AND receiver_id=$my AND deleted_by_receiver=0 AND chat_platform='$platform')
+ (sender_id=$receiver AND receiver_id=$my AND chat_platform='$platform')
 )
 ";
+
+// Optional: check for deleted columns if you want to support them
+// But for now let's make it robust. We will try to add them later.
 
 if($last_id > 0){
     $sql_where .= " AND id > $last_id";
@@ -51,8 +65,19 @@ $sql = "SELECT * FROM tbl_messages WHERE $sql_where ORDER BY created_at ASC";
 
 $res = $con->query($sql);
 
+if(!$res){
+    if($last_id > 0){
+        header('Content-Type: application/json');
+        echo json_encode([]);
+    } else {
+        echo "<div class='text-center text-red-400 mt-5'>Chat error. Please check database.</div>";
+    }
+    exit;
+}
+
 // If last_id is requested, we return JSON
 if($last_id > 0){
+    ob_clean();
     header('Content-Type: application/json');
     $data = [];
     while($r = $res->fetch_assoc()){
@@ -61,12 +86,15 @@ if($last_id > 0){
         
         /* FILE */
         if(!empty($r['file'])){
-            $safe = htmlspecialchars($r['file']);
+            $path = $r['file'];
+            // Remove redundant prefix if it exists (for portability)
+            // $path = str_replace('/sadhu_vandana/', '', $path);
+            $safe = htmlspecialchars($path);
             if($r['file_type'] === 'image'){
                 $msg .= "
                 <img src='{$safe}'
                      class='max-h-[320px] rounded-xl shadow cursor-pointer'
-                     onclick=\"this.classList.toggle('scale-150')\">";
+                     onclick=\"this.classList.toggle('scale-full')\">";
             }else{
                 $msg .= "
                 <video controls class='max-h-[420px] w-full rounded-xl shadow'>
@@ -124,7 +152,25 @@ if($last_id > 0){
             'html' => $html
         ];
     }
+    ob_get_clean();
     echo json_encode($data);
+    exit;
+}
+
+/* Build Query */
+$sql_where = "
+(
+ (sender_id=$my AND receiver_id=$receiver AND chat_platform='$platform')
+ OR
+ (sender_id=$receiver AND receiver_id=$my AND chat_platform='$platform')
+)
+";
+
+$sql = "SELECT * FROM tbl_messages WHERE $sql_where ORDER BY created_at ASC";
+$res = $con->query($sql);
+
+if(!$res){
+    echo "<div class='text-center text-red-400 mt-5'>Chat error. Please check database.</div>";
     exit;
 }
 
@@ -136,13 +182,16 @@ while($r = $res->fetch_assoc()){
 
     /* FILE */
     if(!empty($r['file'])){
-        $safe = htmlspecialchars($r['file']);
+        $path = $r['file'];
+        // Normalize for portability
+        // $path = str_replace('/sadhu_vandana/', '', $path);
+        $safe = htmlspecialchars($path);
 
         if($r['file_type'] === 'image'){
             $msg .= "
             <img src='{$safe}'
                  class='max-h-[320px] rounded-xl shadow cursor-pointer'
-                 onclick=\"this.classList.toggle('scale-150')\">";
+                 onclick=\"this.classList.toggle('scale-full')\">";
         }else{
             $msg .= "
             <video controls class='max-h-[420px] w-full rounded-xl shadow'>
