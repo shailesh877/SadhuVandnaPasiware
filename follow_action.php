@@ -1,10 +1,16 @@
 <?php
+ob_start();
+error_reporting(0);
+ini_set('display_errors', 0);
 include("connection.php");
-session_start();
 header('Content-Type: application/json');
 
 $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
-if(!$user_mobile){ echo json_encode(["ok" => false, "message" => "Not logged in"]); exit; }
+if(!$user_mobile){ 
+    ob_end_clean();
+    echo json_encode(["ok" => false, "message" => "Not logged in"]); 
+    exit; 
+}
 
 $user = $con->query("SELECT id FROM tbl_members WHERE mobile='$user_mobile'")->fetch_assoc();
 $follower_id = $user['id'];
@@ -48,6 +54,7 @@ if($action === 'follow'){
     // Get updated counts
     $followers_count = $con->query("SELECT COUNT(*) FROM tbl_followers WHERE following_id=$following_id AND status='accepted'")->fetch_row()[0];
     
+    ob_get_clean();
     echo json_encode(["ok" => true, "status" => $status, "followers_count" => $followers_count]);
     exit;
 }
@@ -56,6 +63,7 @@ if($action === 'remove_follower'){
     $target_follower_id = intval($_POST['user_id']);
     // Remove the follow from the other person to me
     $con->query("DELETE FROM tbl_followers WHERE follower_id=$target_follower_id AND following_id=$follower_id");
+    ob_get_clean();
     echo json_encode(["ok" => true]);
     exit;
 }
@@ -112,6 +120,7 @@ if($action === 'fetch_suggestions'){
         $suggestions[] = $row;
     }
     
+    ob_get_clean();
     echo json_encode(["ok" => true, "suggestions" => $suggestions]);
     exit;
 }
@@ -171,6 +180,7 @@ if(in_array($action, ['fetch_followers', 'fetch_following', 'fetch_friends', 'fe
         }
         $list[] = $row;
     }
+    ob_get_clean();
     echo json_encode(["ok" => true, "list" => $list]);
     exit;
 }
@@ -204,6 +214,7 @@ if($action === 'get_counts'){
         }
     }
 
+    ob_get_clean();
     echo json_encode([
         "ok" => true,
         "friends" => $friends,
