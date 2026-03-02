@@ -329,6 +329,7 @@ $they_blocked_me = ($block_q2->num_rows > 0);
 <script>
 const myProfile = parseInt(<?php echo json_encode($my_profile_id); ?>);
 const receiverProfile = parseInt(<?php echo json_encode($receiver_id); ?>);
+const chatPlatform = 'community';
 const POLL = 2500;
 let typingTimer = null;
 let isTyping = false;
@@ -456,6 +457,7 @@ async function initiateCall(type){
         fd.append('receiver_id', receiverProfile);
         fd.append('type', type);
         fd.append('peer_id', "agora_v1"); // Dummy value for compatibility
+        fd.append('platform', 'community'); // Fix: Pass platform
         
         const res = await fetch('initiate_call.php', { method:'POST', body:fd });
         const text = await res.text();
@@ -590,11 +592,10 @@ function closeCallModal(){
     document.getElementById('localVideo').innerHTML = "";
     document.getElementById('remoteVideo').innerHTML = "";
     
-    document.getElementById('callStatusText').innerText = "";
-    document.getElementById('callingAudio').pause();
-    document.getElementById('callingAudio').currentTime = 0;
-    document.getElementById('ringtoneAudio').pause();
-    document.getElementById('ringtoneAudio').currentTime = 0;
+    const ring = document.getElementById('ringtoneAudio');
+    if (ring) { ring.pause(); ring.currentTime = 0; }
+    const callAudio = document.getElementById('callingAudio');
+    if (callAudio) { callAudio.pause(); callAudio.currentTime = 0; }
     
     activeCallId = null;
     incomingCallData = null;
@@ -751,7 +752,7 @@ async function stopTyping(){
 
 async function fetchStatus(){
     try{
-        const res = await fetch(`fetch_status.php?profile_id=${receiverProfile}&my_profile_id=${myProfile}`);
+        const res = await fetch(`fetch_status.php?profile_id=${receiverProfile}&my_profile_id=${myProfile}&platform=community`);
         const j = await res.json();
         
         // Online/Typing status
@@ -763,6 +764,14 @@ async function fetchStatus(){
             // If already in call or ringing, ignore or handle multi-call (ignoring for now)
             if(document.getElementById('incomingCallModal').classList.contains('hidden') && document.getElementById('callModal').classList.contains('hidden')){
                 showIncomingCall(j.incoming_call);
+            }
+        } else {
+            const incMod = document.getElementById('incomingCallModal');
+            if (incMod && !incMod.classList.contains('hidden')) {
+                incMod.classList.add('hidden');
+                const ring = document.getElementById('ringtoneAudio');
+                if (ring) { ring.pause(); ring.currentTime = 0; }
+                incomingCallData = null;
             }
         }
         
@@ -824,7 +833,7 @@ async function loadNewMessages(){
         }
 
         const lastId = window.lastMessageId || 0;
-        const res = await fetch(`fetch_chat.php?receiver_id=${receiverProfile}&my_profile_id=${myProfile}&last_id=${lastId}`);
+        const res = await fetch(`fetch_chat.php?receiver_id=${receiverProfile}&my_profile_id=${myProfile}&last_id=${lastId}&platform=${chatPlatform}`);
         const ct = res.headers.get('content-type') || '';
         if(ct.includes('application/json')){
             const arr = await res.json();
