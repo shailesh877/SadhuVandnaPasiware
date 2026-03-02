@@ -1,5 +1,9 @@
 <?php
 // fetch_status.php
+ob_start();
+error_reporting(0);
+ini_set('display_errors', 0);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -12,10 +16,16 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 header('Content-Type: application/json');
 
-ob_clean();
-
-
 $profile_id = intval($_GET['profile_id'] ?? 0);
+$my_profile = intval($_GET['my_profile_id'] ?? 0);
+$platform = $_GET['platform'] ?? 'marriage';
+$response = ['online'=>false, 'last_active'=>null, 'is_typing'=>false];
+
+if(!$con || !$profile_id){ 
+    ob_end_clean();
+    echo json_encode($response); 
+    exit; 
+}
 $my_profile = intval($_GET['my_profile_id'] ?? 0);
 $platform = $_GET['platform'] ?? 'marriage';
 $response = ['online'=>false, 'last_active'=>null, 'is_typing'=>false];
@@ -73,4 +83,6 @@ if($my_call && $my_call->num_rows > 0){
     ];
 }
 
+ob_get_clean();
 echo json_encode($response);
+exit;
