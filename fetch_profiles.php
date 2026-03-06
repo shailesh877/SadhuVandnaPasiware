@@ -28,7 +28,7 @@ $query = "
 SELECT mp.*, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age
 FROM tbl_marriage_profiles mp
 JOIN tbl_members m ON m.id = mp.user_id
-WHERE m.status != 'Blocked' AND mp.id != '$my_profile_id' order by mp.id desc
+WHERE m.status != 'Blocked' AND mp.id != '$my_profile_id'
 ";
 
 // Apply Filters
@@ -49,8 +49,8 @@ if($ageRange){
     }
 }
 
-// Add Limit
-$query .= " LIMIT $limit OFFSET $offset";
+// Add Order and Limit
+$query .= " ORDER BY mp.id DESC LIMIT $limit OFFSET $offset";
 
 $result = $con->query($query);
 
