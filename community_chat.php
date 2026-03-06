@@ -417,18 +417,22 @@ async function initiateCall(type){
     
     // 1. Join Agora Channel
     try {
+        console.log("Attempting to join Agora channel:", channelName);
         await client.join(AGORA_APP_ID, channelName, AGORA_TOKEN, myProfile);
+        console.log("Joined Agora successfully as UID:", myProfile);
         
         // 2. Create Local Tracks
         try {
+            console.log("Creating local tracks for type:", type);
             if(type === 'video'){
                  [localTracks.audio, localTracks.video] = await AgoraRTC.createMicrophoneAndCameraTracks();
             } else {
                  localTracks.audio = await AgoraRTC.createMicrophoneAudioTrack();
             }
+            console.log("Tracks created successfully.");
         } catch(mediaErr){
-            console.error(mediaErr);
-            alert("Camera/Microphone access failed: " + mediaErr.message);
+            console.error("Media Error:", mediaErr);
+            alert("Camera/Microphone access failed. Please ensure you have granted permissions.");
             closeCallModal();
             return;
         }
@@ -440,12 +444,19 @@ async function initiateCall(type){
         } else if(localTracks.audio){
             await client.publish([localTracks.audio]);
         }
+        console.log("Tracks published successfully.");
         
         updateCallUI(type);
 
     } catch (error) {
-        console.error(error);
-        alert("Failed to join call: " + error);
+        console.error("Agora Join Error:", error);
+        if(error.message.includes("404")){
+             alert("Agora Error: Call Room not found (404).");
+        } else if(error.message.includes("token") || error.message.includes("permission")){
+             alert("Agora Error: Authentication failed. If you have an App Certificate active, you must use a token.");
+        } else {
+             alert("Failed to join call: " + error.message);
+        }
         closeCallModal();
         return;
     }
@@ -760,13 +771,13 @@ async function fetchStatus(){
         typingIndicator.classList.toggle('hidden', !j.is_typing);
         
         // CALL HANDLING
+        const incMod = document.getElementById('incomingCallModal');
         if(j.incoming_call){
             // If already in call or ringing, ignore or handle multi-call (ignoring for now)
-            if(document.getElementById('incomingCallModal').classList.contains('hidden') && document.getElementById('callModal').classList.contains('hidden')){
+            if(incMod.classList.contains('hidden') && document.getElementById('callModal').classList.contains('hidden')){
                 showIncomingCall(j.incoming_call);
             }
         } else {
-            const incMod = document.getElementById('incomingCallModal');
             if (incMod && !incMod.classList.contains('hidden')) {
                 incMod.classList.add('hidden');
                 const ring = document.getElementById('ringtoneAudio');
@@ -779,17 +790,10 @@ async function fetchStatus(){
             const s = j.call_update.status;
             if(activeCallId == j.call_update.call_id){
                  if(s === 'rejected' || s === 'ended'){
-                     alert(s === 'rejected' ? 'Call Rejected' : 'Call Ended');
+                     // alert(s === 'rejected' ? 'Call Rejected' : 'Call Ended');
                      endCall();
                  }
-                 // if accepted, connection should happen via PeerJS naturally because Receiver calls us.
-                 // But we can update UI status text
                  if(s === 'accepted'){
-                     // Only update text if NOT already streaming
-                     const v = document.getElementById('remoteVideo');
-                     if(!v.srcObject){
-                         document.getElementById('callStatusText').innerText = "Connecting media...";
-                     }
                      document.getElementById('callingAudio').pause();
                  }
             }
@@ -797,7 +801,6 @@ async function fetchStatus(){
 
         // Update SEEN status for my messages
         if(j.max_seen_id > 0){
-            // find all my sent messages that are NOT yet marked seen (optimization: or just all)
             const myMsgs = document.querySelectorAll('.sent-msg');
             myMsgs.forEach(m => {
                 const mid = parseInt(m.getAttribute('data-msg-id') || 0);
@@ -809,7 +812,9 @@ async function fetchStatus(){
                 }
             });
         }
-    }catch(e){}
+    } catch(e) {
+        console.error("Status Fetch Error:", e);
+    }
     
     // CALL STATUS CHECKS (Merged into fetchStatus)
     // response will contain 'incoming_call' or 'call_update'
