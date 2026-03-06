@@ -1,6 +1,6 @@
 <?php
 include("../connection.php");
-session_start();
+//session_start();
 
 /* ---- Fetch All Wallet Transactions ---- */
 $q = $con->query("
