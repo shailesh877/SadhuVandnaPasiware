@@ -1,5 +1,5 @@
 <?php
-session_start();
+//session_start();
 include("../connection.php");
 
 if (!isset($_SESSION['admin_id'])) {
@@ -26,6 +26,7 @@ if (!isset($_SESSION['admin_id'])) {
         }
     }
 }
+
 // Still not logged in → redirect to login
 if (!isset($_SESSION['admin_id'])) {
     echo "<script>window.location.href = 'admin_login';</script>";
