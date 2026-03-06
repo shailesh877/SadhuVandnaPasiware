@@ -1,12 +1,12 @@
 <?php
-session_start();
+// session_start();
 include("../connection.php");
 
 $error = "";
 
 // --- Already Logged In ---
 if (isset($_SESSION['admin_id'])) {
-    header("Location: index.php");
+    echo "<script>window.location.href='index.php';</script>";
     exit;
 }
 
@@ -26,7 +26,7 @@ if (isset($_COOKIE['sadhu_admin_id']) && isset($_COOKIE['sadhu_admin_token'])) {
             $_SESSION['admin_id'] = $row['admin_id'];
             $_SESSION['admin_name'] = $row['username'];
 
-            header("Location: index.php");
+            echo "<script>window.location.href='index.php';</script>";
             exit;
         }
     }
@@ -56,7 +56,7 @@ if (isset($_POST['login'])) {
                 setcookie("sadhu_admin_token", sha1($row['password']), time() + (86400 * 7), "/");
             }
 
-            header("Location: index.php");
+           echo "<script>window.location.href='index.php';</script>";
             exit;
 
         } else {
