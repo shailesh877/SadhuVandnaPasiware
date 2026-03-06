@@ -44,6 +44,18 @@ async function fetchPosts(isInitial = false) {
     const posts = await res.json();
     const container = document.getElementById("postContainer");
 
+    if (posts.error) {
+        container.innerHTML = `<div class="text-center text-red-500 mt-10">Error: ${posts.error}</div>`;
+        isLoading = false;
+        return;
+    }
+
+    if (!Array.isArray(posts)) {
+        container.innerHTML = `<div class="text-center text-red-500 mt-10">Invalid response from server.</div>`;
+        isLoading = false;
+        return;
+    }
+
     if (posts.length < limit) {
       hasMore = false;
     }
