@@ -48,9 +48,9 @@ if($last_id == 0) {
 // Check if columns exist (simple check by running a DESCRIBE or just handling false result)
 $sql_where = "
 (
- (sender_id=$my AND receiver_id=$receiver AND chat_platform='$platform')
+ (sender_id=$my AND receiver_id=$receiver AND chat_platform='$platform' AND deleted_by_sender=0)
  OR
- (sender_id=$receiver AND receiver_id=$my AND chat_platform='$platform')
+ (sender_id=$receiver AND receiver_id=$my AND chat_platform='$platform' AND deleted_by_receiver=0)
 )
 ";
 
@@ -94,7 +94,7 @@ if($last_id > 0){
                 $msg .= "
                 <img src='{$safe}'
                      class='max-h-[320px] rounded-xl shadow cursor-pointer'
-                     onclick=\"this.classList.toggle('scale-full')\">";
+                     onclick=\"this.classList.toggle('scale-150')\">";
             }else{
                 $msg .= "
                 <video controls class='max-h-[420px] w-full rounded-xl shadow'>
@@ -160,9 +160,9 @@ if($last_id > 0){
 /* Build Query */
 $sql_where = "
 (
- (sender_id=$my AND receiver_id=$receiver AND chat_platform='$platform')
+ (sender_id=$my AND receiver_id=$receiver AND chat_platform='$platform' AND deleted_by_sender=0)
  OR
- (sender_id=$receiver AND receiver_id=$my AND chat_platform='$platform')
+ (sender_id=$receiver AND receiver_id=$my AND chat_platform='$platform' AND deleted_by_receiver=0)
 )
 ";
 
@@ -191,7 +191,7 @@ while($r = $res->fetch_assoc()){
             $msg .= "
             <img src='{$safe}'
                  class='max-h-[320px] rounded-xl shadow cursor-pointer'
-                 onclick=\"this.classList.toggle('scale-full')\">";
+                 onclick=\"this.classList.toggle('scale-150')\">";
         }else{
             $msg .= "
             <video controls class='max-h-[420px] w-full rounded-xl shadow'>
