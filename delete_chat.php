@@ -1,13 +1,16 @@
 <?php
 // delete_chat.php
+ob_start();
 include("connection.php");
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 date_default_timezone_set('Asia/Kolkata');
 
 $message_id = intval($_POST['message_id'] ?? 0);
 $my = intval($_POST['my_profile_id'] ?? 0);
 
-if(!$message_id || !$my){ echo "error"; exit; }
+if(!$message_id || !$my){ ob_end_clean(); echo "error"; exit; }
 
 // Fetch message details
 $q = $con->prepare("SELECT id, sender_id, receiver_id, file, deleted_by_sender, deleted_by_receiver FROM tbl_messages WHERE id=? LIMIT 1");
@@ -15,7 +18,7 @@ $q->bind_param("i", $message_id);
 $q->execute();
 $res = $q->get_result();
 
-if(!$res || $res->num_rows === 0){ echo "error"; exit; }
+if(!$res || $res->num_rows === 0){ ob_end_clean(); echo "error"; exit; }
 $row = $res->fetch_assoc();
 
 $is_sender = ($row['sender_id'] == $my);
@@ -23,7 +26,7 @@ $is_receiver = ($row['receiver_id'] == $my);
 
 if(!$is_sender && !$is_receiver){
     // Not authorized
-    echo "error"; 
+    ob_end_clean(); echo "error"; 
     exit;
 }
 
@@ -50,4 +53,5 @@ if($row['deleted_by_sender'] == 1 && $row['deleted_by_receiver'] == 1){
     }
 }
 
+ob_end_clean();
 echo "ok";
