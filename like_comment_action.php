@@ -1,14 +1,19 @@
 <?php
 ob_start();
-error_reporting(0);
-ini_set('display_errors', 0);
 include_once("connection.php");
 header('Content-Type: application/json');
 
 $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
-if(!$con || !$user_mobile){ 
+
+if(!$con){
     ob_end_clean();
-    echo json_encode([]); 
+    echo json_encode(["error" => "Database connection failed"]);
+    exit;
+}
+
+if(!$user_mobile){ 
+    ob_end_clean();
+    echo json_encode(["error" => "Session expired or user not logged in"]); 
     exit; 
 }
 
@@ -72,67 +77,72 @@ if($action === 'fetch_all'){
     $where = "WHERE p.user_id = $uid";
   }
 
-  $res = $con->query("
-    SELECT p.*, m.name, m.profile_photo
-    FROM tbl_posts p
-    JOIN tbl_members m ON p.user_id = m.id
-    $where
-    ORDER BY p.created_at DESC
-    LIMIT $limit OFFSET $offset
-  ");
-
-  if(!$res){
-    echo json_encode([]);
-    exit;
-  }
-
-  while($p = $res->fetch_assoc()){
-    $pid = $p['id'];
-
-    $likes_res = $con->query("SELECT COUNT(*) FROM tbl_likes WHERE post_id=$pid");
-    $likes = ($likes_res) ? $likes_res->fetch_row()[0] : 0;
-    
-    $user_liked_res = $con->query("SELECT id FROM tbl_likes WHERE post_id=$pid AND user_id=$user_id");
-    $user_liked = ($user_liked_res && $user_liked_res->num_rows > 0);
-
-    $comments = [];
-    $cres = $con->query("
-      SELECT c.comment, c.date, m.name, m.profile_photo
-      FROM tbl_comments c 
-      JOIN tbl_members m ON c.user_id=m.id 
-      WHERE c.post_id=$pid 
-      ORDER BY c.date DESC
+  try {
+    $res = $con->query("
+      SELECT p.*, m.name, m.profile_photo
+      FROM tbl_posts p
+      JOIN tbl_members m ON p.user_id = m.id
+      $where
+      ORDER BY p.created_at DESC
+      LIMIT $limit OFFSET $offset
     ");
 
-    if($cres){
-      while($c = $cres->fetch_assoc()){
-        $comments[] = [
-          'name' => htmlspecialchars($c['name']),
-          'profile_photo' => htmlspecialchars($c['profile_photo']), 
-          'comment' => htmlspecialchars($c['comment']),
-          'date' => date("d M Y, h:i A", strtotime($c['date']))
-        ];
+    if(!$res){
+      $err = $con->error;
+      ob_clean();
+      echo json_encode(["error" => "Query failed: $err"]);
+      exit;
+    }
+
+    while($p = $res->fetch_assoc()){
+      $pid = $p['id'];
+      $likes_res = $con->query("SELECT COUNT(*) FROM tbl_likes WHERE post_id=$pid");
+      $likes = ($likes_res) ? $likes_res->fetch_row()[0] : 0;
+      
+      $user_liked_res = $con->query("SELECT id FROM tbl_likes WHERE post_id=$pid AND user_id=$user_id");
+      $user_liked = ($user_liked_res && $user_liked_res->num_rows > 0);
+
+      $comments = [];
+      $cres = $con->query("
+        SELECT c.comment, c.date, m.name, m.profile_photo
+        FROM tbl_comments c 
+        JOIN tbl_members m ON c.user_id=m.id 
+        WHERE c.post_id=$pid 
+        ORDER BY c.date DESC
+      ");
+
+      if($cres){
+        while($c = $cres->fetch_assoc()){
+          $comments[] = [
+            'name' => htmlspecialchars($c['name'] ?? 'Unknown'),
+            'profile_photo' => htmlspecialchars($c['profile_photo'] ?? 'images/logo.png'), 
+            'comment' => htmlspecialchars($c['comment'] ?? ''),
+            'date' => date("d M Y, h:i A", strtotime($c['date']))
+          ];
+        }
       }
-    }
 
-    $media = [];
-    if(!empty($p['media'])){
-      $media = array_filter(explode(',', $p['media']));
-    }
+      $media = [];
+      if(!empty($p['media'])){
+        $media = array_filter(explode(',', $p['media']));
+      }
 
-    $posts[] = [
-      'id' => $pid,
-      'user_id' => $p['user_id'],
-      'name' => htmlspecialchars($p['name']),
-      'profile_photo' => htmlspecialchars($p['profile_photo']),
-      'status' => htmlspecialchars($p['status']),
-      'link' => htmlspecialchars($p['link']),
-      'likes' => $likes,
-      'user_liked' => $user_liked,
-      'comments' => $comments,
-      'media' => array_values($media),
-      'date' => date("d M Y, h:i A", strtotime($p['created_at']))
-    ];
+      $posts[] = [
+        'id' => $pid,
+        'user_id' => $p['user_id'],
+        'name' => htmlspecialchars($p['name'] ?? 'Unknown'),
+        'profile_photo' => htmlspecialchars($p['profile_photo'] ?? 'images/logo.png'),
+        'status' => htmlspecialchars($p['status'] ?? ''),
+        'link' => htmlspecialchars($p['link'] ?? ''),
+        'likes' => $likes,
+        'user_liked' => $user_liked,
+        'comments' => $comments,
+        'media' => array_values($media),
+        'date' => date("d M Y, h:i A", strtotime($p['created_at']))
+      ];
+    }
+  } catch (Exception $e) {
+      error_log("Error in fetch_all: " . $e->getMessage());
   }
 
   ob_get_clean();
