@@ -1,6 +1,6 @@
 <?php
 include("connection.php");
-session_start();
+//session_start();
 
 $user_mobile = $_SESSION['sadhu_user_id'] ?? '';
 if(!$user_mobile) die("Unauthorized");
