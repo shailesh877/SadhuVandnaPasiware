@@ -148,10 +148,13 @@ $marriage_profile = $con->query("
   </div>
 
   <?php if(!empty($fm['dob'])): 
-    $age = date_diff(date_create($fm['dob']), date_create('today'))->y; ?>
-    <div class="text-xs text-gray-600">
-      Age: <?= $age ?> Years
-    </div>
+    $dob_obj = date_create($fm['dob']);
+    if($dob_obj):
+      $age = date_diff($dob_obj, date_create('today'))->y; ?>
+      <div class="text-xs text-gray-600">
+        Age: <?= $age ?> Years
+      </div>
+    <?php endif; ?>
   <?php endif; ?>
 
   <div class="text-xs bg-orange-200 text-orange-700 px-2 py-0.5 rounded-full inline-block mt-1">
@@ -236,12 +239,14 @@ $marriage_profile = $con->query("
             </div>
 
             <?php if(!empty($marriage_profile['dob'])): 
-              $age = date_diff(date_create($marriage_profile['dob']), date_create('today'))->y; ?>
-
-            <div class="text-sm text-gray-600">
-              Age:
-              <?= $age ?> Years
-            </div>
+              $dob_obj = date_create($marriage_profile['dob']);
+              if($dob_obj):
+                $age = date_diff($dob_obj, date_create('today'))->y; ?>
+                <div class="text-sm text-gray-600">
+                  Age:
+                  <?= $age ?> Years
+                </div>
+              <?php endif; ?>
             <?php endif; ?>
 
             <div class="text-sm text-gray-600">
