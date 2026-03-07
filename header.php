@@ -1,19 +1,35 @@
 <?php
+ob_start();
+
+// 🔥 Better session persistence
 if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 2592000, // 30 Days
+        'path' => '/',
+        'samesite' => 'Lax'
+    ]);
     @session_start();
 }
 include("connection.php");
 include("auto_delete_stories.php");
 
+// -------------------------------------
+// 🔥 AUTO-LOGIN FROM COOKIE
+// -------------------------------------
 if(!isset($_SESSION['sadhu_user_id']) || empty($_SESSION['sadhu_user_id'])){
-    
-    if(isset($_COOKIE['sadhu_user_id']) && isset($_COOKIE['sadhu_user_name'])){
-        // Cookie → session
+    if(isset($_COOKIE['sadhu_user_id']) && !empty($_COOKIE['sadhu_user_id'])){
+        // Cookie exists -> Restore Session
         $_SESSION['sadhu_user_id'] = $_COOKIE['sadhu_user_id'];
-        $_SESSION['sadhu_user_name'] = $_COOKIE['sadhu_user_name'];
+        $_SESSION['sadhu_user_name'] = $_COOKIE['sadhu_user_name'] ?? 'Guest';
     } else {
-        echo "<script>window.location.href='login';</script>";
-        exit;
+        // No session and no cookie -> Check current page before redirecting
+        $current_page = basename($_SERVER['PHP_SELF'], '.php');
+        $auth_pages = ['login', 'registration', 'login_verify_otp', 'registration_code'];
+        
+        if(!in_array($current_page, $auth_pages)){
+            echo "<script>window.location.href='login';</script>";
+            exit;
+        }
     }
 }
 
@@ -25,13 +41,14 @@ if(!isset($_SESSION['sadhu_user_id']) || empty($_SESSION['sadhu_user_id'])){
 
 $uid = $_SESSION['sadhu_user_id'];
 
-$stmt = $con->prepare("SELECT status, name, mobile, email FROM tbl_members WHERE mobile=? LIMIT 1");
+$stmt = $con->prepare("SELECT id, status, name, mobile, email FROM tbl_members WHERE mobile=? LIMIT 1");
 $stmt->bind_param("s", $uid);
 $stmt->execute();
 $res = $stmt->get_result();
 
 if($res->num_rows == 1){
     $row = $res->fetch_assoc();
+    $my_member_id = $row['id']; 
 
     if($row['status'] == "Blocked"){
         // Destroy Session + Cookies
@@ -150,6 +167,7 @@ if(isset($name_parts[1])){
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <!-- Font Awesome CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <!-- Google Fonts: Roboto -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <!-- language script start -->
@@ -611,6 +629,44 @@ document.addEventListener("click", function () {
 
 
 
+      // PeerJS Global Setup (Shared variables)
+      var myMemberId = <?php echo json_encode($my_member_id ?? 0); ?>;
+      var myMemberName = <?php echo json_encode($user_name); ?>;
+      var myMemberPhoto = <?php echo json_encode($profile_photo); ?>;
+      
+      if(myMemberId > 0){
+          window.peer = new Peer('sadhu_user_' + myMemberId);
+          
+          window.peer.on('open', (id) => {
+              console.log('Global Peer ID:', id);
+          });
+          
+          window.peer.on('call', (call) => {
+              console.log('Incoming Peer Call...');
+              const metadata = call.metadata || {};
+              
+              // Only handle if not already on a chat page that might handle it?
+              // Actually, the global modal is a good fallback.
+              // But if we are on message.php, we might want to let the page handle it.
+              // For now, let's show Global Modal if not handled.
+              
+              if(typeof handleIncomingPeerCall === 'function'){
+                  handleIncomingPeerCall(call);
+              } else {
+                  // Global UI handler
+                  showGlobalIncomingCall({
+                      call_id: metadata.call_id || 0,
+                      caller_id: metadata.caller_id || 0,
+                      caller_name: metadata.caller_name || 'Someone',
+                      caller_photo: metadata.caller_photo || 'images/logo.png',
+                      type: metadata.type || 'video',
+                      platform: metadata.platform || 'marriage',
+                      peerCall: call // Store the call object to answer later
+                  });
+              }
+          });
+      }
+
       // Flag to skip global call handling if page provides its own
       const isChatPage = window.location.href.includes('message.php') || window.location.href.includes('community_chat.php');
 
@@ -629,11 +685,12 @@ document.addEventListener("click", function () {
           .then(data => {
             updateBadge(data);
             
+            // Fallback: Database polling for incoming calls if WebSocket fails or user offline
             if (data.incoming_call) {
                 showGlobalIncomingCall(data.incoming_call);
             } else {
                 const modal = document.getElementById('globalIncomingCallModal');
-                if (modal && !modal.classList.contains('hidden')) {
+                if (modal && !modal.classList.contains('hidden') && !modal.dataset.isPeerCall) {
                     modal.classList.add('hidden');
                     const ring = document.getElementById('globalRingtone');
                     if (ring) { ring.pause(); ring.currentTime = 0; }
@@ -664,13 +721,14 @@ document.addEventListener("click", function () {
         }
       }
 
+      let globalPendingCall = null;
       function showGlobalIncomingCall(data) {
         const modal = document.getElementById('globalIncomingCallModal');
-        if (!modal || !modal.classList.contains('hidden')) return;
+        if (!modal || (!modal.classList.contains('hidden') && modal.dataset.callId == data.call_id)) return;
 
         document.getElementById('g_incCallName').innerText = data.caller_name;
         document.getElementById('g_incCallImg').src = data.caller_photo;
-        document.getElementById('g_incCallType').innerText = "Incoming " + data.type + " Call...";
+        document.getElementById('g_incCallType').innerText = "Incoming " + (data.type || 'video') + " Call...";
         modal.classList.remove('hidden');
         
         const ring = document.getElementById('globalRingtone');
@@ -683,6 +741,11 @@ document.addEventListener("click", function () {
         modal.dataset.callerId = data.caller_id;
         modal.dataset.platform = data.platform || 'marriage';
         modal.dataset.type = data.type || 'video';
+        modal.dataset.isPeerCall = data.peerCall ? 'true' : '';
+        
+        if(data.peerCall){
+            globalPendingCall = data.peerCall;
+        }
       }
 
       function acceptGlobalCall() {
@@ -691,6 +754,9 @@ document.addEventListener("click", function () {
         const callerId = modal.dataset.callerId;
         const platform = modal.dataset.platform;
         const type = modal.dataset.type || 'video';
+        
+        // If it's a peer call, we should ideally answer it. 
+        // But since we are redirecting to message.php, we tell message.php to handle it.
         window.location.href = `message.php?receiver_id=${callerId}&accept_call_id=${callId}&platform=${platform}&type=${type}`;
       }
 
@@ -698,12 +764,20 @@ document.addEventListener("click", function () {
         const modal = document.getElementById('globalIncomingCallModal');
         const callId = modal.dataset.callId;
         
-        const fd = new FormData();
-        fd.append('call_id', callId);
-        fd.append('status', 'rejected');
-        await fetch('update_call_status.php', { method:'POST', body:fd });
+        if(globalPendingCall) {
+            globalPendingCall.close();
+            globalPendingCall = null;
+        }
+
+        if(callId && callId != "0"){
+            const fd = new FormData();
+            fd.append('call_id', callId);
+            fd.append('status', 'rejected');
+            await fetch('update_call_status.php', { method:'POST', body:fd });
+        }
         
         modal.classList.add('hidden');
+        modal.dataset.isPeerCall = '';
         const ring = document.getElementById('globalRingtone');
         if (ring) { ring.pause(); ring.currentTime = 0; }
       }
