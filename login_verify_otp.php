@@ -1,4 +1,10 @@
 <?php
+ob_start();
+session_set_cookie_params([
+    'lifetime' => 2592000,
+    'path' => '/',
+    'samesite' => 'Lax'
+]);
 session_start();
 include("connection.php");
 date_default_timezone_set('Asia/Kolkata');
@@ -11,6 +17,8 @@ $input = json_decode(file_get_contents('php://input'), true);
 $mobile = $input['mobile'] ?? ($_POST['mobile'] ?? '');
 $widget_token = $input['access_token'] ?? ($_POST['widget_token'] ?? '');
 $otp = $input['otp'] ?? ($_POST['otp'] ?? '');
+$name = $input['name'] ?? ($_POST['name'] ?? ($_SESSION['login_name'] ?? "New Member"));
+$caste = $input['caste'] ?? ($_POST['caste'] ?? ($_SESSION['login_caste'] ?? ""));
 
 // Session Fallback for Mobile if not passed
 if(empty($mobile) && isset($_SESSION['login_mobile'])) {
@@ -90,20 +98,25 @@ if($res->num_rows == 1){
     // Login (Session stores MOBILE now)
     $_SESSION['sadhu_user_id'] = $row['mobile'];
     $_SESSION['sadhu_user_name'] = $row['name'];
-    setcookie('sadhu_user_id', $row['mobile'], time() + (30*24*60*60), "/");
-    setcookie('sadhu_user_name', $row['name'], time() + (30*24*60*60), "/");
+    // Auto-login Cookies (Modern PHP 7.3+ approach)
+    $cookie_options = [
+        'expires' => time() + (30 * 24 * 60 * 60),
+        'path' => '/',
+        'samesite' => 'Lax'
+    ];
+    setcookie('sadhu_user_id', $row['mobile'], $cookie_options);
+    setcookie('sadhu_user_name', $row['name'], $cookie_options);
     
     echo "success_login";
 
 } else {
     // --- NEW USER -> CREATE ACCOUNT ---
-    
-    $name = $_POST['name'] ?? ($_SESSION['login_name'] ?? "New Member");
+    // Using already extracted variables
     $email = $mobile . "@sadhuvandana.local"; // Unique dummy email
     
     $dob = "";
     $city = "";
-    $cast = $_POST['caste'] ?? ($_SESSION['login_caste'] ?? ""); // Fix variable name from 'cast' to 'caste' or whatever DB column is. Check DB column name matches 'cast' in bind_param later.
+    $cast = $caste; // mapped from already extracted variable
     $gender = "";
     $password = password_hash(bin2hex(random_bytes(8)), PASSWORD_BCRYPT); // Random secure pass
     $photo = ""; 
@@ -117,8 +130,14 @@ if($res->num_rows == 1){
         // Login new user
         $_SESSION['sadhu_user_id'] = $mobile;
         $_SESSION['sadhu_user_name'] = $name;
-        setcookie('sadhu_user_id', $mobile, time() + (30*24*60*60), "/");
-        setcookie('sadhu_user_name', $name, time() + (30*24*60*60), "/");
+        // Auto-login Cookies (Modern PHP 7.3+ approach)
+        $cookie_options = [
+            'expires' => time() + (30 * 24 * 60 * 60),
+            'path' => '/',
+            'samesite' => 'Lax'
+        ];
+        setcookie('sadhu_user_id', $mobile, $cookie_options);
+        setcookie('sadhu_user_name', $name, $cookie_options);
 
         echo "success_register";
     } else {
@@ -129,4 +148,5 @@ if($res->num_rows == 1){
 // Clear OTP Session
 unset($_SESSION['login_otp']);
 unset($_SESSION['login_otp_expiry']);
+ob_end_flush();
 ?>
