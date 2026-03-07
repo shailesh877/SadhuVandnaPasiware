@@ -1,4 +1,10 @@
 <?php
+ob_start();
+session_set_cookie_params([
+    'lifetime' => 2592000,
+    'path' => '/',
+    'samesite' => 'Lax'
+]);
 session_start();
 
 if (isset($_POST['mobile']) && isset($_POST['name']) && isset($_POST['caste'])) {
