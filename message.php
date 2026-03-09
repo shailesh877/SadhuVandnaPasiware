@@ -488,27 +488,37 @@ window.handleIncomingPeerCall = function(call) {
 
 // Removed window.peer.on('error') from here to avoid 'ID taken' log noise since it's already handled in header.php
 
+// Helper: wait for peer to be ready (up to maxMs)
+async function waitForPeer(maxMs = 8000) {
+    const start = Date.now();
+    while (Date.now() - start < maxMs) {
+        if (window.peer && !window.peer.destroyed && !window.peer.disconnected) return true;
+        await new Promise(r => setTimeout(r, 400));
+    }
+    return (window.peer && !window.peer.destroyed);
+}
+
 // INITIATE CALL
 async function initiateCall(type){
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
         alert("Calling requires a secure connection (HTTPS)."); return;
     }
 
+    // If peer is null/destroyed, try re-initializing and wait up to 8s
     if(!window.peer || window.peer.destroyed){
-        // Try to init if missing
         if(typeof initPeer === 'function') initPeer();
-        // wait 1s
-        await new Promise(r => setTimeout(r, 1000));
-        if(!window.peer || window.peer.destroyed) {
-            alert("Calling system is not ready. Please refresh once."); return;
+        console.log("Waiting for PeerJS to initialize...");
+        const ready = await waitForPeer(8000);
+        if(!ready) {
+            alert("Calling system is not ready. Please try again in a few seconds."); return;
         }
     }
 
-    // Ensure Peer is connected
+    // If peer is disconnected, reconnect and wait
     if(window.peer && window.peer.disconnected){
         console.log("Peer disconnected, reconnecting before call...");
-        window.peer.reconnect();
-        await new Promise(r => setTimeout(r, 1500));
+        try { window.peer.reconnect(); } catch(e) {}
+        await waitForPeer(4000);
     }
 
 
