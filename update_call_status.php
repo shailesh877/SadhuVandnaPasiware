@@ -21,7 +21,9 @@ if (!$call_data) {
 // Prevent duplicate logs if already ended or rejected
 $already_finished = in_array($call_data['status'], ['ended', 'rejected']);
 
-if ($status === 'ended' && $duration > 0) {
+if ($status === 'ended') {
+    // If duration is passed, use it. Otherwise, if it was accepted, we might want to calculate it, 
+    // but the client-side timer is usually more accurate.
     $stmt = $con->prepare("UPDATE tbl_calls SET status=?, duration=? WHERE id=?");
     $stmt->bind_param("sii", $status, $duration, $call_id);
 } else {
@@ -37,17 +39,18 @@ if($stmt->execute()){
         $chat_platform = $call_data['chat_platform'];
         
         $msg_text = "";
-        if ($status === 'ended' && $call_data['status'] === 'ringing') {
+        if ($status === 'rejected') {
+            $msg_text = "❌ Rejected " . ucfirst($type) . " Call";
+        } else if ($status === 'ended' && $call_data['status'] === 'ringing') {
             $msg_text = "❌ Missed " . ucfirst($type) . " Call";
         } else if ($status === 'ended') {
             $msg_text = "📞 " . ucfirst($type) . " Call Ended";
             if ($duration > 0) {
                  $mins = floor($duration / 60);
                  $secs = $duration % 60;
-                 $msg_text .= " (" . str_pad($mins, 2, "0", STR_PAD_LEFT) . ":" . str_pad($secs, 2, "0", STR_PAD_LEFT) . ")";
+                 $duration_str = str_pad($mins, 2, "0", STR_PAD_LEFT) . ":" . str_pad($secs, 2, "0", STR_PAD_LEFT);
+                 $msg_text .= " (Talking Time: $duration_str)";
             }
-        } else if ($status === 'rejected') {
-            $msg_text = "❌ Missed " . ucfirst($type) . " Call";
         }
         
         $pref = "SYSTEM_CALL:";
