@@ -31,6 +31,8 @@ if ($status === 'ended') {
     $stmt->bind_param("si", $status, $call_id);
 }
 
+// Clear any buffers before output
+while (ob_get_level() > 0) ob_end_clean();
 if($stmt->execute()){
     if (in_array($status, ['ended', 'rejected']) && !$already_finished) {
         $caller_id = $call_data['caller_id'];
