@@ -1,6 +1,5 @@
 <?php
 // fetch_status.php
-ob_start();
 error_reporting(0);
 ini_set('display_errors', 0);
 
@@ -104,6 +103,8 @@ try {
     $response['error'] = $e->getMessage();
 }
 
-ob_end_clean();
+// Clear any buffers before outputting JSON
+while (ob_get_level() > 0) ob_end_clean();
+header('Content-Type: application/json');
 echo json_encode($response);
 exit;
