@@ -667,7 +667,9 @@ document.addEventListener("click", function () {
           // Reconnect logic if disconnected from server
           window.peer.on('disconnected', () => {
               console.log('Peer disconnected from server. Attempting to reconnect...');
-              window.peer.reconnect();
+              if(window.peer && !window.peer.destroyed) {
+                  try { window.peer.reconnect(); } catch(e) { console.warn('Reconnect failed:', e); }
+              }
           });
           
           window.peer.on('call', (call) => {
@@ -701,9 +703,9 @@ document.addEventListener("click", function () {
           setInterval(() => {
               if (window.peer && !window.peer.destroyed && window.peer.disconnected) {
                   console.log('Heartbeat: Peer disconnected, reconnecting...');
-                  window.peer.reconnect();
+                  try { window.peer.reconnect(); } catch(e) { console.warn('Heartbeat reconnect failed:', e); }
               }
-          }, 5000);
+          }, 8000);
       }
       }
       
