@@ -1,6 +1,5 @@
 <?php
 // get_global_status.php
-ob_start();
 error_reporting(0);
 ini_set('display_errors', 0);
 include_once("connection.php");
@@ -21,6 +20,7 @@ if(!$con || !$user_mobile){
 // Get my IDs
 $userQ = $con->query("SELECT id FROM tbl_members WHERE mobile = '$user_mobile' LIMIT 1");
 if(!$userQ || $userQ->num_rows == 0){ 
+    ob_end_clean();
     echo json_encode($response); 
     exit; 
 }
@@ -100,6 +100,8 @@ if($inc && $inc->num_rows > 0){
     }
 }
 
-ob_get_clean();
+// Clear any buffers before outputting JSON
+while (ob_get_level() > 0) ob_end_clean();
+header('Content-Type: application/json');
 echo json_encode($response);
 exit;
