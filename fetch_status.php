@@ -63,7 +63,7 @@ try {
         $response['max_seen_id'] = intval($row['m'] ?? 0);
     }
 
-    // 4. Incoming Calls Check (Defensive in case tbl_calls missing)
+    // 4. Incoming Calls Check
     try {
         $inc = $con->query("SELECT id, caller_id, type FROM tbl_calls WHERE receiver_id='$my_profile' AND status='ringing' AND chat_platform='$platform' AND created_at > (NOW() - INTERVAL 1 MINUTE) ORDER BY id DESC LIMIT 1");
         if($inc && $inc->num_rows > 0){
@@ -87,23 +87,22 @@ try {
         }
     } catch (Exception $ce) { $response['call_status_error'] = $ce->getMessage(); }
 
-    // 5. Call Status Update (For the caller side)
-    try {
-        $my_call = $con->query("SELECT id, status FROM tbl_calls WHERE caller_id='$my_profile' AND chat_platform='$platform' AND status IN ('accepted', 'rejected', 'ended') AND created_at > (NOW() - INTERVAL 1 MINUTE) ORDER BY id DESC LIMIT 1");
-        if($my_call && $my_call->num_rows > 0){
-            $mc = $my_call->fetch_assoc();
-            $response['call_update'] = [
-                'call_id' => $mc['id'],
-                'status' => $mc['status']
-            ];
-        }
-    } catch (Exception $uce) { $response['update_error'] = $uce->getMessage(); }
-
-    } catch (Throwable $t) {
-        $response['error'] = $t->getMessage();
-    } catch (Exception $e) {
-        $response['error'] = $e->getMessage();
+    // 5. Call Status Sync (For active call)
+    $active_call_id = intval($_GET['active_call_id'] ?? 0);
+    if($active_call_id > 0){
+        try {
+            $sync = $con->query("SELECT status FROM tbl_calls WHERE id=$active_call_id LIMIT 1");
+            if($sync && $row = $sync->fetch_assoc()){
+                $response['active_call_status'] = $row['status'];
+            }
+        } catch (Exception $sce) { $response['sync_error'] = $sce->getMessage(); }
     }
+
+} catch (Throwable $t) {
+    $response['error'] = $t->getMessage();
+} catch (Exception $e) {
+    $response['error'] = $e->getMessage();
+}
 
 ob_end_clean();
 echo json_encode($response);
