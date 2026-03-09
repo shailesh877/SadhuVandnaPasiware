@@ -634,26 +634,49 @@ document.addEventListener("click", function () {
       var myMemberName = <?php echo json_encode($user_name); ?>;
       var myMemberPhoto = <?php echo json_encode($profile_photo); ?>;
       
-      if(myMemberId > 0){
-          window.peer = new Peer('sadhu_user_' + myMemberId);
-          
-          window.peer.on('open', (id) => {
-              console.log('Global Peer ID:', id);
+      function initPeer() {
+          if(myMemberId > 0 && typeof Peer !== 'undefined'){
+              if(window.peer && !window.peer.destroyed) return; // already exists
+              
+              window.peer = new Peer('sadhu_user_' + myMemberId);
+              
+              window.peer.on('open', (id) => {
+                  console.log('Global Peer ID:', id);
+              });
+
+              window.peer.on('error', (err) => {
+                  console.error('Global PeerJS Error:', err.type, err);
+                  if(err.type === 'id-taken' || err.type === 'unavailable-id') {
+                      console.log("ID taken, attempting to reconnect in 3s...");
+                      setTimeout(() => { if(window.peer && window.peer.destroyed) initPeer(); }, 3000);
+                  }
+                  if(err.type === 'peer-unavailable') {
+                      // Handled by retry logic in initiateCall
+                  }
+              });
+
+
+          // Reconnect logic if disconnected from server
+          window.peer.on('disconnected', () => {
+              console.log('Peer disconnected from server. Attempting to reconnect...');
+              window.peer.reconnect();
           });
           
           window.peer.on('call', (call) => {
               console.log('Incoming Peer Call...');
               const metadata = call.metadata || {};
               
-              // Only handle if not already on a chat page that might handle it?
-              // Actually, the global modal is a good fallback.
-              // But if we are on message.php, we might want to let the page handle it.
-              // For now, let's show Global Modal if not handled.
-              
+              call.on('close', () => {
+                  console.log("Peer Call Canceled by Sender");
+                  const modal = document.getElementById('globalIncomingCallModal');
+                  if(modal && modal.dataset.callId == (metadata.call_id || 0)){
+                      rejectGlobalCall(); 
+                  }
+              });
+
               if(typeof handleIncomingPeerCall === 'function'){
                   handleIncomingPeerCall(call);
               } else {
-                  // Global UI handler
                   showGlobalIncomingCall({
                       call_id: metadata.call_id || 0,
                       caller_id: metadata.caller_id || 0,
@@ -661,39 +684,73 @@ document.addEventListener("click", function () {
                       caller_photo: metadata.caller_photo || 'images/logo.png',
                       type: metadata.type || 'video',
                       platform: metadata.platform || 'marriage',
-                      peerCall: call // Store the call object to answer later
+                      peerCall: call 
                   });
               }
           });
+
+          // Heartbeat to keep connection alive
+          setInterval(() => {
+              if (window.peer && !window.peer.destroyed && window.peer.disconnected) {
+                  console.log('Heartbeat: Peer disconnected, reconnecting...');
+                  window.peer.reconnect();
+              }
+          }, 5000);
       }
+      }
+      
+      // Auto-init peer
+      initPeer();
+      // Retry init peer every 2 seconds if not ready (handles slow script load)
+      const peerRetryInterval = setInterval(() => {
+          if(window.peer && !window.peer.destroyed) {
+              clearInterval(peerRetryInterval);
+          } else {
+              initPeer();
+          }
+      }, 2000);
 
       // Flag to skip global call handling if page provides its own
       const isChatPage = window.location.href.includes('message.php') || window.location.href.includes('community_chat.php');
 
       // 🔥 Update global status (Unread messages + Incoming Calls)
       function updateGlobalStatus() {
-        if (isChatPage) {
-            // If on message page, only update count, call is handled by the page itself
-            fetch("notification_count.php")
-              .then(res => res.json())
-              .then(data => updateBadge(data));
-            return;
-        }
-
         fetch("get_global_status.php")
           .then(res => res.json())
           .then(data => {
             updateBadge(data);
             
-            // Fallback: Database polling for incoming calls if WebSocket fails or user offline
+            // CALL SYNC / STOP RINGING
+            const gModal = document.getElementById('globalIncomingCallModal');
+            const gRing = document.getElementById('globalRingtone');
+
             if (data.incoming_call) {
-                showGlobalIncomingCall(data.incoming_call);
+                // Only act globally if not on chat page OR wrong user
+                let handleGlobally = !isChatPage;
+                if(isChatPage){
+                    const pId = (typeof receiverChatProfileId !== 'undefined') ? receiverChatProfileId : 0;
+                    const pPlat = (typeof chatPlatform !== 'undefined') ? chatPlatform : '';
+                    if(data.incoming_call.caller_id != pId || data.incoming_call.platform != pPlat){
+                        handleGlobally = true;
+                    }
+                }
+                
+                if(handleGlobally) {
+                     if(!window.isRedirectingToCall) {
+                         window.isRedirectingToCall = true;
+                         if(window.peer) {
+                             console.log("Destroying peer before redirect...");
+                             try { window.peer.destroy(); } catch(e){}
+                         }
+                         window.location.href = `message.php?receiver_id=${data.incoming_call.caller_id}&platform=${data.incoming_call.platform || 'marriage'}&type=${data.incoming_call.type||'video'}`;
+                     }
+                }
             } else {
-                const modal = document.getElementById('globalIncomingCallModal');
-                if (modal && !modal.classList.contains('hidden') && !modal.dataset.isPeerCall) {
-                    modal.classList.add('hidden');
-                    const ring = document.getElementById('globalRingtone');
-                    if (ring) { ring.pause(); ring.currentTime = 0; }
+                // If DB says no ringing call, hide global modal and stop ringtone
+                if (gModal && !gModal.classList.contains('hidden')) {
+                    console.log("Stopping global ringtone: Call ended");
+                    gModal.classList.add('hidden');
+                    if (gRing) { gRing.pause(); gRing.currentTime = 0; }
                 }
             }
           })
@@ -722,30 +779,16 @@ document.addEventListener("click", function () {
       }
 
       let globalPendingCall = null;
+      // Global Incoming Call is now an instant redirect per user request
       function showGlobalIncomingCall(data) {
-        const modal = document.getElementById('globalIncomingCallModal');
-        if (!modal || (!modal.classList.contains('hidden') && modal.dataset.callId == data.call_id)) return;
-
-        document.getElementById('g_incCallName').innerText = data.caller_name;
-        document.getElementById('g_incCallImg').src = data.caller_photo;
-        document.getElementById('g_incCallType').innerText = "Incoming " + (data.type || 'video') + " Call...";
-        modal.classList.remove('hidden');
-        
-        const ring = document.getElementById('globalRingtone');
-        if (ring) {
-            ring.play().catch(e => console.log("Audio play blocked until user interaction."));
-        }
-
-        // Store data for buttons
-        modal.dataset.callId = data.call_id;
-        modal.dataset.callerId = data.caller_id;
-        modal.dataset.platform = data.platform || 'marriage';
-        modal.dataset.type = data.type || 'video';
-        modal.dataset.isPeerCall = data.peerCall ? 'true' : '';
-        
-        if(data.peerCall){
-            globalPendingCall = data.peerCall;
-        }
+          if(!window.isRedirectingToCall) {
+              window.isRedirectingToCall = true;
+              console.log("Incoming call detected globally, redirecting instantly to message.php...");
+              if(window.peer) {
+                  try { window.peer.destroy(); } catch(e){}
+              }
+              window.location.href = `message.php?receiver_id=${data.caller_id}&platform=${data.platform || 'marriage'}&type=${data.type||'video'}`;
+          }
       }
 
       function acceptGlobalCall() {
@@ -755,9 +798,12 @@ document.addEventListener("click", function () {
         const platform = modal.dataset.platform;
         const type = modal.dataset.type || 'video';
         
-        // If it's a peer call, we should ideally answer it. 
-        // But since we are redirecting to message.php, we tell message.php to handle it.
-        window.location.href = `message.php?receiver_id=${callerId}&accept_call_id=${callId}&platform=${platform}&type=${type}`;
+        const page = (platform === 'community') ? 'community_chat.php' : 'message.php';
+        if(window.peer) {
+            console.log("Destroying peer before redirect...");
+            window.peer.destroy();
+        }
+        window.location.href = `${page}?receiver_id=${callerId}&accept_call_id=${callId}&platform=${platform}&type=${type}`;
       }
 
       async function rejectGlobalCall() {
