@@ -638,7 +638,14 @@ document.addEventListener("click", function () {
           if(myMemberId > 0 && typeof Peer !== 'undefined'){
               if(window.peer && !window.peer.destroyed) return; // already exists
               
-              window.peer = new Peer('sadhu_user_' + myMemberId);
+              const config = {
+                  'iceServers': [
+                      { 'urls': 'stun:stun.l.google.com:19302' },
+                      { 'urls': 'stun:stun1.l.google.com:19302' },
+                      { 'urls': 'stun:stun2.l.google.com:19302' }
+                  ]
+              };
+              window.peer = new Peer('sadhu_user_' + myMemberId, { config: config });
               
               window.peer.on('open', (id) => {
                   console.log('Global Peer ID:', id);
@@ -647,8 +654,9 @@ document.addEventListener("click", function () {
               window.peer.on('error', (err) => {
                   console.error('Global PeerJS Error:', err.type, err);
                   if(err.type === 'id-taken' || err.type === 'unavailable-id') {
-                      console.log("ID taken, attempting to reconnect in 3s...");
-                      setTimeout(() => { if(window.peer && window.peer.destroyed) initPeer(); }, 3000);
+                      console.warn("Peer ID taken. Retrying in 5s...");
+                      if(window.peer) { try { window.peer.destroy(); } catch(e){} window.peer = null; }
+                      setTimeout(initPeer, 5000);
                   }
                   if(err.type === 'peer-unavailable') {
                       // Handled by retry logic in initiateCall
