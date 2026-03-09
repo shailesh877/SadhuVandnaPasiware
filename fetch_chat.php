@@ -110,7 +110,8 @@ if($last_id > 0){
                 $isMissed = strpos($call_text, 'Missed') !== false;
                 $color = $isMissed ? 'text-red-500 font-semibold' : 'text-gray-700 font-semibold';
                 $msg .= "
-                <div class='mt-2 {$color}'>
+                <div class='mt-1 py-1 px-3 border-t border-gray-100 flex items-center justify-center gap-2 {$color} text-[12px]'>
+                    <i class='fa-solid " . ($isMissed ? "fa-phone-slash" : "fa-phone") . "'></i>
                     ".htmlspecialchars($call_text)."
                 </div>";
             } else {
@@ -207,7 +208,8 @@ while($r = $res->fetch_assoc()){
             $isMissed = strpos($call_text, 'Missed') !== false;
             $color = $isMissed ? 'text-red-500 font-semibold' : 'text-gray-700 font-semibold';
             $msg .= "
-            <div class='mt-2 {$color}'>
+            <div class='mt-1 py-1 px-3 border-t border-gray-100 flex items-center justify-center gap-2 {$color} text-[12px]'>
+                <i class='fa-solid " . ($isMissed ? "fa-phone-slash" : "fa-phone") . "'></i>
                 ".htmlspecialchars($call_text)."
             </div>";
         } else {
