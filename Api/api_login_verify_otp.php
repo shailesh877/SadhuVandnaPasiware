@@ -1,90 +1,105 @@
 <?php
 include("connection.php");
 header('Content-Type: application/json');
-session_start();
 
-$input=json_decode(file_get_contents("php://input"),true);
+// MSG91 Credentials
+$authKey = "495236Ar0Le3hg86996e6d6P1";
 
-$mobile=$input['mobile'] ?? '';
-$name=$input['name'] ?? '';
-$caste=$input['caste'] ?? '';
-$widget_token=$input['access_token'] ?? '';
+$input = json_decode(file_get_contents("php://input"), true);
 
-if(empty($mobile)){
-    echo json_encode(["status"=>"error","message"=>"missing_mobile"]);
+$mobile = trim($input['mobile'] ?? $_POST['mobile'] ?? '');
+$name   = trim($input['name']   ?? $_POST['name']   ?? '');
+$caste  = trim($input['caste']  ?? $_POST['caste']  ?? '');
+$otp    = trim($input['otp']    ?? $_POST['otp']    ?? '');
+
+if (empty($mobile) || empty($otp)) {
+    echo json_encode(["status" => "error", "message" => "missing_fields"]);
     exit;
 }
 
-/* USER CHECK */
+// --- Verify OTP via MSG91 ---
+$mobileWithCode = "91" . $mobile;
 
-$check=$con->prepare("SELECT * FROM tbl_members WHERE mobile=? LIMIT 1");
-$check->bind_param("s",$mobile);
+$verifyUrl = "https://control.msg91.com/api/v5/otp/verify?mobile=" . urlencode($mobileWithCode) . "&otp=" . urlencode($otp) . "&authkey=" . urlencode($authKey);
+
+$ch = curl_init($verifyUrl);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$response = curl_exec($ch);
+curl_close($ch);
+
+$msg91Response = json_decode($response, true);
+
+// MSG91 returns type: "success" if OTP is correct
+if (!isset($msg91Response['type']) || $msg91Response['type'] !== 'success') {
+    echo json_encode([
+        "status"  => "error",
+        "message" => "invalid_otp",
+        "detail"  => $msg91Response['message'] ?? 'OTP verification failed'
+    ]);
+    exit;
+}
+
+// OTP verified! Now login or register user
+
+$check = $con->prepare("SELECT * FROM tbl_members WHERE mobile=? LIMIT 1");
+$check->bind_param("s", $mobile);
 $check->execute();
-$res=$check->get_result();
+$res = $check->get_result();
 
-if($res->num_rows==1){
+if ($res->num_rows == 1) {
+    $row = $res->fetch_assoc();
 
-$row=$res->fetch_assoc();
+    if (isset($row['status']) && $row['status'] == 'Blocked') {
+        echo json_encode(["status" => "error", "message" => "blocked"]);
+        exit;
+    }
 
-if($row['status']=='Blocked'){
-echo json_encode(["status"=>"error","message"=>"blocked"]);
-exit;
+    $userData = [
+        "id"            => $row['id'],
+        "name"          => $row['name'],
+        "mobile"        => $row['mobile'],
+        "email"         => $row['email'],
+        "profile_photo" => $row['profile_photo'] ?? '',
+        "city"          => $row['city'] ?? '',
+        "token"         => base64_encode($row['mobile'] . '::' . time())
+    ];
+
+    echo json_encode(["status" => "success_login", "user" => $userData]);
+
+} else {
+    // Register new user
+    if (empty($name) || empty($caste)) {
+        echo json_encode(["status" => "error", "message" => "missing_registration_fields"]);
+        exit;
+    }
+
+    $email    = $mobile . "@sadhuvandana.local";
+    $dob      = "";
+    $city     = "";
+    $cast     = $caste;
+    $gender   = "";
+    $password = password_hash(bin2hex(random_bytes(8)), PASSWORD_BCRYPT);
+    $photo    = "";
+    $date     = date("Y-m-d H:i:s");
+    $status   = "Pending";
+
+    $stmt = $con->prepare("INSERT INTO tbl_members (name, email, mobile, dob, city, cast, gender, password, profile_photo, date, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+    $stmt->bind_param("sssssssssss", $name, $email, $mobile, $dob, $city, $cast, $gender, $password, $photo, $date, $status);
+
+    if ($stmt->execute()) {
+        $userData = [
+            "id"            => $stmt->insert_id,
+            "name"          => $name,
+            "mobile"        => $mobile,
+            "email"         => $email,
+            "profile_photo" => '',
+            "city"          => '',
+            "token"         => base64_encode($mobile . '::' . time())
+        ];
+
+        echo json_encode(["status" => "success_register", "user" => $userData]);
+    } else {
+        echo json_encode(["status" => "error", "message" => "Registration failed: " . $stmt->error]);
+    }
 }
-
-$_SESSION['sadhu_user_id']=$row['mobile'];
-$_SESSION['sadhu_user_name']=$row['name'];
-
-$userData=[
-"id"=>$row['id'],
-"name"=>$row['name'],
-"mobile"=>$row['mobile'],
-"profile_photo"=>$row['profile_photo']
-];
-
-echo json_encode([
-"status"=>"success_login",
-"user"=>$userData
-]);
-
-}else{
-
-$email=$mobile."@sadhuvandana.local";
-
-$dob="";
-$city="";
-$cast=$caste;
-$gender="";
-$password=password_hash(bin2hex(random_bytes(8)),PASSWORD_BCRYPT);
-$photo="";
-$date=date("Y-m-d H:i:s");
-$status="Pending";
-
-$stmt=$con->prepare("INSERT INTO tbl_members (name,email,mobile,dob,city,cast,gender,password,profile_photo,date,status) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
-
-$stmt->bind_param("sssssssssss",$name,$email,$mobile,$dob,$city,$cast,$gender,$password,$photo,$date,$status);
-
-if($stmt->execute()){
-
-$_SESSION['sadhu_user_id']=$mobile;
-$_SESSION['sadhu_user_name']=$name;
-
-$userData=[
-"id"=>$stmt->insert_id,
-"name"=>$name,
-"mobile"=>$mobile
-];
-
-echo json_encode([
-"status"=>"success_register",
-"user"=>$userData
-]);
-
-}else{
-
-echo json_encode([
-"status"=>"error",
-"message"=>$stmt->error
-]);
-
-}
-}
+?>
