@@ -36,6 +36,15 @@ if (!preg_match('/^[0-9]{10}$/', $mobile)) {
 date_default_timezone_set('Asia/Kolkata');
 $today = date('Y-m-d');
 
+// Make sure table is created
+@$con->query("CREATE TABLE IF NOT EXISTS tbl_otp_attempts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    mobile VARCHAR(15) NOT NULL,
+    otp VARCHAR(10) NULL,
+    sent_time DATETIME NOT NULL
+)");
+@$con->query("ALTER TABLE tbl_otp_attempts ADD COLUMN otp VARCHAR(10) NULL");
+
 $stmt = $con->prepare("SELECT COUNT(*) FROM tbl_otp_attempts WHERE mobile=? AND DATE(sent_time)=?");
 $stmt->bind_param("ss", $mobile, $today);
 $stmt->execute();
@@ -50,8 +59,9 @@ if ($count >= 10) {
 
 // --- Send OTP via MSG91 ---
 $mobileWithCode = "91" . $mobile; // Add India country code
+$templateId = "67d02447d6ba711b7d549d42"; // Hardcoded MSG91 Template ID for OTP
 
-$url = "https://control.msg91.com/api/v5/otp?mobile=" . urlencode($mobileWithCode) . "&authkey=" . urlencode($authKey) . "&otp_expiry=10";
+$url = "https://control.msg91.com/api/v5/otp?mobile=" . urlencode($mobileWithCode) . "&template_id=" . urlencode($templateId) . "&authkey=" . urlencode($authKey) . "&otp_expiry=10";
 
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -67,13 +77,12 @@ if (!isset($msg91Response['type']) || $msg91Response['type'] !== 'success') {
     echo json_encode([
         "status"  => "error",
         "message" => "otp_send_failed",
-        "detail"  => $msg91Response['message'] ?? $response
+        "detail"  => $msg91Response['message'] ?? 'Unknown Error'
     ]);
     exit;
 }
 
 // Log the attempt
-@$con->query("ALTER TABLE tbl_otp_attempts ADD COLUMN otp VARCHAR(10) NULL");
 $now = date('Y-m-d H:i:s');
 $ins = $con->prepare("INSERT INTO tbl_otp_attempts (mobile, otp, sent_time) VALUES (?, 'msg91', ?)");
 $ins->bind_param("ss", $mobile, $now);
