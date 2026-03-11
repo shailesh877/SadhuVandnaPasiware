@@ -7,39 +7,38 @@ $authKey = "495236Ar0Le3hg86996e6d6P1";
 
 $input = json_decode(file_get_contents("php://input"), true);
 
-$mobile = trim($input['mobile'] ?? $_POST['mobile'] ?? '');
-$name   = trim($input['name']   ?? $_POST['name']   ?? '');
-$caste  = trim($input['caste']  ?? $_POST['caste']  ?? '');
-$otp    = trim($input['otp']    ?? $_POST['otp']    ?? '');
+$mobile       = trim($input['mobile']       ?? $_POST['mobile']       ?? '');
+$name         = trim($input['name']         ?? $_POST['name']         ?? '');
+$caste        = trim($input['caste']        ?? $_POST['caste']        ?? '');
+$access_token = trim($input['access_token'] ?? $_POST['access_token'] ?? '');
 
-if (empty($mobile) || empty($otp)) {
+if (empty($mobile) || empty($access_token)) {
     echo json_encode(["status" => "error", "message" => "missing_fields"]);
     exit;
 }
 
-// --- Verify OTP via MSG91 ---
-$mobileWithCode = "91" . $mobile;
-
-$verifyUrl = "https://control.msg91.com/api/v5/otp/verify?mobile=" . urlencode($mobileWithCode) . "&otp=" . urlencode($otp) . "&authkey=" . urlencode($authKey);
+// --- Verify MSG91 Widget Token ---
+$verifyUrl = "https://api.msg91.com/api/v5/widget/verifyToken?access-token=" . urlencode($access_token) . "&authkey=" . urlencode($authKey);
 
 $ch = curl_init($verifyUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
 $response = curl_exec($ch);
 curl_close($ch);
 
 $msg91Response = json_decode($response, true);
 
-// MSG91 returns type: "success" if OTP is correct
+// MSG91 returns type: "success" on valid token
 if (!isset($msg91Response['type']) || $msg91Response['type'] !== 'success') {
     echo json_encode([
         "status"  => "error",
-        "message" => "invalid_otp",
-        "detail"  => $msg91Response['message'] ?? 'OTP verification failed'
+        "message" => "otp_verification_failed",
+        "detail"  => $msg91Response['message'] ?? 'Token invalid'
     ]);
     exit;
 }
 
-// OTP verified! Now login or register user
+// Token verified! Now login or register
 
 $check = $con->prepare("SELECT * FROM tbl_members WHERE mobile=? LIMIT 1");
 $check->bind_param("s", $mobile);
