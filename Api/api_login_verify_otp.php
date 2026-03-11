@@ -10,102 +10,96 @@ $input = json_decode(file_get_contents("php://input"), true);
 $mobile       = trim($input['mobile']       ?? $_POST['mobile']       ?? '');
 $name         = trim($input['name']         ?? $_POST['name']         ?? '');
 $caste        = trim($input['caste']        ?? $_POST['caste']        ?? '');
-$access_token = trim($input['access_token'] ?? $_POST['access_token'] ?? '');
+$otp          = trim($input['otp']          ?? $_POST['otp']          ?? '');
 
-if (empty($mobile) || empty($access_token)) {
+if (empty($mobile) || empty($otp)) {
     echo json_encode(["status" => "error", "message" => "missing_fields"]);
     exit;
 }
 
-// --- Verify MSG91 Widget Token via POST ---
-$verifyUrl = "https://api.msg91.com/api/v5/widget/verifyToken";
-$postData  = json_encode(["access-token" => $access_token]);
+// --- Verify MSG91 OTP ---
+$mobileWithCode = "91" . $mobile;
+$verifyUrl = "https://control.msg91.com/api/v5/otp/verify?mobile=" . urlencode($mobileWithCode) . "&otp=" . urlencode($otp) . "&authkey=" . urlencode($authKey);
 
 $ch = curl_init($verifyUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    "Content-Type: application/json",
-    "authkey: " . $authKey
-]);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
 $response = curl_exec($ch);
 curl_close($ch);
 
 $msg91Response = json_decode($response, true);
 
-// MSG91 returns type: "success" on valid token
+// MSG91 returns type: "success" or "error"
 if (!isset($msg91Response['type']) || $msg91Response['type'] !== 'success') {
     echo json_encode([
         "status"  => "error",
         "message" => "otp_verification_failed",
-        "detail"  => $msg91Response['message'] ?? 'Token invalid'
+        "detail"  => $msg91Response['message'] ?? 'OTP invalid'
     ]);
     exit;
 }
 
-// Token verified! Now login or register
+// Ensure the name is at least formatted properly
+if ($name === 'User' || empty($name)) {
+    $name = 'New Member';
+}
 
-$check = $con->prepare("SELECT * FROM tbl_members WHERE mobile=? LIMIT 1");
-$check->bind_param("s", $mobile);
-$check->execute();
-$res = $check->get_result();
+$stmt = $con->prepare("SELECT id FROM tbl_members WHERE mobile=?");
+$stmt->bind_param("s", $mobile);
+$stmt->execute();
+$res = $stmt->get_result();
+$userExists = $res->num_rows > 0;
+$stmt->close();
 
-if ($res->num_rows == 1) {
+$userData = null;
+$status = "error";
+
+if ($userExists) {
+    // Already exists -> Login
     $row = $res->fetch_assoc();
-
-    if (isset($row['status']) && $row['status'] == 'Blocked') {
-        echo json_encode(["status" => "error", "message" => "blocked"]);
-        exit;
-    }
-
     $userData = [
-        "id"            => $row['id'],
-        "name"          => $row['name'],
-        "mobile"        => $row['mobile'],
-        "email"         => $row['email'],
-        "profile_photo" => $row['profile_photo'] ?? '',
-        "city"          => $row['city'] ?? '',
-        "token"         => base64_encode($row['mobile'] . '::' . time())
+        "id" => $row['id'],
+        "mobile" => $mobile,
+        "name" => $name,
+        "caste" => $caste
     ];
-
-    echo json_encode(["status" => "success_login", "user" => $userData]);
-
+    $status = "success_login";
 } else {
-    // Register new user
-    if (empty($name) || empty($caste)) {
-        echo json_encode(["status" => "error", "message" => "missing_registration_fields"]);
-        exit;
-    }
+    // Generate sadhu id (just an example format)
+    $sadhu_id = "SD" . rand(1000, 9999);
+    $date = date('d-m-Y');
 
-    $email    = $mobile . "@sadhuvandana.local";
-    $dob      = "";
-    $city     = "";
-    $cast     = $caste;
-    $gender   = "";
+    // Make sure we have enough parameters based on your DB columns
+    // We match the standard website approach: email = mobile@sadhuvandana.local etc.
+    $email = $mobile . "@sadhuvandana.local"; 
+    $dob = "";
+    $city = "";
+    $gender = "";
     $password = password_hash(bin2hex(random_bytes(8)), PASSWORD_BCRYPT);
-    $photo    = "";
-    $date     = date("Y-m-d H:i:s");
-    $status   = "Pending";
+    $photo = ""; 
+    $account_status = "Pending";
 
-    $stmt = $con->prepare("INSERT INTO tbl_members (name, email, mobile, dob, city, cast, gender, password, profile_photo, date, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
-    $stmt->bind_param("sssssssssss", $name, $email, $mobile, $dob, $city, $cast, $gender, $password, $photo, $date, $status);
-
-    if ($stmt->execute()) {
+    $ins = $con->prepare("INSERT INTO tbl_members (name, email, mobile, dob, city, cast, gender, password, profile_photo, date, status, sadhu_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $ins->bind_param("ssssssssssss", $name, $email, $mobile, $dob, $city, $caste, $gender, $password, $photo, $date, $account_status, $sadhu_id);
+    
+    if($ins->execute()){
         $userData = [
-            "id"            => $stmt->insert_id,
-            "name"          => $name,
-            "mobile"        => $mobile,
-            "email"         => $email,
-            "profile_photo" => '',
-            "city"          => '',
-            "token"         => base64_encode($mobile . '::' . time())
+            "id" => $con->insert_id,
+            "mobile" => $mobile,
+            "name" => $name,
+            "caste" => $caste
         ];
-
-        echo json_encode(["status" => "success_register", "user" => $userData]);
-    } else {
-        echo json_encode(["status" => "error", "message" => "Registration failed: " . $stmt->error]);
+        $status = "success_register";
     }
+}
+
+if ($userData !== null) {
+    echo json_encode([
+        "status" => $status,
+        "message" => "OTP verified successfully",
+        "user" => $userData
+    ]);
+} else {
+    echo json_encode(["status" => "error", "message" => "Database error during register"]);
 }
 ?>
