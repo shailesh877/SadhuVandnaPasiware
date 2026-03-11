@@ -1,70 +1,60 @@
 <?php
 include("connection.php");
 header('Content-Type: application/json');
-session_start();
 
-if(!isset($_SESSION['sadhu_user_id']) && !isset($_COOKIE['sadhu_user_id'])){
+$input = json_decode(file_get_contents("php://input"), true);
+
+// Accept token/mobile from JSON body or POST form data
+$mobile = trim($input['mobile'] ?? $_POST['mobile'] ?? '');
+$token = trim($input['token'] ?? $_POST['token'] ?? '');
+
+if (empty($mobile)) {
     echo json_encode([
-        "status"=>"error",
-        "message"=>"not_logged_in"
+        "status" => "error",
+        "message" => "not_logged_in"
     ]);
     exit;
 }
 
-/* RESTORE SESSION FROM COOKIE */
-
-if(!isset($_SESSION['sadhu_user_id']) && isset($_COOKIE['sadhu_user_id'])){
-    $_SESSION['sadhu_user_id']=$_COOKIE['sadhu_user_id'];
-    $_SESSION['sadhu_user_name']=$_COOKIE['sadhu_user_name'] ?? 'Guest';
-}
-
-$mobile=$_SESSION['sadhu_user_id'];
-
-$stmt=$con->prepare("SELECT id,name,mobile,email,status,profile_photo FROM tbl_members WHERE mobile=? LIMIT 1");
-$stmt->bind_param("s",$mobile);
+$stmt = $con->prepare("SELECT id, name, mobile, email, status, profile_photo, city FROM tbl_members WHERE mobile=? LIMIT 1");
+$stmt->bind_param("s", $mobile);
 $stmt->execute();
-$res=$stmt->get_result();
+$res = $stmt->get_result();
 
-if($res->num_rows!=1){
+if ($res->num_rows != 1) {
     echo json_encode([
-        "status"=>"error",
-        "message"=>"user_not_found"
+        "status" => "error",
+        "message" => "user_not_found"
     ]);
     exit;
 }
 
-$row=$res->fetch_assoc();
+$row = $res->fetch_assoc();
 
 /* BLOCK CHECK */
-
-if($row['status']=="Blocked"){
-
-    session_unset();
-    session_destroy();
-
-    setcookie("sadhu_user_id","",time()-3600,"/");
-    setcookie("sadhu_user_name","",time()-3600,"/");
-
+if ($row['status'] == "Blocked") {
     echo json_encode([
-        "status"=>"error",
-        "message"=>"account_blocked"
+        "status" => "error",
+        "message" => "account_blocked"
     ]);
     exit;
 }
 
-/* UPDATE LAST ACTIVE */
+/* UPDATE LAST ACTIVE (Commented out if column last_active doesn't exist yet, uncomment if it does) */
+// @$con->query("UPDATE tbl_members SET last_active=NOW() WHERE mobile='$mobile'");
 
-$con->query("UPDATE tbl_members SET last_active=NOW() WHERE mobile='$mobile'");
-
-$userData=[
-"id"=>$row['id'],
-"name"=>$row['name'],
-"mobile"=>$row['mobile'],
-"email"=>$row['email'],
-"profile_photo"=>$row['profile_photo']
+$userData = [
+    "id" => $row['id'],
+    "name" => $row['name'],
+    "mobile" => $row['mobile'],
+    "email" => $row['email'],
+    "city" => $row['city'] ?? '',
+    "profile_photo" => $row['profile_photo'] ?? '',
+    "token" => base64_encode($row['mobile'] . '::' . time()) // Refresh token if needed
 ];
 
 echo json_encode([
-"status"=>"success",
-"user"=>$userData
+    "status" => "success",
+    "user" => $userData
 ]);
+?>
