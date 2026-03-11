@@ -36,7 +36,7 @@ if (!preg_match('/^[0-9]{10}$/', $mobile)) {
 date_default_timezone_set('Asia/Kolkata');
 $today = date('Y-m-d');
 
-// Make sure table is created
+// Prevent db error here crashing the script
 @$con->query("CREATE TABLE IF NOT EXISTS tbl_otp_attempts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     mobile VARCHAR(15) NOT NULL,
@@ -67,17 +67,35 @@ $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
 $response = curl_exec($ch);
+$err = curl_error($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
+
+if ($response === false) {
+    echo json_encode([
+        "status"  => "error",
+        "message" => "otp_send_failed",
+        "detail"  => "cURL Error: " . $err
+    ]);
+    exit;
+}
 
 $msg91Response = json_decode($response, true);
 
 // MSG91 returns type: "success" on success
 if (!isset($msg91Response['type']) || $msg91Response['type'] !== 'success') {
+    
+    $detailMsg = "Unknown Error";
+    if(isset($msg91Response['message'])) {
+        $detailMsg = is_array($msg91Response['message']) ? json_encode($msg91Response['message']) : $msg91Response['message'];
+    } else {
+        $detailMsg = "Raw: " . $response;
+    }
+    
     echo json_encode([
         "status"  => "error",
         "message" => "otp_send_failed",
-        "detail"  => $msg91Response['message'] ?? 'Unknown Error'
+        "detail"  => $detailMsg
     ]);
     exit;
 }
@@ -85,8 +103,10 @@ if (!isset($msg91Response['type']) || $msg91Response['type'] !== 'success') {
 // Log the attempt
 $now = date('Y-m-d H:i:s');
 $ins = $con->prepare("INSERT INTO tbl_otp_attempts (mobile, otp, sent_time) VALUES (?, 'msg91', ?)");
-$ins->bind_param("ss", $mobile, $now);
-$ins->execute();
+if($ins){
+    $ins->bind_param("ss", $mobile, $now);
+    $ins->execute();
+}
 
 echo json_encode([
     "status"  => "success",
