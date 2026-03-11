@@ -17,12 +17,19 @@ if (empty($mobile) || empty($access_token)) {
     exit;
 }
 
-// --- Verify MSG91 Widget Token ---
-$verifyUrl = "https://api.msg91.com/api/v5/widget/verifyToken?access-token=" . urlencode($access_token) . "&authkey=" . urlencode($authKey);
+// --- Verify MSG91 Widget Token via POST ---
+$verifyUrl = "https://api.msg91.com/api/v5/widget/verifyToken";
+$postData  = json_encode(["access-token" => $access_token]);
 
 $ch = curl_init($verifyUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json",
+    "authkey: " . $authKey
+]);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 $response = curl_exec($ch);
 curl_close($ch);
 
