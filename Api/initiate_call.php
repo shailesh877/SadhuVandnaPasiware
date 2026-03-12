@@ -1,3 +1,4 @@
+<?php
 include("connection.php");
 include("push_helper.php");
 header('Content-Type: application/json');
