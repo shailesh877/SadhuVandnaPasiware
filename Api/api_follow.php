@@ -1,5 +1,5 @@
-<?php
 include("connection.php");
+include("push_helper.php");
 header('Content-Type: application/json');
 
 // Get action
@@ -32,6 +32,11 @@ if($action === 'follow'){
     $check = $con->query("SELECT status FROM tbl_followers WHERE follower_id=$follower_id AND following_id=$following_id");
     
     if($check->num_rows == 0){
+        // Fetch sender name for notification
+        $sender_name = "Someone";
+        $sQ = $con->query("SELECT name FROM tbl_members WHERE id = $follower_id LIMIT 1");
+        if($sRow = $sQ->fetch_assoc()) $sender_name = $sRow['name'];
+
         // Check if the other person has a pending request to ME
         $check_other = $con->query("SELECT id FROM tbl_followers WHERE follower_id=$following_id AND following_id=$follower_id");
         
@@ -44,12 +49,18 @@ if($action === 'follow'){
             // Also update the other person's status to accepted
             $con->query("UPDATE tbl_followers SET status='accepted' WHERE follower_id=$following_id AND following_id=$follower_id");
             $status = "connected";
+
+            // Push Notification: Accepted
+            sendExpoPushNotification($con, $following_id, "New Connection", "$sender_name accepted your request and followed you back!", ["type" => "follow", "user_id" => $follower_id]);
         } else {
             // New request
             $stmt = $con->prepare("INSERT INTO tbl_followers (follower_id, following_id, status) VALUES (?, ?, 'pending')");
             $stmt->bind_param("ii", $follower_id, $following_id);
             $stmt->execute();
             $status = "requested";
+
+            // Push Notification: Request
+            sendExpoPushNotification($con, $following_id, "Follow Request", "$sender_name wants to connect with you.", ["type" => "follow_request", "user_id" => $follower_id]);
         }
     } else {
         // Already following or requested -> Remove
