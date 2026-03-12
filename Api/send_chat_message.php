@@ -13,7 +13,8 @@ $file_type = null;
 
 if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
     $uploadDir = "../uploads/chat/";
-    if (!file_exists($uploadDir)) mkdir($uploadDir, 0755, true);
+    if (!file_exists($uploadDir))
+        mkdir($uploadDir, 0755, true);
 
     $ext = pathinfo($_FILES['attachment']['name'], PATHINFO_EXTENSION);
     $newName = uniqid('chat_') . '.' . $ext;
@@ -25,42 +26,47 @@ if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ER
         $mime = $_FILES['attachment']['type'];
         if (strpos($mime, 'video') !== false) {
             $file_type = 'video';
-        } else {
+        }
+        else {
             $file_type = 'image';
         }
     }
 }
 
-if(!$my || !$receiver || ($msg === '' && !$attachment)) { 
+if (!$my || !$receiver || ($msg === '' && !$attachment)) {
     echo json_encode(["status" => "error", "message" => "Invalid data"]);
-    exit; 
+    exit;
+
 }
 
 $stmt = $con->prepare("INSERT INTO tbl_messages (sender_id, receiver_id, message, file, file_type, chat_platform, seen, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, NOW())");
 $stmt->bind_param("iissss", $my, $receiver, $msg, $attachment, $file_type, $platform);
 
-if($stmt->execute()){
+if ($stmt->execute()) {
     // Send Push Notification
     $sender_name = "New Message";
     $real_user_id = 0;
 
-    if($platform === 'community'){
+    if ($platform === 'community') {
         // Community: IDs are member IDs
         $sQ = $con->query("SELECT name FROM tbl_members WHERE id = $my LIMIT 1");
-        if($sQ && $sRow = $sQ->fetch_assoc()) $sender_name = $sRow['name'];
+        if ($sQ && $sRow = $sQ->fetch_assoc())
+            $sender_name = $sRow['name'];
         $real_user_id = $receiver; // In community, receiver_id is the user_id
-    } else {
+    }
+    else {
         // Marriage: IDs are marriage profile IDs
-        $sQ = $con->query("SELECT name FROM tbl_marriage_profiles WHERE id = $my LIMIT 1");
-        if($sQ && $sRow = $sQ->fetch_assoc()) $sender_name = $sRow['name'];
+        $sQ = $con->query("SELECT full_name FROM tbl_marriage_profiles WHERE id = $my LIMIT 1");
+        if ($sQ && $sRow = $sQ->fetch_assoc())
+            $sender_name = $sRow['full_name'];
 
         $rQ = $con->query("SELECT user_id FROM tbl_marriage_profiles WHERE id = $receiver LIMIT 1");
-        if($rQ && $rRow = $rQ->fetch_assoc()){
+        if ($rQ && $rRow = $rQ->fetch_assoc()) {
             $real_user_id = $rRow['user_id'];
         }
     }
 
-    if($real_user_id > 0){
+    if ($real_user_id > 0) {
         sendExpoPushNotification($con, $real_user_id, $sender_name, $msg, [
             "type" => "chat",
             "sender_profile_id" => $my,
@@ -69,7 +75,8 @@ if($stmt->execute()){
     }
 
     echo json_encode(["status" => "success", "message" => "Sent"]);
-} else {
-    echo json_encode(["status" => "error", "message" => "Failed"]);
+}
+else {
+    echo json_encode(["status" => "error", "message" => "Database execute failed: " . $stmt->error]);
 }
 ?>
