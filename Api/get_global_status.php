@@ -40,14 +40,24 @@ $response['my_profile_id'] = $my_profile_id;
 
 
 // 1️⃣ Unread messages count
-$q = $con->query("
+$q_msgs = $con->query("
     SELECT COUNT(*) 
     FROM tbl_messages 
     WHERE receiver_id = '$my_profile_id' 
     AND seen = 0
 ");
+$unread_messages = intval($q_msgs->fetch_row()[0]);
 
-$response['unread_count'] = intval($q->fetch_row()[0]);
+// 2️⃣ Pending matrimony requests count
+$q_reqs = $con->query("
+    SELECT COUNT(*) 
+    FROM tbl_proposals 
+    WHERE receiver_id = '$my_profile_id' 
+    AND status = 'pending'
+");
+$unread_proposals = intval($q_reqs->fetch_row()[0]);
+
+$response['unread_count'] = $unread_messages + $unread_proposals;
 
 
 // 2️⃣ Incoming call (last 30 sec, ringing)
