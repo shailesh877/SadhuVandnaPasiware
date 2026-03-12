@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 
 include 'headers.php';
 include 'connection.php';
+include 'push_helper.php';
 
 header('Content-Type: application/json');
 
@@ -111,6 +112,20 @@ if($action == 'send_proposal'){
     $ins = $con->query("INSERT INTO tbl_proposals (sender_id, receiver_id, profile_id, status) VALUES ('$my_profile_id', '$receiver_id', '$receiver_id', 'pending')");
     
     if($ins){
+        // Push Notification
+        $sender_name = "Someone";
+        $sQ = $con->query("SELECT full_name FROM tbl_marriage_profiles WHERE id = '$my_profile_id' LIMIT 1");
+        if($sRow = $sQ->fetch_assoc()) $sender_name = $sRow['full_name'];
+
+        $rQ = $con->query("SELECT user_id FROM tbl_marriage_profiles WHERE id = '$receiver_id' LIMIT 1");
+        if($rQ && $rRow = $rQ->fetch_assoc()){
+            $real_user_id = $rRow['user_id'];
+            sendExpoPushNotification($con, $real_user_id, "New Interest", "$sender_name is interested in your marriage profile.", [
+                "type" => "marriage_request",
+                "sender_profile_id" => $my_profile_id
+            ]);
+        }
+
         echo json_encode(["status" => "success", "message" => "Request sent successfully"]);
     } else {
         echo json_encode(["status" => "error", "message" => "Database error"]);
@@ -135,6 +150,21 @@ if($action == 'manage_request'){
 
     if($sub_action == 'accept'){
         $con->query("UPDATE tbl_proposals SET status='friend' WHERE sender_id='$sender_id' AND receiver_id='$my_profile_id'");
+        
+        // Push Notification
+        $sender_name = "Someone";
+        $sQ = $con->query("SELECT full_name FROM tbl_marriage_profiles WHERE id = '$my_profile_id' LIMIT 1");
+        if($sRow = $sQ->fetch_assoc()) $sender_name = $sRow['full_name'];
+
+        $rQ = $con->query("SELECT user_id FROM tbl_marriage_profiles WHERE id = '$sender_id' LIMIT 1");
+        if($rQ && $rRow = $rQ->fetch_assoc()){
+            $real_user_id = $rRow['user_id'];
+            sendExpoPushNotification($con, $real_user_id, "Interest Accepted", "$sender_name accepted your marriage interest!", [
+                "type" => "marriage_accept",
+                "sender_profile_id" => $my_profile_id
+            ]);
+        }
+
         echo json_encode(["status" => "success", "message" => "Request Accepted"]);
     } else if($sub_action == 'reject'){
         $con->query("DELETE FROM tbl_proposals WHERE sender_id='$sender_id' AND receiver_id='$my_profile_id'");
