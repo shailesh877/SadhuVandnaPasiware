@@ -1,5 +1,9 @@
 <?php
 $con=mysqli_connect("e4skgkwwk0s0gkso48oc40kg","u941015828_sadhuvandna","Sadhuvandna7832%^","u941015828_sadhuvandna",3306);
+if (mysqli_connect_errno()) {
+    echo "Failed to connect to MySQL: " . mysqli_connect_error();
+    exit();
+}
 mysqli_set_charset($con, "utf8mb4");
 
 // EXTRA safety
