@@ -4,6 +4,7 @@ date_default_timezone_set('Asia/Kolkata');
 header('Content-Type: application/json');
 include 'headers.php';
 include 'connection.php';
+include 'push_helper.php';
 
 $action = $_POST['action'] ?? '';
 $user_id = $_POST['user_id'] ?? ''; // Current App User ID
@@ -48,6 +49,20 @@ if($action == 'send_request'){
     $ins = $con->prepare("INSERT INTO tbl_proposals (sender_id, receiver_id, profile_id, status, date) VALUES (?, ?, ?, 'pending', NOW())");
     $ins->bind_param("sss", $my_profile_id, $receiver_profile_id, $receiver_profile_id);
     if($ins->execute()){
+        // Push Notification
+        $sender_name = "Someone";
+        $sQ = $con->query("SELECT name FROM tbl_members WHERE id = '$user_id' LIMIT 1");
+        if($sRow = $sQ->fetch_assoc()) $sender_name = $sRow['name'];
+
+        $rQ = $con->query("SELECT user_id FROM tbl_marriage_profiles WHERE id = '$receiver_profile_id' LIMIT 1");
+        if($rQ && $rRow = $rQ->fetch_assoc()){
+            $real_user_id = $rRow['user_id'];
+            sendExpoPushNotification($con, $real_user_id, "New Connection Request", "$sender_name sent you a connection request.", [
+                "type" => "marriage_request",
+                "sender_profile_id" => $my_profile_id
+            ]);
+        }
+
         echo json_encode(["status" => "success", "message" => "Request Sent"]);
     } else {
         echo json_encode(["status" => "error", "message" => "Failed to send"]);
@@ -64,6 +79,20 @@ elseif($action == 'accept_request'){
     $upd = $con->prepare("UPDATE tbl_proposals SET status='friend' WHERE sender_id=? AND receiver_id=?");
     $upd->bind_param("ss", $sender_profile_id, $my_profile_id);
     if($upd->execute()){
+        // Push Notification
+        $sender_name = "Someone";
+        $sQ = $con->query("SELECT name FROM tbl_members WHERE id = '$user_id' LIMIT 1");
+        if($sRow = $sQ->fetch_assoc()) $sender_name = $sRow['name'];
+
+        $rQ = $con->query("SELECT user_id FROM tbl_marriage_profiles WHERE id = '$sender_profile_id' LIMIT 1");
+        if($rQ && $rRow = $rQ->fetch_assoc()){
+            $real_user_id = $rRow['user_id'];
+            sendExpoPushNotification($con, $real_user_id, "Connection Accepted", "$sender_name accepted your connection request!", [
+                "type" => "marriage_accept",
+                "sender_profile_id" => $my_profile_id
+            ]);
+        }
+
         echo json_encode(["status" => "success", "message" => "Request Accepted"]);
     } else {
         echo json_encode(["status" => "error", "message" => "Failed"]);
