@@ -20,7 +20,7 @@ $con->query("
 
 // fetch messages (filtered by platform)
 $sql = "
-    SELECT id, sender_id, receiver_id, message, seen, created_at
+    SELECT id, sender_id, receiver_id, message, file, file_type, seen, created_at
     FROM tbl_messages
     WHERE ((sender_id={$my} AND receiver_id={$receiver})
        OR (sender_id={$receiver} AND receiver_id={$my}))
@@ -33,8 +33,11 @@ $messages = [];
 while($r = $res->fetch_assoc()){
     $messages[] = [
         "id" => $r['id'],
-        "text" => $r['message'],
+        "message" => $r['message'],
         "sender_id" => $r['sender_id'],
+        "is_mine" => ($r['sender_id'] == $my),
+        "file" => $r['file'],
+        "file_type" => $r['file_type'],
         "seen" => $r['seen'],
         "created_at" => $r['created_at']
     ];
