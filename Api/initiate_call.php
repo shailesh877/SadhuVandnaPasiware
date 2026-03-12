@@ -1,5 +1,5 @@
-<?php
 include("connection.php");
+include("push_helper.php");
 header('Content-Type: application/json');
 
 date_default_timezone_set('Asia/Kolkata');
@@ -41,40 +41,12 @@ if ($stmt->execute()) {
     if ($uQ && $uQ->num_rows > 0) {
         $r_user_id = $uQ->fetch_assoc()['user_id'];
         
-        // 2. Get FCM Token from tbl_members
-        $tQ = $con->query("SELECT fcm_token FROM tbl_members WHERE id = '$r_user_id' LIMIT 1");
-        if ($tQ && $tQ->num_rows > 0) {
-            $token = $tQ->fetch_assoc()['fcm_token'];
-            
-            if ($token) {
-                // 3. Send Expo Push Notification
-                $url = "https://exp.host/--/api/v2/push/send";
-                $data = [
-                    "to" => $token,
-                    "title" => "Incoming Call",
-                    "body" => "Incoming call...",
-                    "data" => [
-                        "channelId" => $peer_id,
-                        "caller_id" => $caller_id,
-                        "type" => $type,
-                        "is_call" => true
-                    ],
-                    "sound" => "default",
-                    "priority" => "high",
-                    "channelId" => "default"
-                ];
-                
-                $options = [
-                    "http" => [
-                        "header"  => "Content-type: application/json",
-                        "method"  => "POST",
-                        "content" => json_encode($data)
-                    ]
-                ];
-                $context  = stream_context_create($options);
-                @file_get_contents($url, false, $context);
-            }
-        }
+        sendExpoPushNotification($con, $r_user_id, "Incoming Call", "Incoming call...", [
+            "channelId" => $peer_id,
+            "caller_id" => $caller_id,
+            "type" => $type,
+            "is_call" => true
+        ]);
     }
 
     echo json_encode([
