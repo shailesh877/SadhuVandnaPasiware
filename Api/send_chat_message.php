@@ -8,13 +8,36 @@ $receiver = intval($_POST['receiver_id'] ?? 0);
 $msg = trim($_POST['message'] ?? '');
 $platform = $_POST['platform'] ?? 'marriage';
 
-if(!$my || !$receiver || $msg === '') { 
+$attachment = null;
+$file_type = null;
+
+if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+    $uploadDir = "../uploads/chat/";
+    if (!file_exists($uploadDir)) mkdir($uploadDir, 0755, true);
+
+    $ext = pathinfo($_FILES['attachment']['name'], PATHINFO_EXTENSION);
+    $newName = uniqid('chat_') . '.' . $ext;
+    $targetFile = $uploadDir . $newName;
+
+    if (move_uploaded_file($_FILES['attachment']['tmp_name'], $targetFile)) {
+        $attachment = "/uploads/chat/" . $newName;
+        // Determine file_type
+        $mime = $_FILES['attachment']['type'];
+        if (strpos($mime, 'video') !== false) {
+            $file_type = 'video';
+        } else {
+            $file_type = 'image';
+        }
+    }
+}
+
+if(!$my || !$receiver || ($msg === '' && !$attachment)) { 
     echo json_encode(["status" => "error", "message" => "Invalid data"]);
     exit; 
 }
 
-$stmt = $con->prepare("INSERT INTO tbl_messages (sender_id, receiver_id, message, chat_platform, seen, created_at) VALUES (?, ?, ?, ?, 0, NOW())");
-$stmt->bind_param("iiss", $my, $receiver, $msg, $platform);
+$stmt = $con->prepare("INSERT INTO tbl_messages (sender_id, receiver_id, message, file, file_type, chat_platform, seen, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, NOW())");
+$stmt->bind_param("iissss", $my, $receiver, $msg, $attachment, $file_type, $platform);
 
 if($stmt->execute()){
     // Send Push Notification
