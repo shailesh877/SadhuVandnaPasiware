@@ -1,30 +1,31 @@
-// Api/update_chat_typing.php
-// Updates the typing status of a user relative to a target user.
-header('Content-Type: application/json');
-error_reporting(0);
-ini_set('display_errors', 0);
+<?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+header("Content-Type: application/json");
 
-include("connection.php");
-$con->set_charset("utf8mb4");
+include("../php/connection.php");
 
-date_default_timezone_set('Asia/Kolkata');
+$profile_id = $_POST['profile_id'] ?? 0;
+$receiver_id = $_POST['receiver_id'] ?? 0;
+$is_typing = $_POST['is_typing'] ?? 0;
+$platform = $_POST['platform'] ?? 'marriage';
 
-$profile_id = intval($_POST['profile_id'] ?? 0);
-$target_profile_id = intval($_POST['receiver_id'] ?? 0);
-$is_typing = intval($_POST['is_typing'] ?? 0);
-
-if(!$profile_id || !$target_profile_id){
-    echo json_encode(['status'=>'error', 'message'=>'Missing IDs']);
+if(!$profile_id || !$receiver_id) {
+    echo json_encode(['status'=>'error']);
     exit;
 }
 
-// Insert or update typing status
-$stmt = $con->prepare("INSERT INTO tbl_typing (profile_id, target_profile_id, is_typing, updated_at) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE is_typing=VALUES(is_typing), updated_at=NOW()");
-$stmt->bind_param("iii", $profile_id, $target_profile_id, $is_typing);
+// Update table to include chat_platform if it doesn't exist
+$con->query("ALTER TABLE tbl_chat_typing ADD COLUMN IF NOT EXISTS chat_platform VARCHAR(20) DEFAULT 'marriage'");
 
-if($stmt->execute()){
-    echo json_encode(['status'=>'success']);
+// Check if row exists (filtered by platform)
+$check = $con->query("SELECT id FROM tbl_chat_typing WHERE profile_id='$profile_id' AND target_id='$receiver_id' AND chat_platform='$platform'");
+if($check->num_rows > 0){
+    $con->query("UPDATE tbl_chat_typing SET is_typing='$is_typing' WHERE profile_id='$profile_id' AND target_id='$receiver_id' AND chat_platform='$platform'");
 } else {
-    echo json_encode(['status'=>'error', 'message'=>'DB Error']);
+    $con->query("INSERT INTO tbl_chat_typing (profile_id, target_id, is_typing, chat_platform) VALUES ('$profile_id', '$receiver_id', '$is_typing', '$platform')");
 }
+
+echo json_encode(['status'=>'success']);
 ?>
