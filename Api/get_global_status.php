@@ -81,7 +81,7 @@ if ($inc && $inc->num_rows > 0) {
         WHERE id = '".$call['caller_id']."' 
         LIMIT 1
     ")->fetch_assoc();
-
+    
     $response['incoming_call'] = [
         "call_id"       => $call['id'],
         "caller_id"     => $call['caller_id'],
