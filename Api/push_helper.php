@@ -39,4 +39,3 @@ function sendExpoPushNotification($con, $receiver_id, $title, $body, $data = [])
     }
     return false;
 }
-?>
