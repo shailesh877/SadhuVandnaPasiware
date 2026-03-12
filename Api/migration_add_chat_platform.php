@@ -17,9 +17,10 @@ if ($check->num_rows == 0) {
     echo "ℹ️ Column 'chat_platform' already exists.<br>";
 }
 
-// 2. Update existing records (optional, but good for consistency)
-// Since the default is 'marriage', old records are already handled.
-// But we want to ensure any future community chats are handled.
+// 2. Update existing records to 'marriage'
+if ($con->query("UPDATE tbl_messages SET chat_platform = 'marriage' WHERE chat_platform IS NULL OR chat_platform = ''")) {
+    echo "✅ Updated existing messages to 'marriage'.<br>";
+}
 
 echo "Migration completed successfully!";
 ?>
