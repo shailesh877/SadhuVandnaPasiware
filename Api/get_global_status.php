@@ -77,7 +77,25 @@ if ($my_profile_id) {
     $unread_proposals = ($q_reqs) ? intval($q_reqs->fetch_row()[0]) : 0;
 }
 
-$response['unread_count'] = $unread_comm + $unread_marriage_msgs + $unread_proposals;
+// 4️⃣ Unread system notifications count (from logged pushes)
+$q_hist = $con->query("
+    SELECT COUNT(*) 
+    FROM tbl_notifications 
+    WHERE user_id = '$user_id' 
+    AND seen = 0
+");
+$unread_hist = ($q_hist) ? intval($q_hist->fetch_row()[0]) : 0;
+
+// 5️⃣ Pending Follow Requests (Community)
+$q_follow = $con->query("
+    SELECT COUNT(*) 
+    FROM tbl_followers 
+    WHERE following_id = '$user_id' 
+    AND status = 'pending'
+");
+$unread_follow = ($q_follow) ? intval($q_follow->fetch_row()[0]) : 0;
+
+$response['unread_count'] = $unread_comm + $unread_marriage_msgs + $unread_proposals + $unread_hist + $unread_follow;
 
 
 // Check if platform column exists
@@ -91,7 +109,8 @@ if ($hasPlatform) {
     if ($my_profile_id) {
         $whereCall .= " OR (receiver_id = '$my_profile_id' AND platform = 'marriage')";
     }
-} else {
+}
+else {
     // If no platform column, check both possibilities to be safe
     $whereCall = "receiver_id = '$user_id'";
     if ($my_profile_id) {
@@ -119,35 +138,36 @@ if ($inc && $inc->num_rows > 0) {
         $c_info = $con->query("
             SELECT full_name, photo 
             FROM tbl_marriage_profiles 
-            WHERE id = '".$call['caller_id']."' 
+            WHERE id = '" . $call['caller_id'] . "' 
             LIMIT 1
         ")->fetch_assoc();
         if ($c_info) {
-            $caller_name  = $c_info['full_name'];
-            $caller_photo = !empty($c_info['photo']) ? "uploads/photo/".$c_info['photo'] : "images/logo.png";
+            $caller_name = $c_info['full_name'];
+            $caller_photo = !empty($c_info['photo']) ? "uploads/photo/" . $c_info['photo'] : "images/logo.png";
         }
-    } else {
+    }
+    else {
         // Community
         $c_info = $con->query("
             SELECT name, profile_photo 
             FROM tbl_members 
-            WHERE id = '".$call['caller_id']."' 
+            WHERE id = '" . $call['caller_id'] . "' 
             LIMIT 1
         ")->fetch_assoc();
         if ($c_info) {
-            $caller_name  = $c_info['name'];
+            $caller_name = $c_info['name'];
             $caller_photo = !empty($c_info['profile_photo']) ? $c_info['profile_photo'] : "images/logo.png";
         }
     }
 
     $response['incoming_call'] = [
-        "call_id"       => $call['id'],
-        "caller_id"     => $call['caller_id'],
-        "caller_name"   => $caller_name,
-        "caller_photo"  => $caller_photo,
-        "type"          => $call['type'],
-        "platform"      => $platform,
-        "peer_id"       => $call['caller_peer_id']
+        "call_id" => $call['id'],
+        "caller_id" => $call['caller_id'],
+        "caller_name" => $caller_name,
+        "caller_photo" => $caller_photo,
+        "type" => $call['type'],
+        "platform" => $platform,
+        "peer_id" => $call['caller_peer_id']
     ];
 }
 
