@@ -38,12 +38,14 @@ if ($mpQ && $mpQ->num_rows > 0) {
 
 
 // 1️⃣ Unread messages count (Community)
+// Count unique senders who have sent unread messages AND ensure sender exists
 $q_msgs_comm = $con->query("
-    SELECT COUNT(*) 
-    FROM tbl_messages 
-    WHERE receiver_id = '$user_id' 
-    AND chat_platform = 'community'
-    AND seen = 0
+    SELECT COUNT(DISTINCT m.sender_id) 
+    FROM tbl_messages m
+    JOIN tbl_members u ON m.sender_id = u.id
+    WHERE m.receiver_id = '$user_id' 
+    AND m.chat_platform = 'community'
+    AND m.seen = 0
 ");
 $unread_comm = ($q_msgs_comm) ? intval($q_msgs_comm->fetch_row()[0]) : 0;
 
@@ -52,21 +54,25 @@ $unread_proposals = 0;
 
 if ($my_profile_id) {
     // 2️⃣ Unread messages count (Marriage)
+    // Count unique senders AND ensure sender profile exists
     $q_msgs_marr = $con->query("
-        SELECT COUNT(*) 
-        FROM tbl_messages 
-        WHERE receiver_id = '$my_profile_id' 
-        AND chat_platform = 'marriage'
-        AND seen = 0
+        SELECT COUNT(DISTINCT m.sender_id) 
+        FROM tbl_messages m
+        JOIN tbl_marriage_profiles p ON m.sender_id = p.id
+        WHERE m.receiver_id = '$my_profile_id' 
+        AND m.chat_platform = 'marriage'
+        AND m.seen = 0
     ");
     $unread_marriage_msgs = ($q_msgs_marr) ? intval($q_msgs_marr->fetch_row()[0]) : 0;
 
     // 3️⃣ Pending matrimony requests count
+    // Ensure sender profile exists
     $q_reqs = $con->query("
         SELECT COUNT(*) 
-        FROM tbl_proposals 
-        WHERE receiver_id = '$my_profile_id' 
-        AND status = 'pending'
+        FROM tbl_proposals p
+        JOIN tbl_marriage_profiles mp ON p.sender_id = mp.id
+        WHERE p.receiver_id = '$my_profile_id' 
+        AND p.status = 'pending'
     ");
     $unread_proposals = ($q_reqs) ? intval($q_reqs->fetch_row()[0]) : 0;
 }
