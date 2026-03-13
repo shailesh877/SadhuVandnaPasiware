@@ -5,133 +5,138 @@ header('Access-Control-Allow-Origin: *');
 
 $user_id = $_POST['user_id'] ?? $_GET['user_id'] ?? 0;
 
-if(!$user_id){
+if (!$user_id) {
     echo json_encode(['status' => 'error', 'message' => 'User ID required']);
     exit;
 }
 
 // Get Marriage Profile ID for Chat/Requests
 $mp = $con->query("SELECT id FROM tbl_marriage_profiles WHERE user_id='$user_id' LIMIT 1");
-$profile_id = 0;
-if($mp->num_rows > 0){
-    $profile_id = $mp->fetch_assoc()['id'];
-}
+$my_marriage_id = ($mp && $mp->num_rows > 0) ? $mp->fetch_assoc()['id'] : 0;
 
-$notifications = [];
+/*
+  UNION QUERY to aggregate all notification types (Website Aligned):
+  1. Unread Messages (Marriage)
+  2. Unread Messages (Community)
+  3. Pending Marriage Proposals
+  4. Pending Follow Requests
+  5. Samaj News (Global)
+  6. System History (Logged pushes)
+*/
 
-// 1. Community Messages (Source: tbl_messages, Key: receiver_id = user_id)
-$msgCommQ = $con->query("
-    SELECT m.sender_id, m.message, m.created_at, u.name, u.profile_photo as photo
-    FROM tbl_messages m
-    JOIN tbl_members u ON m.sender_id = u.id
-    WHERE m.receiver_id = '$user_id' AND m.chat_platform = 'community' AND m.seen = 0
-    GROUP BY m.sender_id
-    ORDER BY m.created_at DESC
-");
-
-while($r = $msgCommQ->fetch_assoc()){
-    $notifications[] = [
-        'type' => 'message',
-        'id' => 'msg_comm_'.$r['sender_id'],
-        'title' => $r['name'] ?? 'Unknown User',
-        'body' => 'Community: ' . substr($r['message'], 0, 30) . '...',
-        'date' => $r['created_at'],
-        'image' => $r['photo'],
-        'data' => ['sender_id' => $r['sender_id'], 'platform' => 'community']
-    ];
-}
-
-// 2. Marriage Messages & Requests (Only if Marriage Profile exists)
-if($profile_id){
-    // Unread Marriage Messages
-    $msgMarrQ = $con->query("
-        SELECT m.sender_id, m.message, m.created_at, p.full_name as name, p.photo
-        FROM tbl_messages m
-        JOIN tbl_marriage_profiles p ON m.sender_id = p.id
-        WHERE m.receiver_id = '$profile_id' AND m.chat_platform = 'marriage' AND m.seen = 0
-        GROUP BY m.sender_id
-        ORDER BY m.created_at DESC
-    ");
-    
-    while($r = $msgMarrQ->fetch_assoc()){
-        $notifications[] = [
-            'type' => 'message',
-            'id' => 'msg_marr_'.$r['sender_id'],
-            'title' => $r['name'] ?? 'Unknown Member',
-            'body' => 'Marriage: ' . substr($r['message'], 0, 30) . '...',
-            'date' => $r['created_at'],
-            'image' => $r['photo'],
-            'data' => ['sender_id' => $r['sender_id'], 'platform' => 'marriage']
-        ];
-    }
-
-    // Pending Requests
-    $reqQ = $con->query("
-        SELECT p.id, p.sender_id, p.created_at, mp.full_name as name, mp.photo
+$sql = "
+    (
+        -- Messages (Marriage)
+        SELECT 
+            'message' as n_type, m1.id, m1.sender_id, m1.chat_platform as platform, 
+            m1.message, m1.created_at, mp.full_name as sender_name, mp.photo as sender_photo,
+            (SELECT COUNT(*) FROM tbl_messages WHERE sender_id = m1.sender_id AND receiver_id = m1.receiver_id AND chat_platform = 'marriage' AND seen = 0) as unread_count
+        FROM tbl_messages m1
+        INNER JOIN (
+            SELECT sender_id, MAX(id) as last_id 
+            FROM tbl_messages 
+            WHERE receiver_id = '$my_marriage_id' AND chat_platform = 'marriage' AND seen = 0
+            GROUP BY sender_id
+        ) m2 ON m1.id = m2.last_id
+        LEFT JOIN tbl_marriage_profiles mp ON m1.sender_id = mp.id
+    )
+    UNION ALL
+    (
+        -- Messages (Community)
+        SELECT 
+            'message' as n_type, m1.id, m1.sender_id, m1.chat_platform as platform, 
+            m1.message, m1.created_at, mem.name as sender_name, mem.profile_photo as sender_photo,
+            (SELECT COUNT(*) FROM tbl_messages WHERE sender_id = m1.sender_id AND receiver_id = m1.receiver_id AND chat_platform = 'community' AND seen = 0) as unread_count
+        FROM tbl_messages m1
+        INNER JOIN (
+            SELECT sender_id, MAX(id) as last_id 
+            FROM tbl_messages 
+            WHERE receiver_id = '$user_id' AND chat_platform = 'community' AND seen = 0
+            GROUP BY sender_id
+        ) m3 ON m1.id = m3.last_id
+        LEFT JOIN tbl_members mem ON m1.sender_id = mem.id
+    )
+    UNION ALL
+    (
+        -- Proposals (Marriage)
+        SELECT 
+            'proposal' as n_type, p.id, p.sender_id, 'marriage' as platform,
+            'Sent you a marriage proposal' as message, p.created_at, mp.full_name as sender_name, mp.photo as sender_photo,
+            1 as unread_count
         FROM tbl_proposals p
         JOIN tbl_marriage_profiles mp ON p.sender_id = mp.id
-        WHERE p.receiver_id = '$profile_id' AND p.status = 'pending'
-    ");
+        WHERE p.receiver_id = '$my_marriage_id' AND p.status = 'pending'
+    )
+    UNION ALL
+    (
+        -- Follows (Community)
+        SELECT 
+            'follow' as n_type, f.id, f.follower_id as sender_id, 'community' as platform,
+            'Sent you a friend request' as message, f.created_at, mem.name as sender_name, mem.profile_photo as sender_photo,
+            1 as unread_count
+        FROM tbl_followers f
+        JOIN tbl_members mem ON f.follower_id = mem.id
+        WHERE f.following_id = '$user_id' AND f.status = 'pending'
+    )
+    UNION ALL
+    (
+        -- News (Global)
+        SELECT 
+            'news' as n_type, n.id, 0 as sender_id, 'news' as platform,
+            n.title as message, n.created_at, 'Samaj News' as sender_name, 'images/logo.png' as sender_photo,
+            0 as unread_count
+        FROM tbl_news n
+        ORDER BY id DESC LIMIT 10
+    )
+    UNION ALL
+    (
+        -- System (Logged Pushes)
+        SELECT 
+            'system' as n_type, h.id, 0 as sender_id, 'system' as platform,
+            h.message, h.created_at, h.title as sender_name, 'images/logo.png' as sender_photo,
+            (CASE WHEN h.seen = 0 THEN 1 ELSE 0 END) as unread_count
+        FROM tbl_notifications h
+        WHERE h.user_id = '$user_id'
+        ORDER BY id DESC LIMIT 15
+    )
+    ORDER BY created_at DESC
+";
 
-    while($r = $reqQ->fetch_assoc()){
-        $notifications[] = [
-            'type' => 'request',
-            'id' => 'req_'.$r['id'],
-            'title' => $r['name'] ?? 'Unknown Member',
-            'body' => 'Marriage connection request',
-            'date' => $r['created_at'],
-            'image' => $r['photo'],
-            'data' => ['request_id' => $r['id']]
+$q = $con->query($sql);
+$data = [];
+
+if ($q) {
+    while($row = $q->fetch_assoc()){
+        $photo = $row['sender_photo'];
+        $n_type = $row['n_type'];
+        
+        $img = "images/logo.png";
+        if($row['platform'] === 'community'){
+            $img = $photo ? 'uploads/photo/'.$photo : 'https://via.placeholder.com/150';
+        } elseif($row['platform'] === 'marriage') {
+            $img = $photo ? ( (strpos($photo,'http')===0) ? $photo : 'uploads/photo/'.$photo ) : 'images/logo.png';
+        }
+
+        $data[] = [
+            'type'          => $n_type,
+            'id'            => $row['n_type'] . '_' . $row['id'],
+            'sender_id'     => $row['sender_id'],
+            'title'         => $row['sender_name'] ?? 'User',
+            'body'          => $row['message'],
+            'image'         => $img,
+            'date'          => $row['created_at'],
+            'unread_count'  => $row['unread_count'],
+            'platform'      => $row['platform'],
+            'data'          => [
+                'sender_id' => $row['sender_id'],
+                'news_id'   => ($n_type == 'news') ? $row['id'] : null
+            ]
         ];
     }
-}
-
-// 3. Likes (Source: tbl_likes, Key: post_id -> user_id)
-$likeQ = $con->query("
-    SELECT l.id, l.user_id, l.date, m.name, m.profile_photo, l.post_id
-    FROM tbl_likes l
-    JOIN tbl_members m ON l.user_id = m.id
-    WHERE l.post_id IN (SELECT id FROM tbl_posts WHERE user_id = '$user_id')
-    AND l.user_id != '$user_id'
-    ORDER BY l.date DESC LIMIT 20
-");
-
-while($r = $likeQ->fetch_assoc()){
-    $notifications[] = [
-        'type' => 'like',
-        'id' => 'like_'.$r['id'],
-        'title' => $r['name'],
-        'body' => 'Liked your post',
-        'date' => $r['date'],
-        'image' => $r['profile_photo'],
-        'data' => ['post_id' => $r['post_id'], 'user_id' => $r['user_id']]
-    ];
-}
-
-// 4. Comments (Source: tbl_comments, Key: post_id -> user_id)
-$commQ = $con->query("
-    SELECT c.id, c.user_id, c.date, m.name, m.profile_photo, c.post_id, c.comment
-    FROM tbl_comments c
-    JOIN tbl_members m ON c.user_id = m.id
-    WHERE c.post_id IN (SELECT id FROM tbl_posts WHERE user_id = '$user_id')
-    AND c.user_id != '$user_id'
-    ORDER BY c.date DESC LIMIT 20
-");
-
-while($r = $commQ->fetch_assoc()){
-    $notifications[] = [
-        'type' => 'comment',
-        'id' => 'comm_'.$r['id'],
-        'title' => $r['name'],
-        'body' => 'Commented: ' . substr($r['comment'], 0, 30) . '...',
-        'date' => $r['date'],
-        'image' => $r['profile_photo'],
-        'data' => ['post_id' => $r['post_id'], 'user_id' => $r['user_id']]
-    ];
 }
 
 // Sort all by date DESC
-usort($notifications, function($a, $b) {
+usort($notifications, function ($a, $b) {
     return strtotime($b['date']) - strtotime($a['date']);
 });
 
