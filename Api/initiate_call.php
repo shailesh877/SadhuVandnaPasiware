@@ -28,28 +28,24 @@ $con->query("
     AND status='ringing'
 ");
 
-// Check if platform column exists to avoid crash before migration
-$checkCol = $con->query("SHOW COLUMNS FROM tbl_calls LIKE 'platform'");
-if ($checkCol->num_rows > 0) {
-    $stmt = $con->prepare("
-        INSERT INTO tbl_calls 
-        (caller_id, receiver_id, type, platform, status, caller_peer_id) 
-        VALUES (?, ?, ?, ?, 'ringing', ?)
-    ");
-    $stmt->bind_param("iisss", $caller_id, $receiver_id, $type, $platform, $peer_id);
-} else {
-    $stmt = $con->prepare("
-        INSERT INTO tbl_calls 
-        (caller_id, receiver_id, type, status, caller_peer_id) 
-        VALUES (?, ?, ?, 'ringing', ?)
-    ");
-    $stmt->bind_param("iiss", $caller_id, $receiver_id, $type, $peer_id);
+// AUTO-MIGRATION: Ensure platform column exists (Safe Check)
+$res = $con->query("SHOW COLUMNS FROM tbl_calls LIKE 'platform'");
+if ($res && $res->num_rows == 0) {
+    $con->query("ALTER TABLE tbl_calls ADD COLUMN platform VARCHAR(50) DEFAULT 'marriage' AFTER type");
 }
+
+$stmt = $con->prepare("
+    INSERT INTO tbl_calls 
+    (caller_id, receiver_id, type, platform, status, caller_peer_id) 
+    VALUES (?, ?, ?, ?, 'ringing', ?)
+");
+$stmt->bind_param("iisss", $caller_id, $receiver_id, $type, $platform, $peer_id);
 
 if ($stmt->execute()) {
     // Send Push Notification
     $r_user_id = 0;
     if ($platform == 'marriage') {
+        // receiver_id is the Marriage Profile ID, find the owner's tbl_members.id
         $uQ = $con->query("SELECT user_id FROM tbl_marriage_profiles WHERE id = '$receiver_id' LIMIT 1");
         if ($uQ && $uQ->num_rows > 0) {
             $r_user_id = $uQ->fetch_assoc()['user_id'];
