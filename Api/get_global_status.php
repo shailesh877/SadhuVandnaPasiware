@@ -78,7 +78,7 @@ $response['unread_count'] = $unread_comm + $unread_marriage_msgs + $unread_propo
 $checkPlat = $con->query("SHOW COLUMNS FROM tbl_calls LIKE 'platform'");
 $hasPlatform = ($checkPlat && $checkPlat->num_rows > 0);
 
-// 2️⃣ Incoming call (last 30 sec, ringing)
+// 2️⃣ Incoming call (last 60 sec, ringing)
 // Check both: Community (receiver_id = user_id) AND Marriage (receiver_id = my_profile_id)
 if ($hasPlatform) {
     $whereCall = "(receiver_id = '$user_id' AND platform = 'community')";
@@ -86,8 +86,11 @@ if ($hasPlatform) {
         $whereCall .= " OR (receiver_id = '$my_profile_id' AND platform = 'marriage')";
     }
 } else {
-    // Fallback to old logic (only marriage) or just match by receiver_id if we can't distinguish
-    $whereCall = "receiver_id = '$my_profile_id'";
+    // If no platform column, check both possibilities to be safe
+    $whereCall = "receiver_id = '$user_id'";
+    if ($my_profile_id) {
+        $whereCall .= " OR receiver_id = '$my_profile_id'";
+    }
 }
 
 $inc = $con->query("
@@ -95,7 +98,7 @@ $inc = $con->query("
     FROM tbl_calls 
     WHERE ($whereCall)
     AND status = 'ringing' 
-    AND created_at > (NOW() - INTERVAL 30 SECOND)
+    AND created_at > (NOW() - INTERVAL 60 SECOND)
     ORDER BY id DESC 
     LIMIT 1
 ");
