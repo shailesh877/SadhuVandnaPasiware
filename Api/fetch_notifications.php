@@ -33,7 +33,7 @@ while($r = $msgCommQ->fetch_assoc()){
     $notifications[] = [
         'type' => 'message',
         'id' => 'msg_comm_'.$r['sender_id'],
-        'title' => $r['name'],
+        'title' => $r['name'] ?? 'Unknown User',
         'body' => 'Community: ' . substr($r['message'], 0, 30) . '...',
         'date' => $r['created_at'],
         'image' => $r['photo'],
@@ -57,7 +57,7 @@ if($profile_id){
         $notifications[] = [
             'type' => 'message',
             'id' => 'msg_marr_'.$r['sender_id'],
-            'title' => $r['name'],
+            'title' => $r['name'] ?? 'Unknown Member',
             'body' => 'Marriage: ' . substr($r['message'], 0, 30) . '...',
             'date' => $r['created_at'],
             'image' => $r['photo'],
@@ -77,7 +77,7 @@ if($profile_id){
         $notifications[] = [
             'type' => 'request',
             'id' => 'req_'.$r['id'],
-            'title' => $r['name'],
+            'title' => $r['name'] ?? 'Unknown Member',
             'body' => 'Marriage connection request',
             'date' => $r['created_at'],
             'image' => $r['photo'],
