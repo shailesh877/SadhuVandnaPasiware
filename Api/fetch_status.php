@@ -28,9 +28,10 @@ if (!$profile_id || !$my_profile) {
 /* ===============================
    1️⃣ Online / Last Active
 ================================ */
+// Increased threshold to 300s (5 mins)
 $res = $con->query("
     SELECT 
-        (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(m.last_active) < 25) AS online,
+        (UNIX_TIMESTAMP() - UNIX_TIMESTAMP(m.last_active) < 300) AS online,
         m.last_active
     FROM tbl_members m
     JOIN tbl_marriage_profiles mp ON mp.user_id = m.id
