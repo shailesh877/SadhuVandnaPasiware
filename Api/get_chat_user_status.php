@@ -13,21 +13,18 @@ $receiver_id = $_GET['profile_id'] ?? 0;
 $my_id = $_GET['my_profile_id'] ?? 0;
 $platform = $_GET['platform'] ?? 'marriage';
 
-if(!$receiver_id){
-    echo json_encode(['status'=>'error', 'message'=>'Missing profile_id']);
-    exit;
-}
-
 // 1. Get Receiver Status
-// Increased threshold to 300s (5 mins) for better stability
+// Source of truth is ALWAYS tbl_members.last_active
 if($platform === 'community'){
     // Community: receiver_id is member_id
-    $sql = "SELECT last_active, (UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(last_active) < 300) as is_online 
+    $sql = "SELECT last_active, (last_active >= NOW() - INTERVAL 5 MINUTE) as is_online 
             FROM tbl_members WHERE id='$receiver_id' LIMIT 1";
 } else {
-    // Marriage: receiver_id is marriage_profile_id
-    $sql = "SELECT last_active, (UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(last_active) < 300) as is_online 
-            FROM tbl_marriage_profiles WHERE id='$receiver_id' LIMIT 1";
+    // Marriage: receiver_id is marriage_profile_id, join with members to get their status
+    $sql = "SELECT m.last_active, (m.last_active >= NOW() - INTERVAL 5 MINUTE) as is_online 
+            FROM tbl_members m
+            JOIN tbl_marriage_profiles mp ON mp.user_id = m.id
+            WHERE mp.id = '$receiver_id' LIMIT 1";
 }
 
 $res = $con->query($sql);
