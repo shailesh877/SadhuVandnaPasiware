@@ -78,13 +78,17 @@ if ($my_profile_id) {
 }
 
 // 4️⃣ Unread system notifications count (from logged pushes)
-$q_hist = $con->query("
-    SELECT COUNT(*) 
-    FROM tbl_notifications 
-    WHERE user_id = '$user_id' 
-    AND seen = 0
-");
-$unread_hist = ($q_hist) ? intval($q_hist->fetch_row()[0]) : 0;
+$unread_hist = 0;
+$checkTable = $con->query("SHOW TABLES LIKE 'tbl_notifications'");
+if ($checkTable && $checkTable->num_rows > 0) {
+    $q_hist = $con->query("
+        SELECT COUNT(*) 
+        FROM tbl_notifications 
+        WHERE user_id = '$user_id' 
+        AND seen = 0
+    ");
+    $unread_hist = ($q_hist) ? intval($q_hist->fetch_row()[0]) : 0;
+}
 
 // 5️⃣ Pending Follow Requests (Community)
 $q_follow = $con->query("
@@ -159,7 +163,7 @@ if ($inc && $inc->num_rows > 0) {
             $caller_photo = !empty($c_info['profile_photo']) ? $c_info['profile_photo'] : "images/logo.png";
         }
     }
-    
+
     $response['incoming_call'] = [
         "call_id" => $call['id'],
         "caller_id" => $call['caller_id'],
