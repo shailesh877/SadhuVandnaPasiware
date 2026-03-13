@@ -159,7 +159,7 @@ if ($inc && $inc->num_rows > 0) {
             $caller_photo = !empty($c_info['profile_photo']) ? $c_info['profile_photo'] : "images/logo.png";
         }
     }
-
+    
     $response['incoming_call'] = [
         "call_id" => $call['id'],
         "caller_id" => $call['caller_id'],
