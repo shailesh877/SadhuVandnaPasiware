@@ -57,7 +57,9 @@ if ($stmt->execute()) {
 
     if ($r_user_id) {
         sendExpoPushNotification($con, $r_user_id, "Incoming Call", "Incoming call...", [
-            "channelId" => $peer_id,
+            "channelId" => "call",
+            "sound" => "ringtone",
+            "peer_id" => $peer_id,
             "caller_id" => $caller_id,
             "type" => $type,
             "platform" => $platform,
