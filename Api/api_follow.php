@@ -182,5 +182,28 @@ if($action === 'get_counts'){
     exit;
 }
 
+if ($action === 'fetch_suggestions') {
+    $limit = intval($_GET['limit'] ?? 10);
+    
+    // Fetch users NOT current user AND NOT already followed/requested
+    $sql = "SELECT id, name as full_name, profile_photo as photo, city 
+            FROM tbl_members 
+            WHERE id != $current_user_id 
+            AND id NOT IN (
+                SELECT following_id FROM tbl_followers WHERE follower_id = $current_user_id
+            )
+            ORDER BY RAND() 
+            LIMIT $limit";
+            
+    $res = $con->query($sql);
+    $list = [];
+    while($row = $res->fetch_assoc()){
+        $row['proposal_status'] = null; // Compatibility with component
+        $list[] = $row;
+    }
+    echo json_encode(["status" => "success", "ok" => true, "data" => $list]);
+    exit;
+}
+
 echo json_encode(["ok" => false, "message" => "Invalid action"]);
 ?>
