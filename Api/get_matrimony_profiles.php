@@ -1,12 +1,23 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 include 'headers.php';
 include 'connection.php';
+include 'push_helper.php';
 
-// Support both JSON and regular POST (handled globaly by our connection.php fix)
+header('Content-Type: application/json');
+
+if (!$con) {
+    echo json_encode(["status" => "error", "message" => "Database connection failed"]);
+    exit;
+}
+
 $user_id = $_REQUEST['user_id'] ?? 0;
 $limit   = intval($_REQUEST['limit'] ?? 20);
 $offset  = intval($_REQUEST['offset'] ?? 0);
-$type    = $_REQUEST['type'] ?? ''; // 'all' or 'connected'
+$type    = $_REQUEST['type'] ?? ''; 
 
 // Filters
 $gender    = $_REQUEST['gender'] ?? '';
@@ -77,21 +88,23 @@ $query = "
 $res = $con->query($query);
 $profiles = [];
 
-while ($row = $res->fetch_assoc()) {
-    $status = null;
-    if ($my_profile_id) {
-        $pid = $row['id'];
-        $pq = $con->query("SELECT status, sender_id FROM tbl_proposals WHERE (sender_id='$my_profile_id' AND receiver_id='$pid') OR (sender_id='$pid' AND receiver_id='$my_profile_id') LIMIT 1");
-        if ($pq && $pq->num_rows > 0) {
-            $p = $pq->fetch_assoc();
-            $status = $p['status'];
-            if ($status == 'pending') {
-                $status = ($p['sender_id'] == $my_profile_id) ? 'sent' : 'received';
+if ($res) {
+    while ($row = $res->fetch_assoc()) {
+        $status = null;
+        if ($my_profile_id) {
+            $pid = $row['id'];
+            $pq = $con->query("SELECT status, sender_id FROM tbl_proposals WHERE (sender_id='$my_profile_id' AND receiver_id='$pid') OR (sender_id='$pid' AND receiver_id='$my_profile_id') LIMIT 1");
+            if ($pq && $pq->num_rows > 0) {
+                $p = $pq->fetch_assoc();
+                $status = $p['status'];
+                if ($status == 'pending') {
+                    $status = ($p['sender_id'] == $my_profile_id) ? 'sent' : 'received';
+                }
             }
         }
+        $row['proposal_status'] = $status;
+        $profiles[] = $row;
     }
-    $row['proposal_status'] = $status;
-    $profiles[] = $row;
 }
 
 echo json_encode([
