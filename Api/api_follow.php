@@ -76,7 +76,7 @@ if($action === 'follow'){
     exit;
 }
 
-if(in_array($action, ['fetch_followers', 'fetch_following', 'fetch_friends', 'fetch_requested', 'fetch_sent'])){
+if(in_array($action, ['fetch_followers', 'fetch_following', 'fetch_friends', 'fetch_requested', 'fetch_sent', 'fetch_all_members'])){
     $uid = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
     
     if($action === 'fetch_followers'){
@@ -104,6 +104,8 @@ if(in_array($action, ['fetch_followers', 'fetch_following', 'fetch_friends', 'fe
                 FROM tbl_members m 
                 JOIN tbl_followers f ON m.id = f.following_id 
                 WHERE f.follower_id = $uid AND f.status='pending'";
+    } elseif($action === 'fetch_all_members') {
+        $sql = "SELECT id, name, profile_photo, city FROM tbl_members WHERE id != $follower_id ORDER BY name ASC";
     }
     
     $res = $con->query($sql);
