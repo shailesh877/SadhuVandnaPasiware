@@ -54,9 +54,13 @@ if ($education) $where .= " AND education LIKE '%$education%' ";
 if ($age_group) {
     $parts = explode('-', $age_group);
     if (count($parts) == 2) {
-        $min = intval($parts[0]);
-        $max = intval($parts[1]);
-        $where .= " AND TIMESTAMPDIFF(YEAR, STR_TO_DATE(dob,'%Y-%m-%d'), CURDATE()) BETWEEN $min AND $max ";
+        $min_age = intval($parts[0]);
+        $max_age = intval($parts[1]);
+        // Index-friendly DOB range
+        $current_date = date('Y-m-d');
+        $min_dob = date('Y-m-d', strtotime("-$max_age years -1 year +1 day"));
+        $max_dob = date('Y-m-d', strtotime("-$min_age years"));
+        $where .= " AND dob BETWEEN '$min_dob' AND '$max_dob' ";
     }
 }
 
@@ -87,24 +91,41 @@ $query = "
 
 $res = $con->query($query);
 $profiles = [];
+$profile_ids = [];
 
 if ($res) {
     while ($row = $res->fetch_assoc()) {
-        $status = null;
-        if ($my_profile_id) {
-            $pid = $row['id'];
-            $pq = $con->query("SELECT status, sender_id FROM tbl_proposals WHERE (sender_id='$my_profile_id' AND receiver_id='$pid') OR (sender_id='$pid' AND receiver_id='$my_profile_id') LIMIT 1");
-            if ($pq && $pq->num_rows > 0) {
-                $p = $pq->fetch_assoc();
-                $status = $p['status'];
-                if ($status == 'pending') {
-                    $status = ($p['sender_id'] == $my_profile_id) ? 'sent' : 'received';
-                }
-            }
-        }
-        $row['proposal_status'] = $status;
         $profiles[] = $row;
+        $profile_ids[] = $row['id'];
     }
+}
+
+// Batch Query for proposal statuses
+$proposal_map = [];
+if (!empty($profile_ids) && $my_profile_id) {
+    $ids_str = implode(',', array_map('intval', $profile_ids));
+    $pq = $con->query("
+        SELECT sender_id, receiver_id, status 
+        FROM tbl_proposals 
+        WHERE (sender_id = '$my_profile_id' AND receiver_id IN ($ids_str)) 
+           OR (receiver_id = '$my_profile_id' AND sender_id IN ($ids_str))
+    ");
+    
+    if ($pq) {
+        while ($p = $pq->fetch_assoc()) {
+            $other_id = ($p['sender_id'] == $my_profile_id) ? $p['receiver_id'] : $p['sender_id'];
+            $status = $p['status'];
+            if ($status == 'pending') {
+                $status = ($p['sender_id'] == $my_profile_id) ? 'sent' : 'received';
+            }
+            $proposal_map[$other_id] = $status;
+        }
+    }
+}
+
+// Map statuses back to profiles
+foreach ($profiles as &$row) {
+    $row['proposal_status'] = $proposal_map[$row['id']] ?? null;
 }
 
 echo json_encode([
