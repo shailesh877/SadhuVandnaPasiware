@@ -104,8 +104,10 @@ if(in_array($action, ['fetch_followers', 'fetch_following', 'fetch_friends', 'fe
                 FROM tbl_members m 
                 JOIN tbl_followers f ON m.id = f.following_id 
                 WHERE f.follower_id = $uid AND f.status='pending'";
-    } elseif($action === 'fetch_all_members') {
-        $sql = "SELECT id, name, profile_photo, city FROM tbl_members WHERE id != $follower_id ORDER BY name ASC";
+    } elseif($action === 'fetch_all_members'){
+        $limit = intval($_GET['limit'] ?? 20);
+        $offset = intval($_GET['offset'] ?? 0);
+        $sql = "SELECT id, name, profile_photo, city FROM tbl_members WHERE id != $follower_id ORDER BY name ASC LIMIT $limit OFFSET $offset";
     }
     
     $res = $con->query($sql);
