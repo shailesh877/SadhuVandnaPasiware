@@ -87,11 +87,15 @@ if($action === 'fetch_comments'){
 // Use $user_id already resolved above
 
 
-// 3. Filter Logic
+// 3. Filter & Pagination Logic
 $filter_user_id = 0;
 if(isset($_REQUEST['filter_user_id']) && intval($_REQUEST['filter_user_id']) > 0){
     $filter_user_id = intval($_REQUEST['filter_user_id']);
 }
+
+// PAGINATION PARAMETERS
+$limit  = intval($_REQUEST['limit'] ?? 20);
+$offset = intval($_REQUEST['offset'] ?? 0);
 
 $whereClause = "";
 if ($filter_user_id > 0) {
@@ -103,7 +107,8 @@ $query = "SELECT p.*, m.name, m.profile_photo
           FROM tbl_posts p
           LEFT JOIN tbl_members m ON p.user_id = m.id 
           $whereClause
-          ORDER BY p.id DESC";
+          ORDER BY p.id DESC
+          LIMIT $limit OFFSET $offset";
 
 $result = $con->query($query);
 $posts = [];
