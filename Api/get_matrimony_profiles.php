@@ -1,101 +1,143 @@
 <?php
-header('Content-Type: application/json');
-include("connection.php");
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// Mobile params
-$user_id = $_REQUEST['user_id'] ?? 0; // Numeric member ID from app
-$limit   = intval($_REQUEST['limit'] ?? 20);
-$offset  = intval($_REQUEST['offset'] ?? 0);
-$gender    = $_REQUEST['gender'] ?? '';
+include 'headers.php';
+include 'connection.php';
+include 'push_helper.php';
+
+header('Content-Type: application/json');
+
+if (!$con) {
+    echo json_encode(["status" => "error", "message" => "Database connection failed"]);
+    exit;
+}
+
+$user_id = $_REQUEST['user_id'] ?? 0;
+$limit = intval($_REQUEST['limit'] ?? 20);
+$offset = intval($_REQUEST['offset'] ?? 0);
+$type = $_REQUEST['type'] ?? '';
+
+
+// Filters
+$gender = $_REQUEST['gender'] ?? '';
 $age_group = $_REQUEST['age'] ?? '';
-$city      = trim($_REQUEST['city'] ?? '');
-$education = trim($_REQUEST['education'] ?? '');
-$search    = $_REQUEST['search'] ?? '';
+$city = $_REQUEST['city'] ?? '';
+$education = $_REQUEST['education'] ?? '';
+$search = $_REQUEST['search'] ?? '';
 
 if (!$user_id) {
     echo json_encode(["status" => "error", "message" => "User ID required"]);
     exit;
 }
 
-// 1. Get Current User's Marriage Profile ID (Website Logic)
-$my_profile_q = $con->query("SELECT id FROM tbl_marriage_profiles WHERE user_id='$user_id' LIMIT 1");
-$my_profile = $my_profile_q->fetch_assoc();
-$my_profile_id = $my_profile['id'] ?? 0;
+// Helper: Get Marriage Profile ID
+function getProfileId($con, $uid)
+{
+    $q = $con->query("SELECT id FROM tbl_marriage_profiles WHERE user_id='$uid'");
+    return ($q && $q->num_rows > 0) ? $q->fetch_assoc()['id'] : 0;
+}
 
-// 2. Base Query (Exactly as website's fetch_profiles.php)
-$query = "
-SELECT mp.*, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age
-FROM tbl_marriage_profiles mp
-JOIN tbl_members m ON m.id = mp.user_id
-WHERE m.status != 'Blocked' AND mp.id != '$my_profile_id'
-";
+$my_profile_id = getProfileId($con, $user_id);
 
-// Special case for 'connected' (Matches)
+// Count pending requests
+$request_count = 0;
+if ($my_profile_id) {
+    $rq = $con->query("SELECT COUNT(*) FROM tbl_proposals WHERE receiver_id='$my_profile_id' AND status='pending'");
+    $request_count = ($rq) ? $rq->fetch_row()[0] : 0;
+}
+
+$where = " WHERE 1 ";
+if ($gender)
+    $where .= " AND gender = '$gender' ";
+if ($city)
+    $where .= " AND city LIKE '%$city%' ";
+if ($education)
+    $where .= " AND education LIKE '%$education%' ";
+
+if ($age_group) {
+    $parts = explode('-', $age_group);
+    if (count($parts) == 2) {
+        $min_age = intval($parts[0]);
+        $max_age = intval($parts[1]);
+        // Index-friendly DOB range
+        $current_date = date('Y-m-d');
+        $min_dob = date('Y-m-d', strtotime("-$max_age years -1 year +1 day"));
+        $max_dob = date('Y-m-d', strtotime("-$min_age years"));
+        $where .= " AND dob BETWEEN '$min_dob' AND '$max_dob' ";
+    }
+}
+
+if ($search) {
+    $where .= " AND (full_name LIKE '%$search%' OR city LIKE '%$search%' OR caste LIKE '%$search%') ";
+}
+
+if ($my_profile_id) {
+    $where .= " AND id != '$my_profile_id' ";
+}
+
+// Special case for 'connected' (used by ConnectedScreen.tsx)
 if ($type === 'connected' && $my_profile_id) {
-    $query .= " AND mp.id IN (
+    $where .= " AND id IN (
         SELECT sender_id FROM tbl_proposals WHERE receiver_id='$my_profile_id' AND status IN ('friend', 'accepted')
         UNION
         SELECT receiver_id FROM tbl_proposals WHERE sender_id='$my_profile_id' AND status IN ('friend', 'accepted')
     )";
 }
 
-// 3. Apply Filters (Exactly as website)
-if($gender) $query .= " AND mp.gender='$gender'";
-if($city) $query .= " AND mp.city LIKE '%$city%'";
-if($education) $query .= " AND mp.education LIKE '%$education%'";
+$query = "
+    SELECT mp.*, m.status as user_status, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age 
+    FROM tbl_marriage_profiles mp
+    JOIN tbl_members m ON mp.user_id = m.id
+    $where AND m.status != 'Blocked'
+    ORDER BY mp.id DESC 
+    LIMIT $limit OFFSET $offset
+";
 
-if($age_group){
-    $range = explode('-',$age_group);
-    if(count($range)==2){
-        $min = (int)$range[0];
-        $max = (int)$range[1];
-        $query .= " AND TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) BETWEEN $min AND $max";
-    }
-}
-
-// Search (App specific enhancement)
-if($search){
-    $query .= " AND (mp.full_name LIKE '%$search%' OR mp.city LIKE '%$search%' OR mp.caste LIKE '%$search%')";
-}
-
-// Order and Pagination
-$query .= " ORDER BY mp.id DESC LIMIT $limit OFFSET $offset";
-
-$result = $con->query($query);
+$res = $con->query($query);
 $profiles = [];
 $profile_ids = [];
 
-if($result){
-    while($row = $result->fetch_assoc()){
-        // Proposal check per row (Consistent with website logic)
-        $proposal_status = 'none';
-        $proposal_check = $con->query("
-            SELECT status, sender_id 
-            FROM tbl_proposals
-            WHERE (sender_id='$my_profile_id' AND receiver_id='".$row['id']."')
-               OR (sender_id='".$row['id']."' AND receiver_id='$my_profile_id')
-            ORDER BY id DESC LIMIT 1
-        ");
-
-        if($proposal_check && $proposal_check->num_rows > 0){
-            $p = $proposal_check->fetch_assoc();
-            $status = strtolower($p['status']);
-            if($status == 'pending'){
-                $proposal_status = ($p['sender_id'] == $my_profile_id) ? 'sent' : 'received';
-            } else {
-                $proposal_status = $status;
-            }
-        }
-        
-        $row['proposal_status'] = $proposal_status;
+if ($res) {
+    while ($row = $res->fetch_assoc()) {
         $profiles[] = $row;
+        $profile_ids[] = $row['id'];
     }
+}
+
+// Batch Query for proposal statuses
+$proposal_map = [];
+if (!empty($profile_ids) && $my_profile_id) {
+    $ids_str = implode(',', array_map('intval', $profile_ids));
+    $pq = $con->query("
+        SELECT sender_id, receiver_id, status 
+        FROM tbl_proposals 
+        WHERE (sender_id = '$my_profile_id' AND receiver_id IN ($ids_str)) 
+           OR (receiver_id = '$my_profile_id' AND sender_id IN ($ids_str))
+    ");
+
+    if ($pq) {
+        while ($p = $pq->fetch_assoc()) {
+            $other_id = ($p['sender_id'] == $my_profile_id) ? $p['receiver_id'] : $p['sender_id'];
+            $status = $p['status'];
+            if ($status == 'pending') {
+                $status = ($p['sender_id'] == $my_profile_id) ? 'sent' : 'received';
+            }
+            $proposal_map[$other_id] = $status;
+        }
+    }
+}
+
+// Map statuses back to profiles
+foreach ($profiles as &$row) {
+    $row['proposal_status'] = $proposal_map[$row['id']] ?? null;
 }
 
 echo json_encode([
     "status" => "success",
     "data" => $profiles,
-    "my_profile_id" => $my_profile_id,
-    "request_count" => 0 // Optional: count requests if needed
+    "my_profile_id" => (int)$my_profile_id,
+    "request_count" => (int)$request_count
 ]);
 ?>
