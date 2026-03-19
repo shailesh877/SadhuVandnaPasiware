@@ -16,7 +16,8 @@ $safe_query = mysqli_real_escape_string($con, $query);
 $users = [];
 $user_sql = "SELECT id, name, profile_photo, city 
              FROM tbl_members 
-             WHERE name LIKE '%$safe_query%' OR city LIKE '%$safe_query%' 
+             WHERE (name LIKE '%$safe_query%' OR city LIKE '%$safe_query%') 
+             AND status != 'Blocked' 
              LIMIT 20";
 $user_res = $con->query($user_sql);
 
@@ -41,8 +42,9 @@ $posts = [];
 // Based on get_posts.php, it uses 'status' as description.
 $post_sql = "SELECT p.*, m.name, m.profile_photo 
              FROM tbl_posts p 
-             LEFT JOIN tbl_members m ON p.user_id = m.id 
+             JOIN tbl_members m ON p.user_id = m.id 
              WHERE p.status LIKE '%$safe_query%' 
+             AND m.status != 'Blocked' 
              ORDER BY p.id DESC 
              LIMIT 20";
 $post_res = $con->query($post_sql);
