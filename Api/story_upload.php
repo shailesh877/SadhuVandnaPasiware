@@ -11,9 +11,11 @@ if (!$user_id) {
 }
 
 if (!$file || empty($file['name'])) {
+    error_log("story_upload.php: No file uploaded for user_id $user_id");
     echo json_encode(["status" => "error", "message" => "No file uploaded"]);
     exit;
 }
+error_log("story_upload.php: Received file: " . $file['name'] . " size: " . $file['size'] . " type: " . $file['type']);
 
 $uploadDir = "../uploads/stories/";
 if (!file_exists($uploadDir)) mkdir($uploadDir, 0755, true);
@@ -50,6 +52,7 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
         echo json_encode(["status" => "error", "message" => "Database error"]);
     }
 } else {
+    error_log("story_upload.php: Failed to move uploaded file to $targetFile. Tmp path: " . $file['tmp_name']);
     echo json_encode(["status" => "error", "message" => "Failed to move uploaded file"]);
 }
 ?>
