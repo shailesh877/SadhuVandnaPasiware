@@ -82,10 +82,11 @@ if ($type === 'connected' && $my_profile_id) {
 }
 
 $query = "
-    SELECT *, TIMESTAMPDIFF(YEAR, STR_TO_DATE(dob,'%Y-%m-%d'), CURDATE()) AS age 
-    FROM tbl_marriage_profiles 
-    $where 
-    ORDER BY id DESC 
+    SELECT mp.*, m.status as user_status, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age 
+    FROM tbl_marriage_profiles mp
+    JOIN tbl_members m ON mp.user_id = m.id
+    $where AND m.status != 'Blocked'
+    ORDER BY mp.id DESC 
     LIMIT $limit OFFSET $offset
 ";
 
