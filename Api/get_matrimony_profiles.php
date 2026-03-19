@@ -30,6 +30,15 @@ JOIN tbl_members m ON m.id = mp.user_id
 WHERE m.status != 'Blocked' AND mp.id != '$my_profile_id'
 ";
 
+// Special case for 'connected' (Matches)
+if ($type === 'connected' && $my_profile_id) {
+    $query .= " AND mp.id IN (
+        SELECT sender_id FROM tbl_proposals WHERE receiver_id='$my_profile_id' AND status IN ('friend', 'accepted')
+        UNION
+        SELECT receiver_id FROM tbl_proposals WHERE sender_id='$my_profile_id' AND status IN ('friend', 'accepted')
+    )";
+}
+
 // 3. Apply Filters (Exactly as website)
 if($gender) $query .= " AND mp.gender='$gender'";
 if($city) $query .= " AND mp.city LIKE '%$city%'";
