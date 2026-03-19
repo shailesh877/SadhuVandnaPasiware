@@ -30,13 +30,19 @@ try {
         $con->query("ALTER TABLE tbl_blocked_users ADD COLUMN chat_platform VARCHAR(20) DEFAULT 'marriage'");
     }
 
+    // Fix Unique constraints - Drop old if exists and add new composite
+    // Note: We use a custom flag or just try-catch to avoid errors if already done
+    $con->query("ALTER TABLE tbl_blocked_users DROP INDEX blocker_id, DROP INDEX blocked_id"); // Drop individual if they exist
+    $con->query("ALTER TABLE tbl_blocked_users DROP INDEX unique_block"); // Drop old composite if exists
+    $con->query("ALTER TABLE tbl_blocked_users ADD UNIQUE INDEX unique_block (blocker_id, blocked_id, chat_platform)");
+
     if ($action === 'block') {
-        $stmt = $con->prepare("INSERT IGNORE INTO tbl_blocked_users (blocker_id, blocked_id, chat_platform) VALUES (?, ?, ?)");
+        $stmt = $con->prepare("INSERT INTO tbl_blocked_users (blocker_id, blocked_id, chat_platform) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE chat_platform=VALUES(chat_platform)");
         $stmt->bind_param("iis", $my_id, $target_id, $platform);
         if ($stmt->execute()) {
             echo json_encode(["status" => "success", "action" => "blocked"]);
         } else {
-            echo json_encode(["status" => "error", "message" => "Failed to block user"]);
+            echo json_encode(["status" => "error", "message" => "Failed to block user: ".$stmt->error]);
         }
     } elseif ($action === 'unblock') {
         $stmt = $con->prepare("DELETE FROM tbl_blocked_users WHERE blocker_id=? AND blocked_id=? AND chat_platform=?");
