@@ -30,16 +30,22 @@ try {
         exit;
     }
 
-    // Get My Profile ID
-    $mq = $con->query("SELECT id FROM tbl_marriage_profiles WHERE user_id='$user_id'");
+    // Get My Profile ID (Ensure user_id search is robust)
+    $mq = $con->query("SELECT id FROM tbl_marriage_profiles WHERE user_id='$user_id' LIMIT 1");
     $my_profile_id = ($mq && $mq->num_rows > 0) ? $mq->fetch_assoc()['id'] : 0;
 
     // Building Query (Mirroring Website fetch_profiles.php)
     $where = " WHERE 1 ";
 
     if ($gender) $where .= " AND mp.gender = '$gender' ";
-    if ($city) $where .= " AND mp.city LIKE '%$city%' ";
-    if ($education) $where .= " AND mp.education LIKE '%$education%' ";
+    if ($city) {
+        $cleanCity = $con->real_escape_string($city);
+        $where .= " AND mp.city LIKE '%$cleanCity%' ";
+    }
+    if ($education) {
+        $cleanEdu = $con->real_escape_string($education);
+        $where .= " AND mp.education LIKE '%$cleanEdu%' ";
+    }
 
     // Age Filter (Website Style)
     if ($age_group) {
@@ -52,19 +58,16 @@ try {
     }
 
     if ($search) {
-        $where .= " AND (mp.full_name LIKE '%$search%' OR mp.city LIKE '%$search%' OR mp.caste LIKE '%$search%') ";
+        $cleanSearch = $con->real_escape_string($search);
+        $where .= " AND (mp.full_name LIKE '%$cleanSearch%' OR mp.city LIKE '%$cleanSearch%' OR mp.caste LIKE '%$cleanSearch%') ";
     }
 
-    if ($my_profile_id) {
-        $where .= " AND mp.id != '$my_profile_id' ";
-    }
-
-    // Connected Profiles Logic (Matches)
+    // Connected Profiles Logic (Matches) - Ensure both directions are fully covered
     if ($type === 'connected' && $my_profile_id) {
         $where .= " AND mp.id IN (
-            SELECT sender_id FROM tbl_proposals WHERE receiver_id='$my_profile_id' AND status IN ('friend', 'accepted')
+            SELECT p.sender_id FROM tbl_proposals p WHERE p.receiver_id='$my_profile_id' AND p.status IN ('friend', 'accepted')
             UNION
-            SELECT receiver_id FROM tbl_proposals WHERE sender_id='$my_profile_id' AND status IN ('friend', 'accepted')
+            SELECT p.receiver_id FROM tbl_proposals p WHERE p.sender_id='$my_profile_id' AND p.status IN ('friend', 'accepted')
         )";
     }
 
