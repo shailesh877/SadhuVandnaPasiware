@@ -103,10 +103,14 @@ if ($filter_user_id > 0) {
 }
 
 // Fetch posts matching website logic (tbl_posts p JOIN tbl_members m)
+// Exclude blocked users
+$whereBlocked = "m.status != 'Blocked'";
+$finalWhere = $whereClause ? "$whereClause AND $whereBlocked" : "WHERE $whereBlocked";
+
 $query = "SELECT p.*, m.name, m.profile_photo 
           FROM tbl_posts p
-          LEFT JOIN tbl_members m ON p.user_id = m.id 
-          $whereClause
+          JOIN tbl_members m ON p.user_id = m.id 
+          $finalWhere
           ORDER BY p.id DESC
           LIMIT $limit OFFSET $offset";
 
