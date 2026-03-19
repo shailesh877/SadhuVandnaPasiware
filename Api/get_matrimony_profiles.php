@@ -82,7 +82,12 @@ if ($type === 'connected' && $my_profile_id) {
 }
 
 $query = "
-    SELECT mp.*, m.status as user_status, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age 
+    SELECT mp.*, m.status as user_status, 
+    CASE 
+        WHEN mp.dob REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE())
+        WHEN mp.dob REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4}$' THEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%d-%m-%Y'), CURDATE())
+        ELSE 0 
+    END AS age 
     FROM tbl_marriage_profiles mp
     JOIN tbl_members m ON mp.user_id = m.id
     $where AND m.status != 'Blocked'
