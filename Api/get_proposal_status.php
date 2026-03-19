@@ -1,53 +1,42 @@
 <?php
-include 'headers.php';
-include 'connection.php';
+include("connection.php");
 
-$user_id = $_GET['user_id'] ?? '';
-$receiver_profile_id = $_GET['receiver_id'] ?? '';
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header("Access-Control-Allow-Methods: POST, GET");
+header("Access-Control-Allow-Headers: Content-Type");
 
-if(!$user_id || !$receiver_profile_id){
-    echo json_encode(["status" => "error", "message" => "Invalid parameters"]);
-    exit;
-}
+// Handle both JSON and FormData
+$json = file_get_contents('php://input');
+$data_input = json_decode($json, true);
 
-// 1. Get Sender's Marriage Profile ID
-$stmt = $con->prepare("SELECT id FROM tbl_marriage_profiles WHERE user_id=? LIMIT 1");
-$stmt->bind_param("s", $user_id);
-$stmt->execute();
-$sender_res = $stmt->get_result();
+$user_id = intval($_REQUEST['user_id'] ?? $data_input['user_id'] ?? 0);
+$receiver_id = intval($_REQUEST['receiver_id'] ?? $data_input['receiver_id'] ?? 0);
 
-if($sender_res->num_rows == 0){
-    // If current user doesn't have a marriage profile, status is always 'none'
+if (!$user_id || !$receiver_id) {
     echo json_encode(["status" => "success", "proposal_status" => "none"]);
     exit;
 }
 
-$sender_profile_id = $sender_res->fetch_assoc()['id'];
+// Get Marriage Profile ID for sender
+$mq = $con->query("SELECT id FROM tbl_marriage_profiles WHERE user_id='$user_id' LIMIT 1");
+$my_profile_id = ($mq && $mq->num_rows > 0) ? $mq->fetch_assoc()['id'] : 0;
 
-// 2. Check Proposal Status
-// Check outgoing: sender -> receiver
-$stmt_out = $con->prepare("SELECT status FROM tbl_proposals WHERE sender_id=? AND receiver_id=? ORDER BY id DESC LIMIT 1");
-$stmt_out->bind_param("ss", $sender_profile_id, $receiver_profile_id);
-$stmt_out->execute();
-$out_res = $stmt_out->get_result();
-
-if($out_res->num_rows > 0){
-    $status = $out_res->fetch_assoc()['status'];
-    echo json_encode(["status" => "success", "proposal_status" => $status, "direction" => "outgoing"]);
+if (!$my_profile_id) {
+    echo json_encode(["status" => "success", "proposal_status" => "none"]);
     exit;
 }
 
-// Check incoming: receiver -> sender (Maybe they sent us a request?)
-$stmt_in = $con->prepare("SELECT status FROM tbl_proposals WHERE sender_id=? AND receiver_id=? ORDER BY id DESC LIMIT 1");
-$stmt_in->bind_param("ss", $receiver_profile_id, $sender_profile_id);
-$stmt_in->execute();
-$in_res = $stmt_in->get_result();
+$pq = $con->query("SELECT status, sender_id FROM tbl_proposals WHERE (sender_id='$my_profile_id' AND receiver_id='$receiver_id') OR (sender_id='$receiver_id' AND receiver_id='$my_profile_id') LIMIT 1");
+$status = 'none';
 
-if($in_res->num_rows > 0){
-    $status = $in_res->fetch_assoc()['status'];
-    echo json_encode(["status" => "success", "proposal_status" => $status, "direction" => "incoming"]);
-    exit;
+if ($pq && $pq->num_rows > 0) {
+    $p = $pq->fetch_assoc();
+    $status = $p['status'];
+    if ($status == 'pending') {
+        $status = ($p['sender_id'] == $my_profile_id) ? 'pending' : 'received';
+    }
 }
 
-echo json_encode(["status" => "success", "proposal_status" => "none"]);
+echo json_encode(["status" => "success", "proposal_status" => $status]);
 ?>
