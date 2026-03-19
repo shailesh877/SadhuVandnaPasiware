@@ -60,7 +60,7 @@ if ($age_group) {
         $current_date = date('Y-m-d');
         $min_dob = date('Y-m-d', strtotime("-$max_age years -1 year +1 day"));
         $max_dob = date('Y-m-d', strtotime("-$min_age years"));
-        $where .= " AND dob BETWEEN '$min_dob' AND '$max_dob' ";
+        $where .= " AND mp.dob BETWEEN '$min_dob' AND '$max_dob' ";
     }
 }
 
@@ -90,7 +90,7 @@ $query = "
     END AS age 
     FROM tbl_marriage_profiles mp
     JOIN tbl_members m ON mp.user_id = m.id
-    $where AND m.status != 'Blocked'
+    $where AND (m.status != 'Blocked' OR m.status IS NULL)
     ORDER BY mp.id DESC 
     LIMIT $limit OFFSET $offset
 ";
