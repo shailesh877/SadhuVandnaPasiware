@@ -3,11 +3,9 @@ include("connection.php");
 include("push_helper.php");
 header('Content-Type: application/json');
 
-// Get action
-$action = $_REQUEST['action'] ?? '';
-
-// Support both POST (form-data/json) and GET
+// Get action from request or JSON input
 $input = json_decode(file_get_contents("php://input"), true);
+$action = $_REQUEST['action'] ?? $input['action'] ?? '';
 $current_user_id = intval($_POST['current_user_id'] ?? $input['current_user_id'] ?? $_GET['current_user_id'] ?? 0);
 
 if(!$current_user_id){
