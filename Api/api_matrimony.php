@@ -48,7 +48,13 @@ if($action == 'fetch_profiles'){
             $max = intval($parts[1]);
             // Age = (CURDATE - dob)
             // dob BETWEEN CURDATE - max years AND CURDATE - min years
-            $where .= " AND TIMESTAMPDIFF(YEAR, STR_TO_DATE(dob,'%Y-%m-%d'), CURDATE()) BETWEEN $min AND $max ";
+            $where .= " AND (
+                CASE 
+                    WHEN dob REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(dob,'%Y-%m-%d'), CURDATE())
+                    WHEN dob REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4}$' THEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(dob,'%d-%m-%Y'), CURDATE())
+                    ELSE 0 
+                END
+            ) BETWEEN $min AND $max ";
         }
     }
 
@@ -62,7 +68,12 @@ if($action == 'fetch_profiles'){
     }
 
     $files = [];
-    $res = $con->query("SELECT *, TIMESTAMPDIFF(YEAR, STR_TO_DATE(dob,'%Y-%m-%d'), CURDATE()) AS age FROM tbl_marriage_profiles $where ORDER BY id DESC");
+    $res = $con->query("SELECT *, 
+    CASE 
+        WHEN dob REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(dob,'%Y-%m-%d'), CURDATE())
+        WHEN dob REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4}$' THEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(dob,'%d-%m-%Y'), CURDATE())
+        ELSE 0 
+    END AS age FROM tbl_marriage_profiles $where ORDER BY id DESC");
     
     while($row = $res->fetch_assoc()){
         // Check proposal status if logged in
@@ -214,7 +225,13 @@ if($action == 'fetch_my_requests'){
     while($r = $cq1->fetch_assoc()) $connected[] = $r;
     
     // Where I am receiver AND status=friend
-    $cq2 = $con->query("SELECT p.*, mp.full_name, mp.photo, mp.city, mp.education, mp.user_id, mp.id as friend_profile_id, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age FROM tbl_proposals p JOIN tbl_marriage_profiles mp ON p.sender_id = mp.id WHERE p.receiver_id='$my_profile_id' AND p.status='friend'");
+    $cq2 = $con->query("SELECT p.*, mp.full_name, mp.photo, mp.city, mp.education, mp.user_id, mp.id as friend_profile_id, 
+    CASE 
+        WHEN mp.dob REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE())
+        WHEN mp.dob REGEXP '^[0-9]{2}-[0-9]{2}-[0-9]{4}$' THEN TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%d-%m-%Y'), CURDATE())
+        ELSE 0 
+    END AS age 
+    FROM tbl_proposals p JOIN tbl_marriage_profiles mp ON p.sender_id = mp.id WHERE p.receiver_id='$my_profile_id' AND p.status='friend'");
     while($r = $cq2->fetch_assoc()) $connected[] = $r;
 
     echo json_encode(["status" => "success", "sent" => $sent, "received" => $received, "connected" => $connected]);
