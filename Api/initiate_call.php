@@ -1,81 +1,52 @@
 <?php
-include("connection.php");
-include("push_helper.php");
-header('Content-Type: application/json');
+include 'headers.php';
+include 'connection.php';
+include 'push_helper.php';
 
-date_default_timezone_set('Asia/Kolkata');
+// Handle JSON Input
+$json = file_get_contents('php://input');
+$data = json_decode($json, true);
 
-$caller_id   = $_POST['caller_id']   ?? 0;
-$receiver_id = $_POST['receiver_id'] ?? 0;
-$type        = $_POST['type']        ?? 'video';
-$peer_id     = $_POST['peer_id']     ?? '';
-$platform    = $_POST['platform']    ?? 'marriage';
+$caller_id = intval($_REQUEST['caller_id'] ?? $data['caller_id'] ?? 0);
+$receiver_id = intval($_REQUEST['receiver_id'] ?? $data['receiver_id'] ?? 0);
+$type = $_REQUEST['type'] ?? $data['type'] ?? 'video';
+$platform = $_REQUEST['platform'] ?? $data['platform'] ?? 'marriage';
+$peer_id = $_REQUEST['peer_id'] ?? $data['peer_id'] ?? '';
 
-if (!$caller_id || !$receiver_id || !$peer_id) {
-    echo json_encode([
-        "status" => false,
-        "message" => "Missing required parameters"
-    ]);
+if(!$caller_id || !$receiver_id){
+    echo json_encode(["status" => "error", "message" => "Invalid IDs"]);
     exit;
 }
 
-// End previous ringing calls (avoid duplicate)
-$con->query("
-    UPDATE tbl_calls 
-    SET status='ended' 
-    WHERE caller_id='$caller_id' 
-    AND receiver_id='$receiver_id' 
-    AND status='ringing'
-");
+try {
+    // 1. Get Receiver FCM Token
+    $target_member = $con->query("
+        SELECT m.fcm_token 
+        FROM tbl_members m 
+        JOIN tbl_marriage_profiles mp ON mp.user_id = m.id 
+        WHERE mp.id = '$receiver_id'
+    ")->fetch_assoc();
 
-// AUTO-MIGRATION: Ensure platform column exists (Safe Check)
-$res = $con->query("SHOW COLUMNS FROM tbl_calls LIKE 'platform'");
-if ($res && $res->num_rows == 0) {
-    $con->query("ALTER TABLE tbl_calls ADD COLUMN platform VARCHAR(50) DEFAULT 'marriage' AFTER type");
-}
+    $token = $target_member['fcm_token'] ?? null;
 
-$stmt = $con->prepare("
-    INSERT INTO tbl_calls 
-    (caller_id, receiver_id, type, platform, status, caller_peer_id) 
-    VALUES (?, ?, ?, ?, 'ringing', ?)
-");
-$stmt->bind_param("iisss", $caller_id, $receiver_id, $type, $platform, $peer_id);
+    // 2. Get Caller Name
+    $caller = $con->query("SELECT full_name FROM tbl_marriage_profiles WHERE id='$caller_id'")->fetch_assoc();
+    $caller_name = $caller['full_name'] ?? "Someone";
 
-if ($stmt->execute()) {
-    // Send Push Notification
-    $r_user_id = 0;
-    if ($platform == 'marriage') {
-        // receiver_id is the Marriage Profile ID, find the owner's tbl_members.id
-        $uQ = $con->query("SELECT user_id FROM tbl_marriage_profiles WHERE id = '$receiver_id' LIMIT 1");
-        if ($uQ && $uQ->num_rows > 0) {
-            $r_user_id = $uQ->fetch_assoc()['user_id'];
-        }
-    } else {
-        // Community: receiver_id is already the tbl_members.id
-        $r_user_id = $receiver_id;
+    if($token){
+        $push_data = [
+            "type" => "incoming_call",
+            "caller_id" => (string)$caller_id,
+            "caller_name" => $caller_name,
+            "call_type" => $type,
+            "channel_id" => $peer_id,
+            "platform" => $platform
+        ];
+        sendPush($token, "Incoming $type call", "From $caller_name", $push_data);
     }
 
-    if ($r_user_id) {
-        sendExpoPushNotification($con, $r_user_id, "Incoming Call", "Incoming call...", [
-            "channelId" => "incoming_calls",
-            "sound" => "ringtone",
-            "peer_id" => $peer_id,
-            "caller_id" => $caller_id,
-            "type" => $type,
-            "platform" => $platform,
-            "is_call" => true
-        ]);
-    }
-
-    echo json_encode([
-        "status" => true,
-        "call_id" => $con->insert_id,
-        "message" => "Call initiated"
-    ]);
-} else {
-    echo json_encode([
-        "status" => false,
-        "message" => "Call failed"
-    ]);
+    echo json_encode(["status" => "success", "message" => "Call Signal Sent"]);
+} catch (Exception $e) {
+    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
 }
 ?>
