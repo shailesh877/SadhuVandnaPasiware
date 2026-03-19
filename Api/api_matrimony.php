@@ -70,7 +70,7 @@ try {
             FROM tbl_proposals p
             INNER JOIN tbl_marriage_profiles mp ON mp.id = IF(p.sender_id='$my_profile_id', p.receiver_id, p.sender_id)
             WHERE (p.sender_id='$my_profile_id' OR p.receiver_id='$my_profile_id')
-            AND p.status='friend'
+            AND p.status IN ('friend', 'accepted')
             ORDER BY p.id DESC
         ");
         if ($cq) {
