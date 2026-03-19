@@ -103,6 +103,9 @@ if ($res) {
         $profiles[] = $row;
         $profile_ids[] = $row['id'];
     }
+} else {
+    echo json_encode(["status" => "error", "message" => "SQL Error: " . $con->error]);
+    exit;
 }
 
 // Batch Query for proposal statuses
