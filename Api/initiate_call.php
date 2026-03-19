@@ -42,7 +42,7 @@ try {
             "channel_id" => $peer_id,
             "platform" => $platform
         ];
-        sendPush($token, "Incoming $type call", "From $caller_name", $push_data);
+        sendExpoPushNotification($con, $receiver_id, "Incoming $type call", "From $caller_name", $push_data);
     }
 
     echo json_encode(["status" => "success", "message" => "Call Signal Sent"]);
