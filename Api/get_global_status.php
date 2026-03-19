@@ -3,6 +3,9 @@
 error_reporting(0);
 include("connection.php");
 
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Content-Type: application/json");
 date_default_timezone_set("Asia/Kolkata");
@@ -14,8 +17,11 @@ $response = [
     "my_profile_id" => null
 ];
 
-// RN se user_id aayega
-$user_id = $_POST['user_id'] ?? 0;
+// Handle JSON Input
+$json = file_get_contents('php://input');
+$data = json_decode($json, true);
+
+$user_id = intval($_REQUEST['user_id'] ?? $data['user_id'] ?? 0);
 
 if (!$user_id) {
     echo json_encode($response);
