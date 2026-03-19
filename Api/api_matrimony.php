@@ -39,6 +39,9 @@ if($action == 'fetch_profiles'){
     if($gender) $where .= " AND gender = '$gender' ";
     if($city) $where .= " AND city LIKE '%$city%' ";
     if($education) $where .= " AND education LIKE '%$education%' ";
+    if($search){
+        $where .= " AND (full_name LIKE '%$search%' OR city LIKE '%$search%' OR caste LIKE '%$search%') ";
+    }
 
     // Age Filter
     if($age_group){
@@ -63,14 +66,8 @@ if($action == 'fetch_profiles'){
         $where .= " AND id != '$my_profile_id' ";
     }
     
-    // Global and individual blocks
-    $where .= " AND user_id NOT IN (
-        SELECT id FROM tbl_members WHERE status = 'Blocked'
-        UNION
-        SELECT blocked_id FROM tbl_blocked_users WHERE blocker_id = '$user_id'
-        UNION
-        SELECT blocker_id FROM tbl_blocked_users WHERE blocked_id = '$user_id'
-    ) ";
+    // Global blocks only (safe version)
+    $where .= " AND user_id NOT IN (SELECT id FROM tbl_members WHERE status = 'Blocked') ";
 
     $files = [];
     $res = $con->query("SELECT *, 
