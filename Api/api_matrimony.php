@@ -100,7 +100,7 @@ try {
         echo json_encode(["status" => "success", "message" => "Removed/Cancelled"]);
         exit;
     }
-
+    
     echo json_encode(["status" => "error", "message" => "Invalid Action"]);
 
 } catch (Exception $e) {
