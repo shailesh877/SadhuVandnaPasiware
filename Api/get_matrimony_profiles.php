@@ -80,6 +80,15 @@ if ($type === 'connected' && $my_profile_id) {
     )";
 }
 
+// Automatic table creation if missing
+$con->query("CREATE TABLE IF NOT EXISTS tbl_blocked_users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    blocker_id INT NOT NULL,
+    blocked_id INT NOT NULL,
+    chat_platform VARCHAR(20) DEFAULT 'marriage',
+    UNIQUE KEY (blocker_id, blocked_id, chat_platform)
+)");
+
 $query = "
     SELECT mp.*, 
     CASE 
@@ -90,11 +99,6 @@ $query = "
     FROM tbl_marriage_profiles mp
     LEFT JOIN tbl_members m ON mp.user_id = m.id
     $where AND (m.status != 'Blocked' OR m.status IS NULL)
-    AND mp.user_id NOT IN (
-        SELECT blocked_id FROM tbl_blocked_users WHERE blocker_id = '$user_id'
-        UNION
-        SELECT blocker_id FROM tbl_blocked_users WHERE blocked_id = '$user_id'
-    )
     ORDER BY mp.id DESC 
     LIMIT $limit OFFSET $offset
 ";
