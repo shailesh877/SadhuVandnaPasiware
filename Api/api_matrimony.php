@@ -9,6 +9,22 @@ include 'push_helper.php';
 
 header('Content-Type: application/json');
 
+// Global Error Handler to catch fatal errors and return JSON
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && ($error['type'] === E_ERROR || $error['type'] === E_PARSE || $error['type'] === E_COMPILE_ERROR)) {
+        echo json_encode([
+            "status" => "error", 
+            "message" => "Fatal Error: " . $error['message'],
+            "file" => $error['file'],
+            "line" => $error['line']
+        ]);
+        exit;
+    }
+});
+
+try {
+
 $action = $_REQUEST['action'] ?? '';
 $user_id = $_REQUEST['user_id'] ?? 0; // The App User ID (tbl_members.id)
 
@@ -237,5 +253,12 @@ if ($action == 'fetch_my_requests') {
     exit;
 }
 
-echo json_encode(["status" => "error", "message" => "Invalid action"]);
+} catch (Throwable $e) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "Exception: " . $e->getMessage(),
+        "file" => $e->getFile(),
+        "line" => $e->getLine()
+    ]);
+}
 ?>
