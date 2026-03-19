@@ -39,12 +39,11 @@ function getProfileId($con, $uid) {
 
 $my_profile_id = getProfileId($con, $user_id);
 
-// Count pending requests
-$request_count = 0;
-if ($my_profile_id) {
-    $rq = $con->query("SELECT COUNT(*) FROM tbl_proposals WHERE receiver_id='$my_profile_id' AND status='pending'");
-    $request_count = ($rq) ? $rq->fetch_row()[0] : 0;
-}
+// --- SUPER DEBUG ---
+$total_in_mp = $con->query("SELECT COUNT(*) FROM tbl_marriage_profiles")->fetch_row()[0];
+$total_in_members = $con->query("SELECT COUNT(*) FROM tbl_members")->fetch_row()[0];
+$user_exists = $con->query("SELECT COUNT(*) FROM tbl_members WHERE id='$user_id'")->fetch_row()[0];
+// -------------------
 
 $where = " WHERE 1 ";
 if ($gender)    $where .= " AND gender = '$gender' ";
@@ -89,7 +88,13 @@ $query = "
         ELSE 0 
     END AS age 
     FROM tbl_marriage_profiles mp
-    $where
+    LEFT JOIN tbl_members m ON mp.user_id = m.id
+    $where AND (m.status != 'Blocked' OR m.status IS NULL)
+    AND mp.user_id NOT IN (
+        SELECT blocked_id FROM tbl_blocked_users WHERE blocker_id = '$user_id'
+        UNION
+        SELECT blocker_id FROM tbl_blocked_users WHERE blocked_id = '$user_id'
+    )
     ORDER BY mp.id DESC 
     LIMIT $limit OFFSET $offset
 ";
@@ -140,6 +145,13 @@ echo json_encode([
     "status" => "success",
     "data" => $profiles,
     "my_profile_id" => (int)$my_profile_id,
-    "request_count" => (int)$request_count
+    "request_count" => (int)$request_count,
+    "debug" => [
+        "total_profiles" => (int)$total_in_mp,
+        "total_members" => (int)$total_in_members,
+        "user_exists" => (int)$user_exists,
+        "passed_user_id" => $user_id,
+        "query" => $query
+    ]
 ]);
 ?>
