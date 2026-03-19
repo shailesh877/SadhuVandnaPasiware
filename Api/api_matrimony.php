@@ -207,7 +207,7 @@ if ($action == 'fetch_my_requests') {
         exit;
     }
 
-    // Sent
+    // Sent Requests
     $sent = [];
     $sq = $con->query("SELECT p.*, mp.full_name, mp.photo, mp.city, mp.education, mp.user_id, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age, mp.caste FROM tbl_proposals p JOIN tbl_marriage_profiles mp ON p.receiver_id = mp.id WHERE p.sender_id='$my_profile_id' AND p.status='pending'");
     if ($sq) {
@@ -223,18 +223,17 @@ if ($action == 'fetch_my_requests') {
             $received[] = $r;
     }
 
-    // Connected (Friends) - for tab
-    // We need 'connected' logic too since the App request screen has a 'Connected' tab.
+    // Connected (Matches)
     $connected = [];
-    // Where I am sender AND status=friend
-    $cq1 = $con->query("SELECT p.*, mp.full_name, mp.photo, mp.city, mp.education, mp.user_id, mp.id as friend_profile_id, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age FROM tbl_proposals p JOIN tbl_marriage_profiles mp ON p.receiver_id = mp.id WHERE p.sender_id='$my_profile_id' AND p.status='friend'");
+    // Where I am sender AND status=friend/accepted
+    $cq1 = $con->query("SELECT p.*, mp.full_name, mp.photo, mp.city, mp.education, mp.user_id, mp.id as friend_profile_id, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age FROM tbl_proposals p JOIN tbl_marriage_profiles mp ON p.receiver_id = mp.id WHERE p.sender_id='$my_profile_id' AND p.status IN ('friend', 'accepted')");
     if ($cq1) {
         while ($r = $cq1->fetch_assoc())
             $connected[] = $r;
     }
 
-    // Where I am receiver AND status=friend
-    $cq2 = $con->query("SELECT p.*, mp.full_name, mp.photo, mp.city, mp.education, mp.user_id, mp.id as friend_profile_id, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age FROM tbl_proposals p JOIN tbl_marriage_profiles mp ON p.sender_id = mp.id WHERE p.receiver_id='$my_profile_id' AND p.status='friend'");
+    // Where I am receiver AND status=friend/accepted
+    $cq2 = $con->query("SELECT p.*, mp.full_name, mp.photo, mp.city, mp.education, mp.user_id, mp.id as friend_profile_id, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age FROM tbl_proposals p JOIN tbl_marriage_profiles mp ON p.sender_id = mp.id WHERE p.receiver_id='$my_profile_id' AND p.status IN ('friend', 'accepted')");
     if ($cq2) {
         while ($r = $cq2->fetch_assoc())
             $connected[] = $r;
