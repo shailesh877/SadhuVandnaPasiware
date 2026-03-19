@@ -32,7 +32,7 @@ function sendExpoPushNotification($con, $receiver_id, $title, $body, $data = [])
                 "data" => $data,
                 "sound" => "default",
                 "priority" => "high",
-                "channelId" => "default"
+                "channelId" => $data['channelId'] ?? "default"
             ];
 
             $json = json_encode($payload);
