@@ -1,21 +1,9 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-header('Access-Control-Allow-Origin: *');
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit;
-}
+include("headers.php"); // Updated headers with OPTIONS support
+include("connection.php");
+include("push_helper.php");
 
 try {
-    include("connection.php");
-    include("push_helper.php");
-
     // Handle both JSON and FormData
     $json = file_get_contents('php://input');
     $data_input = json_decode($json, true);
@@ -70,7 +58,7 @@ try {
     }
 
 } catch (Exception $e) {
-    file_put_contents('debug_proposal.txt', "Error: ".$e->getMessage()."\n", FILE_APPEND);
-    echo json_encode(["status" => "error", "message" => "System error occurred"]);
+    file_put_contents('debug_proposal.txt', date('Y-m-d H:i:s')." | Error: ".$e->getMessage()."\n", FILE_APPEND);
+    echo json_encode(["status" => "error", "message" => "System error occurred: ".$e->getMessage()]);
 }
 ?>
