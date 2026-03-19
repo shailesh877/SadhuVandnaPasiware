@@ -17,7 +17,8 @@ $stmt->execute();
 $sender_res = $stmt->get_result();
 
 if($sender_res->num_rows == 0){
-    echo json_encode(["status" => "error", "message" => "No profile"]);
+    // If current user doesn't have a marriage profile, status is always 'none'
+    echo json_encode(["status" => "success", "proposal_status" => "none"]);
     exit;
 }
 
