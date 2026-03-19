@@ -30,11 +30,15 @@ try {
         $con->query("ALTER TABLE tbl_blocked_users ADD COLUMN chat_platform VARCHAR(20) DEFAULT 'marriage'");
     }
 
-    // Fix Unique constraints - Drop old if exists and add new composite
-    // Note: We use a custom flag or just try-catch to avoid errors if already done
-    $con->query("ALTER TABLE tbl_blocked_users DROP INDEX blocker_id, DROP INDEX blocked_id"); // Drop individual if they exist
-    $con->query("ALTER TABLE tbl_blocked_users DROP INDEX unique_block"); // Drop old composite if exists
-    $con->query("ALTER TABLE tbl_blocked_users ADD UNIQUE INDEX unique_block (blocker_id, blocked_id, chat_platform)");
+    // Robust index management: Check if unique_block already exists
+    $idx_check = $con->query("SHOW INDEX FROM tbl_blocked_users WHERE Key_name = 'unique_block'");
+    if ($idx_check && $idx_check->num_rows == 0) {
+        // Try to drop old ones IF they exist (ignoring errors)
+        @$con->query("ALTER TABLE tbl_blocked_users DROP INDEX blocker_id");
+        @$con->query("ALTER TABLE tbl_blocked_users DROP INDEX blocked_id");
+        // Add new composite index
+        $con->query("ALTER TABLE tbl_blocked_users ADD UNIQUE INDEX unique_block (blocker_id, blocked_id, chat_platform)");
+    }
 
     if ($action === 'block') {
         $stmt = $con->prepare("INSERT INTO tbl_blocked_users (blocker_id, blocked_id, chat_platform) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE chat_platform=VALUES(chat_platform)");
