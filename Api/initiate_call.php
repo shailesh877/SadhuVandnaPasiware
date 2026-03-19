@@ -35,16 +35,17 @@ try {
     // If marriage, receiver_id is Profile ID. In community, it's Member ID.
     if ($platform === 'marriage') {
         $target_member = $con->query("
-            SELECT m.fcm_token 
+            SELECT m.id, m.fcm_token 
             FROM tbl_members m 
             JOIN tbl_marriage_profiles mp ON mp.user_id = m.id 
             WHERE mp.id = '$receiver_id'
         ")->fetch_assoc();
     } else {
-        $target_member = $con->query("SELECT fcm_token FROM tbl_members WHERE id = '$receiver_id'")->fetch_assoc();
+        $target_member = $con->query("SELECT id, fcm_token FROM tbl_members WHERE id = '$receiver_id'")->fetch_assoc();
     }
 
     $token = $target_member['fcm_token'] ?? null;
+    $real_receiver_member_id = $target_member['id'] ?? 0;
 
     // 3. Get Caller Name
     if ($platform === 'marriage') {
@@ -55,17 +56,19 @@ try {
         $caller_name = $caller['name'] ?? "Someone";
     }
 
-    if($token){
+    if($token && $real_receiver_member_id){
         $push_data = [
             "type" => "incoming_call",
+            "is_call" => true,
             "call_id" => (string)$call_id,
             "caller_id" => (string)$caller_id,
             "caller_name" => $caller_name,
             "call_type" => $type,
-            "channel_id" => $peer_id,
+            "channelId" => "incoming_calls",
+            "peer_id" => $peer_id,
             "platform" => $platform
         ];
-        sendExpoPushNotification($con, $receiver_id, "Incoming $type call", "From $caller_name", $push_data);
+        sendExpoPushNotification($con, $real_receiver_member_id, "Incoming $type call", "From $caller_name", $push_data);
     }
 
     echo json_encode(["status" => "success", "message" => "Call Signal Sent", "call_id" => $call_id]);
