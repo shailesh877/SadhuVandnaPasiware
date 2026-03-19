@@ -76,7 +76,7 @@ if ($action == 'fetch_profiles') {
             $pq = $con->query("SELECT status, sender_id FROM tbl_proposals WHERE (sender_id='$my_profile_id' AND receiver_id='{$row['id']}') OR (sender_id='{$row['id']}' AND receiver_id='$my_profile_id') LIMIT 1");
             if ($pq && $pq->num_rows > 0) {
                 $p = $pq->fetch_assoc();
-                $status = $p['status']; // pending, friend, etc
+                $status = $p['status']; // pending, friend, accepted, etc
                 $is_sender = ($p['sender_id'] == $my_profile_id);
                 if ($status == 'pending') {
                     $status = $is_sender ? 'sent' : 'received';
@@ -207,36 +207,30 @@ if ($action == 'fetch_my_requests') {
         exit;
     }
 
-    // Sent Requests
+    // Sent
     $sent = [];
     $sq = $con->query("SELECT p.*, mp.full_name, mp.photo, mp.city, mp.education, mp.user_id, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age, mp.caste FROM tbl_proposals p JOIN tbl_marriage_profiles mp ON p.receiver_id = mp.id WHERE p.sender_id='$my_profile_id' AND p.status='pending'");
     if ($sq) {
-        while ($r = $sq->fetch_assoc())
-            $sent[] = $r;
+        while ($r = $sq->fetch_assoc()) $sent[] = $r;
     }
 
     // Received
     $received = [];
     $rq = $con->query("SELECT p.*, mp.full_name, mp.photo, mp.city, mp.education, mp.user_id, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age, mp.caste, mp.id as sender_profile_id FROM tbl_proposals p JOIN tbl_marriage_profiles mp ON p.sender_id = mp.id WHERE p.receiver_id='$my_profile_id' AND p.status='pending'");
     if ($rq) {
-        while ($r = $rq->fetch_assoc())
-            $received[] = $r;
+        while ($r = $rq->fetch_assoc()) $received[] = $r;
     }
 
     // Connected (Matches)
     $connected = [];
-    // Where I am sender AND status=friend/accepted
     $cq1 = $con->query("SELECT p.*, mp.full_name, mp.photo, mp.city, mp.education, mp.user_id, mp.id as friend_profile_id, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age FROM tbl_proposals p JOIN tbl_marriage_profiles mp ON p.receiver_id = mp.id WHERE p.sender_id='$my_profile_id' AND p.status IN ('friend', 'accepted')");
     if ($cq1) {
-        while ($r = $cq1->fetch_assoc())
-            $connected[] = $r;
+        while ($r = $cq1->fetch_assoc()) $connected[] = $r;
     }
 
-    // Where I am receiver AND status=friend/accepted
     $cq2 = $con->query("SELECT p.*, mp.full_name, mp.photo, mp.city, mp.education, mp.user_id, mp.id as friend_profile_id, TIMESTAMPDIFF(YEAR, STR_TO_DATE(mp.dob,'%Y-%m-%d'), CURDATE()) AS age FROM tbl_proposals p JOIN tbl_marriage_profiles mp ON p.sender_id = mp.id WHERE p.receiver_id='$my_profile_id' AND p.status IN ('friend', 'accepted')");
     if ($cq2) {
-        while ($r = $cq2->fetch_assoc())
-            $connected[] = $r;
+        while ($r = $cq2->fetch_assoc()) $connected[] = $r;
     }
 
     echo json_encode(["status" => "success", "sent" => $sent, "received" => $received, "connected" => $connected]);
