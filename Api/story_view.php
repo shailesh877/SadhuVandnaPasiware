@@ -1,5 +1,6 @@
 <?php
 // Api/story_view.php
+include("headers.php"); // ADDED CORS HEADER! THIS WAS MISSING
 require_once("connection.php");
 date_default_timezone_set('Asia/Kolkata');
 
