@@ -1,10 +1,14 @@
 <?php
 include("connection.php");
 
-header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header("Access-Control-Allow-Methods: POST, GET");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    exit;
+}
 
 // Handle both JSON and FormData
 $json = file_get_contents('php://input');
