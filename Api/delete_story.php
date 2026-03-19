@@ -1,5 +1,6 @@
 <?php
 // Api/delete_story.php
+include 'headers.php'; // YE LINE ADD KRNA ZARURI HAI BHAI!
 require_once("connection.php");
 
 $user_id = intval($_POST['user_id'] ?? 0);
