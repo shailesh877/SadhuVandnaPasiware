@@ -24,8 +24,11 @@ try {
         exit;
     }
 
-    // Ensure chat_platform column exists in tbl_blocked_users
-    $con->query("ALTER TABLE tbl_blocked_users ADD COLUMN IF NOT EXISTS chat_platform VARCHAR(20) DEFAULT 'marriage'");
+    // Ensure chat_platform column exists in tbl_blocked_users (Compatible way)
+    $check_col = $con->query("SHOW COLUMNS FROM tbl_blocked_users LIKE 'chat_platform'");
+    if ($check_col && $check_col->num_rows == 0) {
+        $con->query("ALTER TABLE tbl_blocked_users ADD COLUMN chat_platform VARCHAR(20) DEFAULT 'marriage'");
+    }
 
     if ($action === 'block') {
         $stmt = $con->prepare("INSERT IGNORE INTO tbl_blocked_users (blocker_id, blocked_id, chat_platform) VALUES (?, ?, ?)");
