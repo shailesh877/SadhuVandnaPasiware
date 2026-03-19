@@ -8,13 +8,12 @@ try {
     include 'connection.php';
     include 'push_helper.php';
 
-    if (!$con) {
-        echo json_encode(["status" => "error", "message" => "Connection failed"]);
-        exit;
-    }
+    // Handle JSON Input
+    $json = file_get_contents('php://input');
+    $data = json_decode($json, true);
 
-    $action = $_REQUEST['action'] ?? '';
-    $user_id = $_REQUEST['user_id'] ?? 0;
+    $action = $_REQUEST['action'] ?? $data['action'] ?? '';
+    $user_id = $_REQUEST['user_id'] ?? $data['user_id'] ?? 0;
 
     if (!$user_id) {
         echo json_encode(["status" => "error", "message" => "User ID required"]);
