@@ -68,12 +68,12 @@ if ($search) {
 }
 
 if ($my_profile_id) {
-    $where .= " AND id != '$my_profile_id' ";
+    $where .= " AND mp.id != '$my_profile_id' ";
 }
 
 // Special case for 'connected' (used by ConnectedScreen.tsx)
 if ($type === 'connected' && $my_profile_id) {
-    $where .= " AND id IN (
+    $where .= " AND mp.id IN (
         SELECT sender_id FROM tbl_proposals WHERE receiver_id='$my_profile_id' AND status IN ('friend', 'accepted')
         UNION
         SELECT receiver_id FROM tbl_proposals WHERE sender_id='$my_profile_id' AND status IN ('friend', 'accepted')
