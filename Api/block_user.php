@@ -47,8 +47,10 @@ try {
             echo json_encode(["status" => "error", "message" => "Failed to unblock user"]);
         }
     } elseif ($action === 'check') {
-        $stmt = $con->prepare("SELECT id FROM tbl_blocked_users WHERE blocker_id=? AND blocked_id=? AND chat_platform=?");
-        $stmt->bind_param("iis", $my_id, $target_id, $platform);
+        $stmt = $con->prepare("SELECT id FROM tbl_blocked_users WHERE 
+            ((blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)) 
+            AND chat_platform=?");
+        $stmt->bind_param("iiiis", $my_id, $target_id, $target_id, $my_id, $platform);
         $stmt->execute();
         $stmt->store_result();
         echo json_encode(["status" => "success", "blocked" => ($stmt->num_rows > 0)]);
