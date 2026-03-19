@@ -191,6 +191,7 @@ if ($action === 'fetch_suggestions') {
     $sql = "SELECT id, name as full_name, profile_photo as photo, city 
             FROM tbl_members 
             WHERE id != $current_user_id 
+            AND status != 'Blocked' 
             AND id NOT IN (
                 SELECT following_id FROM tbl_followers WHERE follower_id = $current_user_id
             )
