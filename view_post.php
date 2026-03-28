@@ -1,7 +1,17 @@
 <?php
 include("header.php");
 ?>
-<main class="flex-1 px-2 md:px-10 py-15 md:ml-20 mb-13 md:mb-0 max-w-7xl overflow-hidden min-h-screen">
+<div class="bg-orange-600 text-white p-3 flex justify-between items-center sticky top-0 z-50 shadow-md">
+    <div class="flex items-center gap-2">
+        <img src="assets/icon.png" class="w-8 h-8 rounded-lg shadow-sm">
+        <span class="font-bold text-sm">Sadhu Vandna App</span>
+    </div>
+    <a href="https://play.google.com/store/apps/details?id=com.sadhuvandna.app" class="bg-white text-orange-600 px-4 py-1.5 rounded-full text-sm font-extrabold shadow-sm active:scale-95 transition">
+        INSTALL APP
+    </a>
+</div>
+
+<main class="flex-1 px-2 md:px-10 py-5 md:ml-20 mb-13 md:mb-0 max-w-7xl overflow-hidden min-h-screen">
     <div id="singlePostContainer" class="flex flex-col gap-4 flex-1">
         <div class="text-center mt-10 text-gray-500">Loading Post...</div>
     </div>
@@ -11,6 +21,14 @@ include("header.php");
 async function fetchPost() {
     const urlParams = new URLSearchParams(window.location.search);
     const pid = urlParams.get('id');
+
+    // Auto-redirect to Play Store for mobile users if they land on the web
+    if (/android/i.test(navigator.userAgent)) {
+        setTimeout(() => {
+            window.location.href = "https://play.google.com/store/apps/details?id=com.sadhuvandna.app";
+        }, 1500); // Give 1.5s to see the post content or check if app opens
+    }
+
     if(!pid) {
         document.getElementById('singlePostContainer').innerHTML = "<div class='text-center text-red-500 mt-10'>Invalid Link</div>";
         return;
