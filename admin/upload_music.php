@@ -1,11 +1,11 @@
 <?php
 include("../connection.php");
 
-// 🔥 HANDLE AJAX REQUESTS
+// HANDLE REQUEST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
 
-    // ================= DELETE =================
+    // DELETE
     if (isset($_POST['delete_id'])) {
 
         $id = intval($_POST['delete_id']);
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // ================= UPLOAD =================
+    // UPLOAD
     if (isset($_FILES['music_file'])) {
 
         $files = $_FILES['music_file'];
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 mkdir($target_dir, 0777, true);
             }
 
-            // 🔥 AUTO META FROM FILE NAME
+            // AUTO META
             $fileWithoutExt = pathinfo($file_name, PATHINFO_FILENAME);
             $parts = explode("_", $fileWithoutExt);
 
@@ -143,17 +143,40 @@ button {
 .upload-btn {
     width: 100%;
     background: #22c55e;
+    border-radius: 8px;
+    font-weight: bold;
 }
 
+/* 🔥 NEW PREMIUM DELETE BUTTON */
 .delete-btn {
-    background: red;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: 0.2s;
+}
+
+.delete-btn:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    transform: scale(1.05);
+}
+
+.delete-btn:active {
+    transform: scale(0.95);
 }
 
 li {
     display: flex;
     justify-content: space-between;
     margin-bottom: 10px;
+    align-items: center;
 }
 </style>
 
@@ -189,7 +212,7 @@ li {
 
 <script>
 
-// LOAD MUSIC
+// LOAD
 async function loadMusic() {
     const res = await fetch('get_music.php');
     const data = await res.json();
@@ -204,7 +227,9 @@ async function loadMusic() {
                 <b>${m.title}</b><br>
                 <small>${m.artist} | ${m.tags}</small>
             </div>
-            <button class="delete-btn" onclick="deleteMusic(${m.id})">Delete</button>
+            <button class="delete-btn" onclick="deleteMusic(${m.id})">
+                🗑 Delete
+            </button>
         </li>
         `;
     });
@@ -213,7 +238,7 @@ async function loadMusic() {
 // DELETE
 async function deleteMusic(id){
 
-    if(!confirm("Delete this song?")) return;
+    if(!confirm("⚠️ Are you sure?\nThis song will be permanently deleted!")) return;
 
     const formData = new FormData();
     formData.append('delete_id', id);
