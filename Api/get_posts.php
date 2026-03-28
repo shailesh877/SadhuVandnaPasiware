@@ -18,28 +18,34 @@ date_default_timezone_set("Asia/Kolkata");
 
 // 1. Get User ID from Request or Session
 $user_id = 0;
-if(isset($_REQUEST['user_id']) && intval($_REQUEST['user_id']) > 0){
+if (isset($_REQUEST['user_id']) && intval($_REQUEST['user_id']) > 0) {
     $user_id = intval($_REQUEST['user_id']);
-} else if(isset($_SESSION['sadhu_user_id'])){
+}
+else if (isset($_SESSION['sadhu_user_id'])) {
     $user_email = $_SESSION['sadhu_user_id'];
     $user = $con->query("SELECT id FROM tbl_members WHERE email='$user_email'")->fetch_assoc();
-    if($user) $user_id = $user['id'];
+    if ($user)
+        $user_id = $user['id'];
 }
 
 // 2. Handle Actions
 $action = $_REQUEST['action'] ?? '';
 
 // ACTION: LIKE
-if($action === 'like'){
-    if($user_id <= 0){ echo json_encode(["status" => "error", "message" => "Auth failed"]); exit; }
+if ($action === 'like') {
+    if ($user_id <= 0) {
+        echo json_encode(["status" => "error", "message" => "Auth failed"]);
+        exit;
+    }
     $pid = intval($_POST['id']);
     $check = $con->query("SELECT id FROM tbl_likes WHERE post_id=$pid AND user_id=$user_id");
 
-    if($check->num_rows == 0){
+    if ($check->num_rows == 0) {
         $stmt = $con->prepare("INSERT INTO tbl_likes (post_id, user_id, date) VALUES (?, ?, NOW())");
         $stmt->bind_param("ii", $pid, $user_id);
         $stmt->execute();
-    } else {
+    }
+    else {
         $con->query("DELETE FROM tbl_likes WHERE post_id=$pid AND user_id=$user_id");
     }
     echo json_encode(["ok" => true]);
@@ -47,11 +53,14 @@ if($action === 'like'){
 }
 
 // ACTION: COMMENT
-if($action === 'comment'){
-    if($user_id <= 0){ echo json_encode(["status" => "error", "message" => "Auth failed"]); exit; }
+if ($action === 'comment') {
+    if ($user_id <= 0) {
+        echo json_encode(["status" => "error", "message" => "Auth failed"]);
+        exit;
+    }
     $pid = intval($_POST['id']);
     $comment = trim($_POST['comment']);
-    if($comment != ""){
+    if ($comment != "") {
         $stmt = $con->prepare("INSERT INTO tbl_comments (post_id, user_id, comment, date) VALUES (?, ?, ?, NOW())");
         $stmt->bind_param("iis", $pid, $user_id, $comment);
         $stmt->execute();
@@ -61,7 +70,7 @@ if($action === 'comment'){
 }
 
 // ACTION: FETCH COMMENTS
-if($action === 'fetch_comments'){
+if ($action === 'fetch_comments') {
     $pid = intval($_REQUEST['id']);
     $comments = [];
     $cres = $con->query("
@@ -71,7 +80,7 @@ if($action === 'fetch_comments'){
         WHERE c.post_id=$pid 
         ORDER BY c.date DESC
     ");
-    while($c = $cres->fetch_assoc()){
+    while ($c = $cres->fetch_assoc()) {
         $comments[] = [
             'name' => htmlspecialchars($c['name']),
             'profile_photo' => htmlspecialchars($c['profile_photo']),
@@ -89,17 +98,22 @@ if($action === 'fetch_comments'){
 
 // 3. Filter & Pagination Logic
 $filter_user_id = 0;
-if(isset($_REQUEST['filter_user_id']) && intval($_REQUEST['filter_user_id']) > 0){
+if (isset($_REQUEST['filter_user_id']) && intval($_REQUEST['filter_user_id']) > 0) {
     $filter_user_id = intval($_REQUEST['filter_user_id']);
 }
 
 // PAGINATION PARAMETERS
-$limit  = intval($_REQUEST['limit'] ?? 20);
+$limit = intval($_REQUEST['limit'] ?? 20);
 $offset = intval($_REQUEST['offset'] ?? 0);
 
 $whereClause = "";
 if ($filter_user_id > 0) {
     $whereClause = "WHERE p.user_id = '$filter_user_id'";
+}
+
+if (isset($_REQUEST['post_id']) && intval($_REQUEST['post_id']) > 0) {
+    $pid_filter = intval($_REQUEST['post_id']);
+    $whereClause = "WHERE p.id = '$pid_filter'";
 }
 
 // Fetch posts matching website logic (tbl_posts p JOIN tbl_members m)
@@ -117,7 +131,7 @@ $query = "SELECT p.*, m.name, m.profile_photo
 $result = $con->query($query);
 $posts = [];
 
-while($p = $result->fetch_assoc()){
+while ($p = $result->fetch_assoc()) {
     $pid = intval($p['id']);
 
     // Likes count
@@ -126,9 +140,10 @@ while($p = $result->fetch_assoc()){
 
     // User liked?
     $user_liked = false;
-    if($user_id > 0){
+    if ($user_id > 0) {
         $ul_res = $con->query("SELECT id FROM tbl_likes WHERE post_id=$pid AND user_id=$user_id");
-        if($ul_res && $ul_res->num_rows > 0) $user_liked = true;
+        if ($ul_res && $ul_res->num_rows > 0)
+            $user_liked = true;
     }
 
     // Comments
@@ -138,8 +153,8 @@ while($p = $result->fetch_assoc()){
                          JOIN tbl_members m ON c.user_id=m.id 
                          WHERE c.post_id=$pid 
                          ORDER BY c.date DESC");
-    if($cres){
-        while($c = $cres->fetch_assoc()){
+    if ($cres) {
+        while ($c = $cres->fetch_assoc()) {
             $comments[] = [
                 'name' => $c['name'],
                 'profile_photo' => $c['profile_photo'],
@@ -151,11 +166,11 @@ while($p = $result->fetch_assoc()){
 
     // Media
     $media = [];
-    if(!empty($p['media'])){
+    if (!empty($p['media'])) {
         $media = array_values(array_filter(explode(',', $p['media'])));
     }
     // Fallback for legacy 'image' column
-    if(empty($media) && !empty($p['image'])){
+    if (empty($media) && !empty($p['image'])) {
         $media[] = $p['image'];
     }
 
