@@ -47,6 +47,29 @@ if ($action === 'like') {
         $stmt->bind_param("ii", $pid, $user_id);
         if ($stmt->execute()) {
             echo json_encode(["ok" => true, "status" => "liked"]);
+            
+            // 🔥 Send Push Notification to Post Owner
+            try {
+                include_once 'push_helper.php';
+                // Find owner and your name
+                $ownQ = $con->query("SELECT p.user_id, m.name as liker_name 
+                                     FROM tbl_posts p, tbl_members m 
+                                     WHERE p.id = $pid AND m.id = $user_id LIMIT 1");
+                if ($row = $ownQ->fetch_assoc()) {
+                    $owner_id = $row['user_id'];
+                    $liker_name = $row['liker_name'];
+                    
+                    if ($owner_id != $user_id) { // Don't notify yourself
+                        sendExpoPushNotification(
+                            $con, 
+                            $owner_id, 
+                            "New Like", 
+                            "$liker_name liked your post.", 
+                            ["type" => "like", "postId" => strval($pid)]
+                        );
+                    }
+                }
+            } catch (Exception $e) {}
         } else {
             echo json_encode(["ok" => false, "message" => "Db error"]);
         }
