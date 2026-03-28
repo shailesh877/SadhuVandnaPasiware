@@ -1,7 +1,7 @@
 <?php
 include("../connection.php");
 
-// MULTIPLE UPLOAD HANDLER
+// MULTIPLE UPLOAD
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
 
@@ -55,49 +55,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Upload Music</title>
+<title>Admin - Upload Music</title>
 
 <style>
 body {
-    font-family: Arial;
-    background: #f3f4f6;
     margin: 0;
-    padding: 20px;
+    font-family: 'Segoe UI', sans-serif;
+    background: #0f172a;
+    color: #fff;
 }
 
-.wrapper {
+/* HEADER */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background: #020617;
+    border-bottom: 1px solid #1e293b;
+}
+
+.header h1 {
+    font-size: 20px;
+}
+
+.back-btn {
+    background: #22c55e;
+    padding: 8px 15px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: white;
+    font-weight: bold;
+}
+
+/* LAYOUT */
+.container {
     display: flex;
     gap: 20px;
-    max-width: 1100px;
-    margin: auto;
-}
-
-.card {
-    background: white;
     padding: 20px;
-    border-radius: 10px;
+}
+
+/* CARD */
+.card {
+    background: #020617;
+    border-radius: 12px;
+    padding: 20px;
     flex: 1;
+    box-shadow: 0 0 20px rgba(0,0,0,0.4);
 }
 
-h2 {
-    margin-bottom: 15px;
-}
-
+/* INPUT */
 input {
     width: 100%;
     padding: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    border: none;
+    background: #0f172a;
+    color: white;
 }
 
+input:focus {
+    outline: 2px solid #22c55e;
+}
+
+/* BUTTON */
 button {
     width: 100%;
     padding: 12px;
-    background: orange;
-    color: white;
+    background: #22c55e;
     border: none;
+    border-radius: 8px;
+    font-weight: bold;
     cursor: pointer;
 }
 
+/* LIST */
 #musicList {
     list-style: none;
     padding: 0;
@@ -106,35 +139,52 @@ button {
 }
 
 #musicList li {
-    padding: 8px;
-    border-bottom: 1px solid #ddd;
+    padding: 10px;
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    justify-content: space-between;
+}
+
+.tag {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+#msg {
+    margin-top: 10px;
+    font-size: 14px;
 }
 </style>
 
 </head>
 <body>
 
-<div class="wrapper">
+<!-- HEADER -->
+<div class="header">
+    <h1>🎵 Music Upload Panel</h1>
+    <a href="index.php" class="back-btn">⬅ Back to Dashboard</a>
+</div>
 
-    <!-- LEFT: FORM -->
+<!-- MAIN -->
+<div class="container">
+
+    <!-- UPLOAD -->
     <div class="card">
         <h2>Upload Music</h2>
 
         <form id="uploadForm" enctype="multipart/form-data">
             <input type="text" name="title" placeholder="Song Title" required>
-            <input type="text" name="artist" placeholder="Artist" required>
-            <input type="text" name="tags" placeholder="Tags">
-
-            <!-- MULTIPLE FILE -->
+            <input type="text" name="artist" placeholder="Artist Name" required>
+            <input type="text" name="tags" placeholder="Tags (comma separated)">
             <input type="file" name="music_file[]" multiple required>
 
-            <button type="submit">Upload</button>
+            <button type="submit">Upload Music</button>
         </form>
 
         <div id="msg"></div>
     </div>
 
-    <!-- RIGHT: LIST -->
+    <!-- LIST -->
     <div class="card">
         <h2>Uploaded Music</h2>
         <ul id="musicList"></ul>
@@ -144,7 +194,7 @@ button {
 
 <script>
 
-// LOAD MUSIC LIST
+// LOAD LIST
 async function loadMusic() {
     const res = await fetch('get_music.php');
     const data = await res.json();
@@ -153,11 +203,18 @@ async function loadMusic() {
     list.innerHTML = '';
 
     data.forEach(m => {
-        list.innerHTML += `<li>${m.title} - ${m.artist}</li>`;
+        list.innerHTML += `
+            <li>
+                <div>
+                    <b>${m.title}</b><br>
+                    <span class="tag">${m.artist}</span>
+                </div>
+            </li>
+        `;
     });
 }
 
-// FORM SUBMIT
+// SUBMIT
 document.getElementById('uploadForm').onsubmit = async (e) => {
     e.preventDefault();
 
@@ -184,10 +241,10 @@ document.getElementById('uploadForm').onsubmit = async (e) => {
     }
 
     btn.disabled = false;
-    btn.innerText = "Upload";
+    btn.innerText = "Upload Music";
 };
 
-// INITIAL LOAD
+// INIT
 loadMusic();
 
 </script>
