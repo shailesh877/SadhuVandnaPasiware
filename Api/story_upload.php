@@ -43,8 +43,9 @@ if (move_uploaded_file($file['tmp_name'], $targetFile)) {
     date_default_timezone_set("Asia/Kolkata");
     $date = date("Y-m-d H:i:s");
 
-    $stmt = $con->prepare("INSERT INTO tbl_stories (user_id, media, type, date) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("isss", $user_id, $dbPath, $type, $date);
+    $music_id = $_POST['music_id'] ?? null;
+    $stmt = $con->prepare("INSERT INTO tbl_stories (user_id, media, type, date, music_id) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("isssi", $user_id, $dbPath, $type, $date, $music_id);
     
     if ($stmt->execute()) {
         echo json_encode(["status" => "success", "message" => "Story uploaded successfully"]);
