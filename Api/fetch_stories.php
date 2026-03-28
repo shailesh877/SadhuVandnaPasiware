@@ -1,30 +1,35 @@
 <?php
 // Api/fetch_stories.php
 require_once("connection.php");
+include 'headers.php';
 date_default_timezone_set('Asia/Kolkata');
 
 $user_id = intval($_GET['user_id'] ?? 0); // The viewer's ID
 
 // Helper to get full URL
-// Assuming images are hosted at root/uploads/stories...
-// We will return relative path from DB and App will prepend BASE_URL/../ if needed, or we return full URL.
-// Let's return the path as is from DB (e.g. 'uploads/stories/xyz.jpg')
+$music_base_url = "https://www.sadhuvandna.co.in/uploads/music/";
 
 $response = [];
 
 // 1. Fetch My Stories
 $my_stories = [];
 if ($user_id) {
-    $q = $con->query("SELECT id, media, type, date, (SELECT COUNT(*) FROM tbl_story_views v WHERE v.story_id = s.id) as views FROM tbl_stories s WHERE user_id='$user_id' AND date > (NOW() - INTERVAL 1 DAY) ORDER BY date ASC");
+    $q = $con->query("
+        SELECT s.id, s.media, s.type, s.date, 
+               (SELECT COUNT(*) FROM tbl_story_views v WHERE v.story_id = s.id) as views,
+               m.title AS music_title, m.artist AS music_artist, m.file_name AS music_file
+        FROM tbl_stories s 
+        LEFT JOIN music m ON s.music_id = m.id
+        WHERE s.user_id='$user_id' AND s.date > (NOW() - INTERVAL 1 DAY) 
+        ORDER BY s.date ASC
+    ");
     while ($r = $q->fetch_assoc()) {
+        $r['music_url'] = $r['music_file'] ? $music_base_url . $r['music_file'] : null;
         $my_stories[] = $r;
     }
 }
 
 // 2. Fetch Others' Stories grouped by User
-// We want users who have stories in the last 24h.
-// Prioritize unseen users? 
-// Logic mirroring stories.php:
 $sql = "
 SELECT 
   m.id AS user_id,
@@ -42,18 +47,29 @@ ORDER BY latest_date DESC
 
 $others = [];
 $res = $con->query($sql);
-while ($row = $res->fetch_assoc()) {
-    // Fetch stories for this user
-    $uid = $row['user_id'];
-    $s_q = $con->query("SELECT id, media, type, date, (SELECT COUNT(*) FROM tbl_story_views v WHERE v.story_id = s.id AND v.viewer_id = '$user_id') as seen FROM tbl_stories s WHERE user_id='$uid' AND date > (NOW() - INTERVAL 1 DAY) ORDER BY date ASC");
-    $user_stories = [];
-    while ($s = $s_q->fetch_assoc()) {
-        $s['seen'] = $s['seen'] > 0; // Convert to boolean
-        $user_stories[] = $s;
+if ($res) {
+    while ($row = $res->fetch_assoc()) {
+        // Fetch stories for this user
+        $uid = $row['user_id'];
+        $s_q = $con->query("
+            SELECT s.id, s.media, s.type, s.date, 
+                   (SELECT COUNT(*) FROM tbl_story_views v WHERE v.story_id = s.id AND v.viewer_id = '$user_id') as seen,
+                   mu.title AS music_title, mu.artist AS music_artist, mu.file_name AS music_file
+            FROM tbl_stories s 
+            LEFT JOIN music mu ON s.music_id = mu.id
+            WHERE s.user_id='$uid' AND s.date > (NOW() - INTERVAL 1 DAY) 
+            ORDER BY s.date ASC
+        ");
+        $user_stories = [];
+        while ($s = $s_q->fetch_assoc()) {
+            $s['seen'] = intval($s['seen']) > 0; // Convert to boolean
+            $s['music_url'] = $s['music_file'] ? $music_base_url . $s['music_file'] : null;
+            $user_stories[] = $s;
+        }
+        
+        $row['stories'] = $user_stories;
+        $others[] = $row;
     }
-    
-    $row['stories'] = $user_stories;
-    $others[] = $row;
 }
 
 echo json_encode(['status' => 'success', 'my_stories' => $my_stories, 'others' => $others]);
