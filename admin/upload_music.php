@@ -1,10 +1,37 @@
 <?php
 include("../connection.php");
 
-// MULTIPLE UPLOAD + AUTO META FROM FILENAME
+// 🔥 HANDLE AJAX REQUESTS
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
 
+    // ================= DELETE =================
+    if (isset($_POST['delete_id'])) {
+
+        $id = intval($_POST['delete_id']);
+
+        $res = mysqli_query($con, "SELECT file_name FROM music WHERE id=$id");
+        $row = mysqli_fetch_assoc($res);
+
+        if ($row) {
+
+            $filePath = "../uploads/music/" . $row['file_name'];
+
+            mysqli_query($con, "DELETE FROM music WHERE id=$id");
+
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+
+            echo json_encode(["status" => "success"]);
+        } else {
+            echo json_encode(["status" => "error"]);
+        }
+
+        exit;
+    }
+
+    // ================= UPLOAD =================
     if (isset($_FILES['music_file'])) {
 
         $files = $_FILES['music_file'];
@@ -18,7 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($file_name == '') continue;
 
-            // SAFE FILE NAME
             $new_file_name = time() . "_" . rand(1000,9999) . "_" . preg_replace("/[^a-zA-Z0-9.]/", "_", $file_name);
             $target_dir = "../uploads/music/";
 
@@ -30,15 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fileWithoutExt = pathinfo($file_name, PATHINFO_FILENAME);
             $parts = explode("_", $fileWithoutExt);
 
-            // Artist & Title
             $artist_auto = $parts[0] ?? "Unknown";
             $title_auto  = $parts[1] ?? $fileWithoutExt;
 
-            // Tags
             $tags_array = array_slice($parts, 2);
             $tags_auto = implode(",", $tags_array);
 
-            // Clean text
             $artist_auto = ucwords(strtolower(str_replace("_", " ", $artist_auto)));
             $title_auto = ucwords(strtolower(str_replace("_", " ", $title_auto)));
 
@@ -54,28 +77,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         echo json_encode([
             "status" => "success",
-            "message" => count($uploaded) . " songs uploaded successfully 🚀"
+            "message" => count($uploaded) . " songs uploaded 🚀"
         ]);
         exit;
     }
-
-    echo json_encode(["status" => "error", "message" => "No file uploaded"]);
-    exit;
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Admin - Upload Music</title>
+<title>Music Panel</title>
 
 <style>
 body {
     margin: 0;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: Arial;
     background: #0f172a;
-    color: #fff;
+    color: white;
 }
 
 .header {
@@ -83,15 +102,14 @@ body {
     justify-content: space-between;
     padding: 15px 30px;
     background: #020617;
-    border-bottom: 1px solid #1e293b;
 }
 
 .back-btn {
     background: #22c55e;
     padding: 8px 15px;
     border-radius: 6px;
-    text-decoration: none;
     color: white;
+    text-decoration: none;
 }
 
 .container {
@@ -103,7 +121,7 @@ body {
 .card {
     background: #020617;
     padding: 20px;
-    border-radius: 12px;
+    border-radius: 10px;
     flex: 1;
 }
 
@@ -117,24 +135,25 @@ input {
 }
 
 button {
-    width: 100%;
-    padding: 12px;
-    background: #22c55e;
+    padding: 10px;
     border: none;
-    border-radius: 8px;
     cursor: pointer;
 }
 
-#musicList {
-    list-style: none;
-    padding: 0;
-    max-height: 400px;
-    overflow-y: auto;
+.upload-btn {
+    width: 100%;
+    background: #22c55e;
 }
 
-#musicList li {
-    padding: 10px;
-    border-bottom: 1px solid #1e293b;
+.delete-btn {
+    background: red;
+    color: white;
+}
+
+li {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
 }
 </style>
 
@@ -142,27 +161,27 @@ button {
 <body>
 
 <div class="header">
-    <h2>🎵 Music Upload Panel</h2>
+    <h2>🎵 Music Panel</h2>
     <a href="index.php" class="back-btn">⬅ Dashboard</a>
 </div>
 
 <div class="container">
 
-    <!-- Upload -->
+    <!-- UPLOAD -->
     <div class="card">
         <h3>Upload Music</h3>
 
         <form id="uploadForm" enctype="multipart/form-data">
             <input type="file" name="music_file[]" multiple required>
-            <button type="submit">Upload</button>
+            <button class="upload-btn">Upload</button>
         </form>
 
         <div id="msg"></div>
     </div>
 
-    <!-- List -->
+    <!-- LIST -->
     <div class="card">
-        <h3>Uploaded Music</h3>
+        <h3>Music List</h3>
         <ul id="musicList"></ul>
     </div>
 
@@ -179,11 +198,41 @@ async function loadMusic() {
     list.innerHTML = '';
 
     data.forEach(m => {
-        list.innerHTML += `<li>${m.title} - ${m.artist} (${m.tags})</li>`;
+        list.innerHTML += `
+        <li>
+            <div>
+                <b>${m.title}</b><br>
+                <small>${m.artist} | ${m.tags}</small>
+            </div>
+            <button class="delete-btn" onclick="deleteMusic(${m.id})">Delete</button>
+        </li>
+        `;
     });
 }
 
-// SUBMIT
+// DELETE
+async function deleteMusic(id){
+
+    if(!confirm("Delete this song?")) return;
+
+    const formData = new FormData();
+    formData.append('delete_id', id);
+
+    const res = await fetch('upload_music.php', {
+        method: 'POST',
+        body: formData
+    });
+
+    const result = await res.json();
+
+    if(result.status === 'success'){
+        loadMusic();
+    } else {
+        alert("Delete failed");
+    }
+}
+
+// UPLOAD
 document.getElementById('uploadForm').onsubmit = async (e) => {
     e.preventDefault();
 
@@ -204,7 +253,7 @@ document.getElementById('uploadForm').onsubmit = async (e) => {
 
     msg.innerText = result.message;
 
-    if (result.status === 'success') {
+    if(result.status === 'success'){
         e.target.reset();
         loadMusic();
     }
