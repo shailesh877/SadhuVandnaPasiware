@@ -20,11 +20,18 @@ $images = array_filter(explode(",", $row['image']));
 ?>
 
 <script>
-// Auto-redirect to Play Store for mobile users
+// Auto-redirect to App or Play Store for mobile users
 if (/android/i.test(navigator.userAgent)) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const nid = urlParams.get('id');
+
+    // 1. Try to open the app via Custom Scheme first
+    window.location.href = "sadhuvandna://view_news.php?id=" + nid;
+
+    // 2. Wait 2.5 seconds and then go to Play Store if app didn't open
     setTimeout(() => {
         window.location.href = "https://play.google.com/store/apps/details?id=com.sadhuvandna.app";
-    }, 1500);
+    }, 2500);
 }
 </script>
 
