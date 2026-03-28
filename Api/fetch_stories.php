@@ -9,6 +9,12 @@ $user_id = intval($_GET['user_id'] ?? 0); // The viewer's ID
 // Helper to get full URL
 $music_base_url = "https://www.sadhuvandna.co.in/uploads/music/";
 
+// Auto Migration: Add music_id if missing
+$check_col = $con->query("SHOW COLUMNS FROM tbl_stories LIKE 'music_id'");
+if ($check_col->num_rows == 0) {
+    $con->query("ALTER TABLE tbl_stories ADD COLUMN music_id INT DEFAULT NULL");
+}
+
 $response = [];
 
 // 1. Fetch My Stories
