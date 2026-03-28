@@ -22,11 +22,15 @@ async function fetchPost() {
     const urlParams = new URLSearchParams(window.location.search);
     const pid = urlParams.get('id');
 
-    // Auto-redirect to Play Store for mobile users if they land on the web
+    // Auto-redirect to App or Play Store for mobile users
     if (/android/i.test(navigator.userAgent)) {
+        // 1. Try to open the app via Custom Scheme first
+        window.location.href = "sadhuvandna://view_post.php?id=" + pid;
+        
+        // 2. Wait 2 seconds and then go to Play Store if app didn't open
         setTimeout(() => {
             window.location.href = "https://play.google.com/store/apps/details?id=com.sadhuvandna.app";
-        }, 1500); // Give 1.5s to see the post content or check if app opens
+        }, 2500);
     }
 
     if(!pid) {
