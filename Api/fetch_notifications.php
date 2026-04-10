@@ -22,14 +22,11 @@ $mp = $con->query("SELECT id FROM tbl_marriage_profiles WHERE user_id='$user_id'
 $my_marriage_id = ($mp && $mp->num_rows > 0) ? $mp->fetch_assoc()['id'] : 0;
 
 if ($action === 'count') {
-    $msg_marriage = $con->query("SELECT COUNT(*) FROM tbl_messages WHERE receiver_id = '$my_marriage_id' AND chat_platform = 'marriage' AND seen = 0")->fetch_row()[0];
-    $msg_community = $con->query("SELECT COUNT(*) FROM tbl_messages WHERE receiver_id = '$user_id' AND chat_platform = 'community' AND seen = 0")->fetch_row()[0];
-    $proposals = $con->query("SELECT COUNT(*) FROM tbl_proposals WHERE receiver_id = '$my_marriage_id' AND status = 'pending'")->fetch_row()[0];
-    $follows = $con->query("SELECT COUNT(*) FROM tbl_followers WHERE following_id = '$user_id' AND status = 'pending'")->fetch_row()[0];
-    $system = $con->query("SELECT COUNT(*) FROM tbl_notifications WHERE user_id = '$user_id' AND seen = 0")->fetch_row()[0];
-
-    $total = (int)$msg_marriage + (int)$msg_community + (int)$proposals + (int)$follows + (int)$system;
-    echo json_encode(['status' => 'success', 'unread_count' => intval($total)]);
+    // Rely strictly on tbl_notifications for the bell icon badge count.
+    $systemQ = $con->query("SELECT COUNT(*) FROM tbl_notifications WHERE user_id = '$user_id' AND seen = 0");
+    $total = $systemQ ? (int)$systemQ->fetch_row()[0] : 0;
+    
+    echo json_encode(['status' => 'success', 'unread_count' => $total]);
     exit;
 }
 
