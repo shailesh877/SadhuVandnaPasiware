@@ -158,5 +158,16 @@ $totalEarnings = $totalEarnings ? $totalEarnings : 0;
       <h3 class="text-xl font-bold text-white mb-2">Bulk WhatsApp</h3>
       <p class="text-sm text-green-100">Send via MSG91</p>
     </a>
+      <!-- Add Contact Card -->
+    <a href="admin_add_contact.php" class="block bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
+          <i class="fa-solid fa-address-book text-white text-2xl"></i>
+        </div>
+        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
+      </div>
+      <h3 class="text-xl font-bold text-white mb-2">Add Contact</h3>
+      <p class="text-sm text-orange-100">Manual or Excel Import</p>
+    </a>
   </div>
 </main>
