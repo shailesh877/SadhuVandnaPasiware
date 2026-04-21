@@ -24,8 +24,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $query = "";
     if (!empty($ids)) {
-        $ids_str = implode(',', array_map('intval', $ids));
-        $query = "SELECT name, mobile FROM tbl_members WHERE id IN ($ids_str) AND mobile IS NOT NULL AND mobile != ''";
+        $member_ids = [];
+        $contact_ids = [];
+        foreach($ids as $prefixed_id){
+            if(strpos($prefixed_id, 'member_') === 0){
+                $member_ids[] = (int)str_replace('member_', '', $prefixed_id);
+            } elseif(strpos($prefixed_id, 'contact_') === 0){
+                $contact_ids[] = (int)str_replace('contact_', '', $prefixed_id);
+            }
+        }
+
+        $queries = [];
+        if (!empty($member_ids)) {
+            $ids_str = implode(',', $member_ids);
+            $queries[] = "(SELECT name, mobile FROM tbl_members WHERE id IN ($ids_str) AND mobile IS NOT NULL AND mobile != '')";
+        }
+        if (!empty($contact_ids)) {
+            $ids_str = implode(',', $contact_ids);
+            $queries[] = "(SELECT name, mobile FROM tbl_contact WHERE id IN ($ids_str) AND mobile IS NOT NULL AND mobile != '')";
+        }
+        
+        if(!empty($queries)){
+            $query = implode(" UNION ", $queries);
+        }
     }
 
     if (empty($query)) {
@@ -183,6 +204,10 @@ if (isset($_SESSION['msg'])) {
                             <span class="text-sm text-gray-700 font-medium">Filter by Status</span>
                         </label>
                         <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="radio" name="target_type" value="contacts" class="w-5 h-5 text-green-600 focus:ring-green-500 cursor-pointer" onchange="toggleSections()">
+                            <span class="text-sm text-gray-700 font-medium">Saved Contacts (Manual)</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
                             <input type="radio" name="target_type" value="specific" class="w-5 h-5 text-green-600 focus:ring-green-500 cursor-pointer" onchange="toggleSections()">
                             <span class="text-sm text-gray-700 font-medium">Specific Members</span>
                         </label>
@@ -256,15 +281,32 @@ if (isset($_SESSION['msg'])) {
 
 <?php
 $js_users = [];
+// Fetch from tbl_members
 $all_users = mysqli_query($con, "SELECT id, name, mobile, status FROM tbl_members ORDER BY name ASC");
 while($u = mysqli_fetch_assoc($all_users)){
     if(empty($u['mobile'])) continue;
     $js_users[] = [
-        'id' => $u['id'],
+        'id' => 'member_' . $u['id'],
         'name' => htmlspecialchars($u['name'] ?? ''),
         'mobile' => htmlspecialchars($u['mobile'] ?? ''),
-        'status' => $u['status']
+        'status' => $u['status'],
+        'source' => 'Member'
     ];
+}
+
+// Fetch from tbl_contact
+$all_contacts = mysqli_query($con, "SELECT id, name, mobile FROM tbl_contact ORDER BY name ASC");
+if($all_contacts){
+    while($c = mysqli_fetch_assoc($all_contacts)){
+        if(empty($c['mobile'])) continue;
+        $js_users[] = [
+            'id' => 'contact_' . $c['id'],
+            'name' => htmlspecialchars($c['name'] ?? ''),
+            'mobile' => htmlspecialchars($c['mobile'] ?? ''),
+            'status' => 'Manual',
+            'source' => 'Contact'
+        ];
+    }
 }
 ?>
 
@@ -291,6 +333,11 @@ function toggleSections() {
         statusSection.classList.remove('hidden');
         filterByStatus();
         return;
+    } else if (targetType === 'contacts') {
+        statusSection.classList.add('hidden');
+        filteredUsers = users.filter(u => u.source === 'Contact');
+        // Auto-select all from Saved Contacts
+        filteredUsers.forEach(u => selectedIds.add(String(u.id)));
     } else if (targetType === 'specific') {
         statusSection.classList.add('hidden');
         filteredUsers = [...users];
@@ -335,7 +382,7 @@ function renderList() {
         label.innerHTML = `
             <input type="checkbox" value="${u.id}" ${isChecked ? 'checked' : ''} class="w-4 h-4 text-green-600 rounded cursor-pointer" onchange="toggleUserSelection('${u.id}', this.checked)">
             <div>
-                <div class="text-sm text-gray-800 font-bold">${u.name}</div>
+                <div class="text-sm text-gray-800 font-bold">${u.name} <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 ml-1 font-normal">${u.source || ''}</span></div>
                 <div class="text-[10px] text-gray-500">${u.mobile} • ${u.status}</div>
             </div>
         `;
@@ -387,7 +434,17 @@ function updateHiddenInputs() {
 
 document.getElementById('memberSearch').addEventListener('input', function(e) {
     const term = e.target.value.toLowerCase();
-    filteredUsers = users.filter(u => u.name.toLowerCase().includes(term) || u.mobile.includes(term));
+    const targetType = document.querySelector('input[name="target_type"]:checked').value;
+    
+    let baseUsers = [...users];
+    if (targetType === 'status') {
+        const statusVal = document.querySelector('select[name="status_filter"]').value;
+        baseUsers = users.filter(u => u.status === statusVal);
+    } else if (targetType === 'contacts') {
+        baseUsers = users.filter(u => u.source === 'Contact');
+    }
+
+    filteredUsers = baseUsers.filter(u => u.name.toLowerCase().includes(term) || u.mobile.includes(term));
     currentPage = 1;
     renderList();
 });
