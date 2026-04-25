@@ -69,6 +69,7 @@ function scrapeYoutubeStreams($channelUrl) {
 
 $channels = [
     "https://www.youtube.com/@MorariBapu/streams",
+    "https://www.youtube.com/@AasthaChannel/streams",
     "https://www.youtube.com/@AasthaTV/streams",
     "https://www.youtube.com/@AasthaBhajan/streams"
 ];
@@ -89,10 +90,19 @@ foreach ($allVideos as $video) {
     }
 }
 
-// Sort: LIVE videos first
+// Sort: LIVE videos first, then prioritize Morari Bapu content
 usort($uniqueVideos, function($a, $b) {
+    // 1. Prioritize LIVE
     if ($a['isLive'] && !$b['isLive']) return -1;
     if (!$a['isLive'] && $b['isLive']) return 1;
+    
+    // 2. Both are LIVE or both are NOT LIVE, check for "Morari" or "Bapu"
+    $isAMorari = (stripos($a['title'], 'Morari') !== false || stripos($a['title'], 'Bapu') !== false);
+    $isBMorari = (stripos($b['title'], 'Morari') !== false || stripos($b['title'], 'Bapu') !== false);
+    
+    if ($isAMorari && !$isBMorari) return -1;
+    if (!$isAMorari && $isBMorari) return 1;
+    
     return 0;
 });
 
