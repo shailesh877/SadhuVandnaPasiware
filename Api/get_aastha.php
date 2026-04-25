@@ -4,7 +4,7 @@ header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header('Content-Type: application/json');
 
-$channelUrl = "https://www.youtube.com/@AasthaBhajan/streams";
+$channelUrl = "https://www.youtube.com/@AasthatvGujarati/streams";
 
 $options = [
     "http" => [
