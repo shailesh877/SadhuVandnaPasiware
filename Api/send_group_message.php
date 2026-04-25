@@ -2,6 +2,7 @@
 // send_group_message.php
 include 'headers.php';
 include 'connection.php';
+include 'push_helper.php';
 
 $group_id = intval($_POST['group_id'] ?? 0);
 $sender_id = intval($_POST['sender_id'] ?? 0);
@@ -43,6 +44,34 @@ if (!$group_id || !$sender_id || (empty($message) && empty($attachment))) {
 $sql = "INSERT INTO tbl_group_messages (group_id, sender_id, message, attachment, file_type) VALUES ($group_id, $sender_id, '$message', '$attachment', '$file_type')";
 
 if ($con->query($sql)) {
+    // Notifications logic
+    try {
+        // 1. Get Group Info
+        $gQ = $con->query("SELECT group_name FROM tbl_groups WHERE id = $group_id LIMIT 1");
+        $group_name = ($gQ && $gRow = $gQ->fetch_assoc()) ? $gRow['group_name'] : "Group";
+
+        // 2. Get Sender Info
+        $sQ = $con->query("SELECT name FROM tbl_members WHERE id = $sender_id LIMIT 1");
+        $sender_name = ($sQ && $sRow = $sQ->fetch_assoc()) ? $sRow['name'] : "Member";
+
+        // 3. Get All Members to notify
+        $mQ = $con->query("SELECT user_id FROM tbl_group_members WHERE group_id = $group_id AND user_id != $sender_id");
+        
+        $notif_title = $group_name;
+        $notif_body = "$sender_name: " . ($attachment ? "📷 Sent an attachment" : $message);
+
+        while($mRow = $mQ->fetch_assoc()){
+            $target_id = $mRow['user_id'];
+            sendExpoPushNotification($con, $target_id, $notif_title, $notif_body, [
+                "type" => "group_chat",
+                "group_id" => $group_id
+            ]);
+        }
+    } catch (Exception $e) {
+        // Log error but don't fail the message send
+        file_put_contents("push_log.txt", date('Y-m-d H:i:s') . " | Group Notif Error: " . $e->getMessage() . "\n", FILE_APPEND);
+    }
+
     echo json_encode(["status" => "success", "message" => "Message sent successfully"]);
 } else {
     echo json_encode(["status" => "error", "message" => "Failed to send message: " . $con->error]);
