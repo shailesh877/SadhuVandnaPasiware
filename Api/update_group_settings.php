@@ -2,9 +2,13 @@
 include 'headers.php';
 include 'connection.php';
 
-$group_id = intval($_POST['group_id'] ?? 0);
-$user_id = intval($_POST['user_id'] ?? 0);
-$admins_only = intval($_POST['admins_only'] ?? 0);
+// Handle JSON Input
+$json = file_get_contents('php://input');
+$data = json_decode($json, true);
+
+$group_id = intval($_REQUEST['group_id'] ?? $data['group_id'] ?? 0);
+$user_id = intval($_REQUEST['user_id'] ?? $data['user_id'] ?? 0);
+$admins_only = intval($_REQUEST['admins_only'] ?? $data['admins_only'] ?? 0);
 
 if (!$group_id || !$user_id) {
     echo json_encode(["status" => "error", "message" => "Invalid data"]);
