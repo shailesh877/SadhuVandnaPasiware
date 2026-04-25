@@ -20,7 +20,7 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] == 0) {
     $target_file = $target_dir . $new_filename;
 
     if (move_uploaded_file($_FILES["file"]["tmp_name"], $target_file)) {
-        $attachment = $new_filename;
+        $attachment = "/uploads/chat/" . $new_filename;
     }
 }
 
