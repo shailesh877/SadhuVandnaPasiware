@@ -25,6 +25,35 @@ $sql = "
 $res = $con->query($sql);
 $messages = [];
 
+if ($user_id > 0) {
+    $now = date('Y-m-d H:i:s');
+    // Fetch messages to check seen status
+    $check_sql = "SELECT id, seen_by FROM tbl_group_messages WHERE group_id = $group_id AND sender_id != $user_id";
+    $check_res = $con->query($check_sql);
+    while ($check_row = $check_res->fetch_assoc()) {
+        $msg_id = $check_row['id'];
+        $seen_by_json = $check_row['seen_by'] ? json_decode($check_row['seen_by'], true) : [];
+        if (!is_array($seen_by_json)) $seen_by_json = [];
+        
+        $already_seen = false;
+        foreach ($seen_by_json as $entry) {
+            if (isset($entry['u']) && $entry['u'] == $user_id) {
+                $already_seen = true;
+                break;
+            }
+        }
+        
+        if (!$already_seen) {
+            $seen_by_json[] = ["u" => $user_id, "t" => $now];
+            $new_seen_by = $con->real_escape_string(json_encode($seen_by_json));
+            $con->query("UPDATE tbl_group_messages SET seen_by = '$new_seen_by' WHERE id = $msg_id");
+        }
+    }
+    // Re-fetch to get updated seen_by if needed, but actually the select below will get them anyway
+}
+
+$res = $con->query($sql);
+
 while ($row = $res->fetch_assoc()) {
     $messages[] = [
         "id" => $row['id'],
@@ -34,6 +63,7 @@ while ($row = $res->fetch_assoc()) {
         "sender_photo" => $row['sender_photo'],
         "message" => $row['message'],
         "attachment" => $row['attachment'],
+        "seen_by" => $row['seen_by'],
         "created_at" => $row['created_at']
     ];
 }
