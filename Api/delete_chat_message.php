@@ -15,7 +15,7 @@ if(!$message_id || !$my){
 }
 
 try {
-    $is_group = isset($_REQUEST['is_group']) && $_REQUEST['is_group'] == '1';
+    $is_group = (isset($_REQUEST['is_group']) && $_REQUEST['is_group'] == '1') || (isset($data['is_group']) && $data['is_group'] == '1');
     
     if ($is_group) {
         $stmt = $con->prepare("UPDATE tbl_group_messages SET is_deleted = 1, message = '🚫 This message was deleted', attachment = '' WHERE id=? AND sender_id=?");
