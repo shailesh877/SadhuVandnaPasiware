@@ -29,7 +29,16 @@ try {
     if($stmt->affected_rows > 0){
         echo json_encode(["status" => "success", "message" => "Deleted"]);
     } else {
-        echo json_encode(["status" => "error", "message" => "Failed or Not Authorized"]);
+        echo json_encode([
+            "status" => "error", 
+            "message" => "Failed or Not Authorized",
+            "debug" => [
+                "message_id" => $message_id,
+                "sender_id" => $my,
+                "is_group" => $is_group,
+                "affected" => $stmt->affected_rows
+            ]
+        ]);
     }
 } catch (Exception $e) {
     echo json_encode(["status" => "error", "message" => $e->getMessage()]);
