@@ -18,9 +18,9 @@ try {
     $is_group = isset($_REQUEST['is_group']) && $_REQUEST['is_group'] == '1';
     
     if ($is_group) {
-        $stmt = $con->prepare("DELETE FROM tbl_group_messages WHERE id=? AND sender_id=?");
+        $stmt = $con->prepare("UPDATE tbl_group_messages SET is_deleted = 1, message = '🚫 This message was deleted', attachment = '' WHERE id=? AND sender_id=?");
     } else {
-        $stmt = $con->prepare("DELETE FROM tbl_messages WHERE id=? AND sender_id=?");
+        $stmt = $con->prepare("UPDATE tbl_messages SET is_deleted = 1, message = '🚫 This message was deleted', file = '', file_type = NULL WHERE id=? AND sender_id=?");
     }
     
     $stmt->bind_param("ii", $message_id, $my);
