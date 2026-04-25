@@ -41,6 +41,33 @@ if (!$group_id || !$sender_id || (empty($message) && empty($attachment))) {
     exit;
 }
 
+// Auto-migration check: add admins_only if it doesn't exist
+$check_adm = $con->query("SHOW COLUMNS FROM `tbl_groups` LIKE 'admins_only'");
+if ($check_adm->num_rows == 0) {
+    $con->query("ALTER TABLE `tbl_groups` ADD COLUMN `admins_only` TINYINT(1) DEFAULT 0");
+}
+
+// Check Group Permissions
+$gQ = $con->query("SELECT created_by, admins_only FROM tbl_groups WHERE id = $group_id");
+$group = $gQ->fetch_assoc();
+
+if ($group && $group['admins_only'] == 1) {
+    // Check if sender is admin or creator
+    $is_admin = ($group['created_by'] == $sender_id);
+    if (!$is_admin) {
+        $mQ = $con->query("SELECT role FROM tbl_group_members WHERE group_id = $group_id AND user_id = $sender_id");
+        $member = $mQ->fetch_assoc();
+        if ($member && $member['role'] === 'admin') {
+            $is_admin = true;
+        }
+    }
+
+    if (!$is_admin) {
+        echo json_encode(["status" => "error", "message" => "Only admins can send messages to this group"]);
+        exit;
+    }
+}
+
 $sql = "INSERT INTO tbl_group_messages (group_id, sender_id, message, attachment, file_type) VALUES ($group_id, $sender_id, '$message', '$attachment', '$file_type')";
 
 if ($con->query($sql)) {
