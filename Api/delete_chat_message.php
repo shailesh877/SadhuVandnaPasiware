@@ -15,8 +15,14 @@ if(!$message_id || !$my){
 }
 
 try {
-    // delete only if I am sender
-    $stmt = $con->prepare("DELETE FROM tbl_messages WHERE id=? AND sender_id=?");
+    $is_group = isset($_REQUEST['is_group']) && $_REQUEST['is_group'] == '1';
+    
+    if ($is_group) {
+        $stmt = $con->prepare("DELETE FROM tbl_group_messages WHERE id=? AND sender_id=?");
+    } else {
+        $stmt = $con->prepare("DELETE FROM tbl_messages WHERE id=? AND sender_id=?");
+    }
+    
     $stmt->bind_param("ii", $message_id, $my);
     $stmt->execute();
 
