@@ -86,7 +86,7 @@ while ($row = $res->fetch_assoc()) {
 
 // 3. Fetch groups the user is a part of
 $groups_sql = "
-    SELECT g.id, g.name, g.photo, 
+    SELECT g.id, g.name, g.photo, g.created_by,
            (SELECT message FROM tbl_group_messages WHERE group_id = g.id ORDER BY created_at DESC LIMIT 1) as last_message,
            (SELECT created_at FROM tbl_group_messages WHERE group_id = g.id ORDER BY created_at DESC LIMIT 1) as last_message_time,
            g.created_at as group_created_at
@@ -105,7 +105,8 @@ if ($groups_res) {
             "last_message" => $grow['last_message'] ?: 'Group created',
             "time" => date("h:i A", strtotime($msg_time)),
             "unread" => 0, // Simplified for now
-            "isGroup" => true // Flag to identify group chats
+            "isGroup" => true, // Flag to identify group chats
+            "created_by" => $grow['created_by']
         ];
     }
 }
