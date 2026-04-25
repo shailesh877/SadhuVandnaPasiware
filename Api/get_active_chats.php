@@ -84,5 +84,36 @@ while ($row = $res->fetch_assoc()) {
     ];
 }
 
+// 3. Fetch groups the user is a part of
+$groups_sql = "
+    SELECT g.id, g.name, g.photo, 
+           (SELECT message FROM tbl_group_messages WHERE group_id = g.id ORDER BY created_at DESC LIMIT 1) as last_message,
+           (SELECT created_at FROM tbl_group_messages WHERE group_id = g.id ORDER BY created_at DESC LIMIT 1) as last_message_time,
+           g.created_at as group_created_at
+    FROM tbl_groups g
+    INNER JOIN tbl_group_members gm ON g.id = gm.group_id
+    WHERE gm.user_id = $search_id AND g.platform = '$platform'
+";
+$groups_res = $con->query($groups_sql);
+if ($groups_res) {
+    while ($grow = $groups_res->fetch_assoc()) {
+        $msg_time = $grow['last_message_time'] ? $grow['last_message_time'] : $grow['group_created_at'];
+        $chats[] = [
+            "partner_id" => $grow['id'], // use group_id as partner_id for mapping
+            "full_name" => $grow['name'],
+            "profile_photo" => $grow['photo'],
+            "last_message" => $grow['last_message'] ?: 'Group created',
+            "time" => date("h:i A", strtotime($msg_time)),
+            "unread" => 0, // Simplified for now
+            "isGroup" => true // Flag to identify group chats
+        ];
+    }
+}
+
+// Sort chats by time (most recent first)
+usort($chats, function($a, $b) {
+    return strtotime($b['time']) - strtotime($a['time']);
+});
+
 echo json_encode(["status" => "success", "data" => $chats]);
 ?>
