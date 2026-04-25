@@ -19,8 +19,25 @@ if (!in_array($user_id, $members)) {
     $members[] = $user_id;
 }
 
+// Handle file upload
+$photo_filename = '';
+if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
+    $target_dir = "../uploads/photo/";
+    if (!file_exists($target_dir)) {
+        mkdir($target_dir, 0777, true);
+    }
+    
+    $file_extension = pathinfo($_FILES["photo"]["name"], PATHINFO_EXTENSION);
+    $new_filename = 'group_init_' . time() . '_' . rand(1000, 9999) . '.' . $file_extension;
+    $target_file = $target_dir . $new_filename;
+
+    if (move_uploaded_file($_FILES["photo"]["tmp_name"], $target_file)) {
+        $photo_filename = $new_filename;
+    }
+}
+
 // 1. Insert into tbl_groups
-$sql = "INSERT INTO tbl_groups (name, description, created_by, platform) VALUES ('$group_name', '$description', $user_id, '$platform')";
+$sql = "INSERT INTO tbl_groups (name, description, created_by, platform, photo) VALUES ('$group_name', '$description', $user_id, '$platform', '$photo_filename')";
 if ($con->query($sql)) {
     $group_id = $con->insert_id;
 
