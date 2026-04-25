@@ -19,6 +19,10 @@ $sql = "
     ORDER BY gm.role ASC, m.name ASC
 ";
 
+$gQ = $con->query("SELECT created_by FROM tbl_groups WHERE id = $group_id");
+$group = $gQ->fetch_assoc();
+$creator_id = $group ? intval($group['created_by']) : 0;
+
 $res = $con->query($sql);
 $members = [];
 
@@ -32,5 +36,5 @@ while ($row = $res->fetch_assoc()) {
     ];
 }
 
-echo json_encode(["status" => "success", "data" => $members]);
+echo json_encode(["status" => "success", "data" => $members, "creator_id" => $creator_id]);
 ?>
