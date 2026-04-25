@@ -63,6 +63,7 @@ while ($row = $res->fetch_assoc()) {
         "sender_photo" => $row['sender_photo'],
         "message" => $row['message'],
         "attachment" => $row['attachment'],
+        "file_type" => $row['file_type'],
         "seen_by" => $row['seen_by'],
         "created_at" => $row['created_at']
     ];
