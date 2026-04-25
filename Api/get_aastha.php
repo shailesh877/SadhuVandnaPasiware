@@ -4,7 +4,7 @@ header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header('Content-Type: application/json');
 
-$channelUrl = "https://www.youtube.com/@AasthaChannel/streams";
+$channelUrl = "https://www.youtube.com/@AasthaBhajan/streams";
 
 $options = [
     "http" => [
@@ -19,7 +19,7 @@ $context = stream_context_create($options);
 $html = @file_get_contents($channelUrl, false, $context);
 
 if ($html) {
-    if (preg_match('/var ytInitialData = (.*?);<\/script>/', $html, $matches)) {
+    if (preg_match('/(?:var ytInitialData|window\["ytInitialData"\])\s*=\s*(.*?);<\/script>/', $html, $matches)) {
         $jsonData = json_decode($matches[1], true);
         $videos = [];
         try {
