@@ -27,8 +27,11 @@ if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ER
         if (strpos($mime, 'video') !== false) {
             $file_type = 'video';
         }
-        else {
+        else if (strpos($mime, 'image') !== false) {
             $file_type = 'image';
+        }
+        else {
+            $file_type = 'document';
         }
     }
 }
