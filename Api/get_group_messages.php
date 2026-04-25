@@ -11,6 +11,12 @@ if (!$group_id) {
     exit;
 }
 
+// Auto-migration: add is_deleted if it doesn't exist
+$check_del = $con->query("SHOW COLUMNS FROM `tbl_group_messages` LIKE 'is_deleted'");
+if ($check_del->num_rows == 0) {
+    $con->query("ALTER TABLE `tbl_group_messages` ADD COLUMN `is_deleted` TINYINT(1) DEFAULT 0");
+}
+
 $sql = "
     SELECT 
         gm.*, 
@@ -64,6 +70,7 @@ while ($row = $res->fetch_assoc()) {
         "message" => $row['message'],
         "attachment" => $row['attachment'],
         "file_type" => $row['file_type'],
+        "is_deleted" => intval($row['is_deleted'] ?? 0),
         "seen_by" => $row['seen_by'],
         "created_at" => $row['created_at']
     ];
