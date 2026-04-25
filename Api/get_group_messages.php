@@ -76,5 +76,14 @@ while ($row = $res->fetch_assoc()) {
     ];
 }
 
-echo json_encode(["status" => "success", "data" => $messages]);
+// 4. Get Group Settings
+$gQ = $con->query("SELECT admins_only FROM tbl_groups WHERE id = $group_id");
+$group_data = $gQ->fetch_assoc();
+$admins_only = $group_data ? intval($group_data['admins_only']) : 0;
+
+echo json_encode([
+    "status" => "success", 
+    "data" => $messages,
+    "admins_only" => $admins_only
+]);
 ?>
