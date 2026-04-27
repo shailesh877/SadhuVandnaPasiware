@@ -28,6 +28,9 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] == 0) {
         else if (strpos($mime, 'image') !== false) $file_type = 'image';
         else $file_type = 'document';
     }
+} elseif (isset($_POST['forward_file']) && !empty($_POST['forward_file'])) {
+    $attachment = $_POST['forward_file'];
+    $file_type = $_POST['file_type'] ?? 'image';
 }
 
 // Auto-migration check: add file_type if it doesn't exist
