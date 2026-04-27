@@ -34,6 +34,9 @@ if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ER
             $file_type = 'document';
         }
     }
+} elseif (isset($_POST['forward_file']) && !empty($_POST['forward_file'])) {
+    $attachment = $_POST['forward_file'];
+    $file_type = $_POST['file_type'] ?? 'image';
 }
 
 if (!$my || !$receiver || ($msg === '' && !$attachment)) {
