@@ -15,7 +15,13 @@ if ($check_adm->num_rows == 0) {
     $con->query("ALTER TABLE `tbl_groups` ADD COLUMN `admins_only` TINYINT(1) DEFAULT 0");
 }
 
-$res = $con->query("SELECT invite_code, admins_only FROM tbl_groups WHERE id = $group_id");
+// Auto-migration check: add description if it doesn't exist
+$check_desc = $con->query("SHOW COLUMNS FROM `tbl_groups` LIKE 'description'");
+if ($check_desc->num_rows == 0) {
+    $con->query("ALTER TABLE `tbl_groups` ADD COLUMN `description` TEXT DEFAULT NULL");
+}
+
+$res = $con->query("SELECT invite_code, admins_only, description FROM tbl_groups WHERE id = $group_id");
 if (!$res) {
     echo json_encode(["status" => "error", "message" => "Database error: " . $con->error]);
     exit;
@@ -36,5 +42,10 @@ if (!$invite_code) {
     $con->query("UPDATE tbl_groups SET invite_code = '$invite_code' WHERE id = $group_id");
 }
 
-echo json_encode(["status" => "success", "invite_code" => $invite_code, "admins_only" => $admins_only]);
+echo json_encode([
+    "status" => "success", 
+    "invite_code" => $invite_code, 
+    "admins_only" => $admins_only,
+    "description" => $row['description'] ?? ''
+]);
 ?>
