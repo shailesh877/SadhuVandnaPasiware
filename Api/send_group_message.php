@@ -77,12 +77,20 @@ if ($con->query($sql)) {
     // Notifications logic
     try {
         // 1. Get Group Info
-        $gQ = $con->query("SELECT group_name FROM tbl_groups WHERE id = $group_id LIMIT 1");
-        $group_name = ($gQ && $gRow = $gQ->fetch_assoc()) ? $gRow['group_name'] : "Group";
+        $gQ = $con->query("SELECT name, platform FROM tbl_groups WHERE id = $group_id LIMIT 1");
+        $gRow = ($gQ) ? $gQ->fetch_assoc() : null;
+        $group_name = $gRow ? $gRow['name'] : "Group";
+        $group_platform = $gRow ? $gRow['platform'] : "community";
 
         // 2. Get Sender Info
-        $sQ = $con->query("SELECT name FROM tbl_members WHERE id = $sender_id LIMIT 1");
-        $sender_name = ($sQ && $sRow = $sQ->fetch_assoc()) ? $sRow['name'] : "Member";
+        $sender_name = "Member";
+        if ($group_platform === 'marriage') {
+            $sQ = $con->query("SELECT full_name FROM tbl_marriage_profiles WHERE id = $sender_id LIMIT 1");
+            if ($sQ && $sRow = $sQ->fetch_assoc()) $sender_name = $sRow['full_name'];
+        } else {
+            $sQ = $con->query("SELECT name FROM tbl_members WHERE id = $sender_id LIMIT 1");
+            if ($sQ && $sRow = $sQ->fetch_assoc()) $sender_name = $sRow['name'];
+        }
 
         // 3. Get All Members to notify
         $mQ = $con->query("SELECT user_id FROM tbl_group_members WHERE group_id = $group_id AND user_id != $sender_id");
@@ -91,11 +99,23 @@ if ($con->query($sql)) {
         $notif_body = "$sender_name: " . ($attachment ? "📷 Sent an attachment" : $message);
 
         while($mRow = $mQ->fetch_assoc()){
-            $target_id = $mRow['user_id'];
-            sendExpoPushNotification($con, $target_id, $notif_title, $notif_body, [
-                "type" => "group_chat",
-                "group_id" => $group_id
-            ]);
+            $target_profile_id = $mRow['user_id'];
+            $real_user_id = 0;
+
+            if ($group_platform === 'marriage') {
+                $rQ = $con->query("SELECT user_id FROM tbl_marriage_profiles WHERE id = $target_profile_id LIMIT 1");
+                if ($rQ && $rRow = $rQ->fetch_assoc()) $real_user_id = $rRow['user_id'];
+            } else {
+                $real_user_id = $target_profile_id; // Community uses member_id directly
+            }
+
+            if ($real_user_id > 0) {
+                sendExpoPushNotification($con, $real_user_id, $notif_title, $notif_body, [
+                    "type" => "group_chat",
+                    "group_id" => $group_id,
+                    "platform" => $group_platform
+                ]);
+            }
         }
     } catch (Exception $e) {
         // Log error but don't fail the message send
