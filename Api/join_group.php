@@ -5,7 +5,7 @@
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['inviteCode'])) {
     header("Content-Type: text/html; charset=UTF-8");
     $invite_code = $_GET['inviteCode'];
-    $app_link = "sadhuvandna://Api/join_group.php?inviteCode=" . htmlspecialchars($invite_code);
+    $app_link = "sadhuvandna://join?inviteCode=" . htmlspecialchars($invite_code);
     ?>
     <!DOCTYPE html>
     <html lang="en">
