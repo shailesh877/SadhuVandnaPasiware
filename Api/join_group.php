@@ -13,6 +13,7 @@ $user_id = intval($data['user_id'] ?? $_POST['user_id'] ?? 0);
 if (!$invite_code || !$user_id) {
     // If opened in browser (GET request without user_id)
     if ($_SERVER['REQUEST_METHOD'] === 'GET' && $invite_code) {
+        header("Content-Type: text/html; charset=UTF-8");
         $app_link = "sadhuvandna://Api/join_group.php?inviteCode=$invite_code";
         ?>
         <!DOCTYPE html>
