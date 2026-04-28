@@ -27,6 +27,11 @@ if (!empty($group_name)) {
     $update_parts[] = "name = '$group_name'";
 }
 
+$description = $con->real_escape_string($_POST['description'] ?? '');
+if (isset($_POST['description'])) {
+    $update_parts[] = "description = '$description'";
+}
+
 // Handle file upload
 if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
     $target_dir = "../uploads/photo/";
