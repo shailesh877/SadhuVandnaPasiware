@@ -58,19 +58,26 @@ while ($row = $res->fetch_assoc()) {
     $partner_name = "User";
     $partner_photo = "";
 
+    $is_online = false;
     if ($platform === 'marriage') {
-        // Join with marriage profiles
-        $p = $con->query("SELECT full_name, photo FROM tbl_marriage_profiles WHERE id = $partner_id LIMIT 1")->fetch_assoc();
+        // Join with marriage profiles and members to get online status
+        $p = $con->query("SELECT mp.full_name, mp.photo, (m.last_active >= NOW() - INTERVAL 5 MINUTE) as is_online 
+                          FROM tbl_marriage_profiles mp 
+                          JOIN tbl_members m ON mp.user_id = m.id
+                          WHERE mp.id = $partner_id LIMIT 1")->fetch_assoc();
         if ($p) {
             $partner_name = $p['full_name'];
             $partner_photo = $p['photo'];
+            $is_online = ($p['is_online'] == 1);
         }
     } else {
         // Join with members
-        $p = $con->query("SELECT name, profile_photo FROM tbl_members WHERE id = $partner_id LIMIT 1")->fetch_assoc();
+        $p = $con->query("SELECT name, profile_photo, (last_active >= NOW() - INTERVAL 5 MINUTE) as is_online 
+                          FROM tbl_members WHERE id = $partner_id LIMIT 1")->fetch_assoc();
         if ($p) {
             $partner_name = $p['name'];
             $partner_photo = $p['profile_photo'];
+            $is_online = ($p['is_online'] == 1);
         }
     }
 
@@ -81,7 +88,8 @@ while ($row = $res->fetch_assoc()) {
         "last_message" => $row['message'],
         "time" => date("h:i A", strtotime($row['created_at'])),
         "timestamp" => $row['created_at'],
-        "unread" => ($row['receiver_id'] == $search_id && $row['seen'] == 0) ? 1 : 0
+        "unread" => ($row['receiver_id'] == $search_id && $row['seen'] == 0) ? 1 : 0,
+        "is_online" => $is_online
     ];
 }
 
@@ -108,7 +116,8 @@ if ($groups_res) {
             "timestamp" => $msg_time,
             "unread" => 0, // Simplified for now
             "isGroup" => true, // Flag to identify group chats
-            "created_by" => $grow['created_by']
+            "created_by" => $grow['created_by'],
+            "is_online" => false // Groups don't have online status
         ];
     }
 }
