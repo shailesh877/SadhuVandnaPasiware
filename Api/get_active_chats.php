@@ -80,6 +80,7 @@ while ($row = $res->fetch_assoc()) {
         "profile_photo" => $partner_photo,
         "last_message" => $row['message'],
         "time" => date("h:i A", strtotime($row['created_at'])),
+        "timestamp" => $row['created_at'],
         "unread" => ($row['receiver_id'] == $search_id && $row['seen'] == 0) ? 1 : 0
     ];
 }
@@ -104,6 +105,7 @@ if ($groups_res) {
             "profile_photo" => $grow['photo'],
             "last_message" => $grow['last_message'] ?: 'Group created',
             "time" => date("h:i A", strtotime($msg_time)),
+            "timestamp" => $msg_time,
             "unread" => 0, // Simplified for now
             "isGroup" => true, // Flag to identify group chats
             "created_by" => $grow['created_by']
@@ -111,9 +113,9 @@ if ($groups_res) {
     }
 }
 
-// Sort chats by time (most recent first)
+// Sort chats by timestamp (most recent first)
 usort($chats, function($a, $b) {
-    return strtotime($b['time']) - strtotime($a['time']);
+    return strtotime($b['timestamp']) - strtotime($a['timestamp']);
 });
 
 echo json_encode(["status" => "success", "data" => $chats]);
