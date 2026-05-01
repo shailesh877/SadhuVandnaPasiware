@@ -12,7 +12,7 @@ if (!$group_id) {
 
 // Assume platform is community for now as groups are built for it
 $sql = "
-    SELECT gm.id as membership_id, gm.role, gm.joined_at, m.id as user_id, m.name, m.profile_photo 
+    SELECT gm.id as membership_id, gm.role, gm.joined_at, m.id as user_id, m.name, m.profile_photo, (m.last_active >= NOW() - INTERVAL 5 MINUTE) as is_online 
     FROM tbl_group_members gm
     INNER JOIN tbl_members m ON gm.user_id = m.id
     WHERE gm.group_id = $group_id
@@ -32,7 +32,8 @@ while ($row = $res->fetch_assoc()) {
         "name" => $row['name'],
         "profile_photo" => $row['profile_photo'],
         "role" => $row['role'],
-        "joined_at" => $row['joined_at']
+        "joined_at" => $row['joined_at'],
+        "is_online" => ($row['is_online'] == 1)
     ];
 }
 
