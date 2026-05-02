@@ -23,13 +23,17 @@ $sql = "
     LIMIT 1
 ";
 
-$res = $con->query($sql);
-if ($res && $row = $res->fetch_assoc()) {
-    echo json_encode([
-        "status" => "success",
-        "typing_user" => $row['user_name']
-    ]);
-} else {
+try {
+    $res = $con->query($sql);
+    if ($res && $row = $res->fetch_assoc()) {
+        echo json_encode([
+            "status" => "success",
+            "typing_user" => $row['user_name']
+        ]);
+    } else {
+        echo json_encode(["status" => "success", "typing_user" => null]);
+    }
+} catch (Exception $e) {
     echo json_encode(["status" => "success", "typing_user" => null]);
 }
 ?>
