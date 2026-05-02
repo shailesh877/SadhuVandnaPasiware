@@ -67,20 +67,24 @@ function scrapeYoutubeStreams($channelUrl) {
     return $videos;
 }
 
-$channels = [
-    "https://www.youtube.com/@MorariBapu/streams",
-    "https://www.youtube.com/@MorariBapu/videos",
-    "https://www.youtube.com/@AasthaChannel/streams",
-    "https://www.youtube.com/@AasthaChannel/videos",
-    "https://www.youtube.com/@AasthaTV/streams",
-    "https://www.youtube.com/@AasthaTV/videos",
-    "https://www.youtube.com/@AasthaBhajan/streams",
-    "https://www.youtube.com/@AasthaBhajan/videos"
+$channelUrls = [
+    ["url" => "https://www.youtube.com/@MorariBapu/streams", "isStream" => true],
+    ["url" => "https://www.youtube.com/@MorariBapu/videos", "isStream" => false],
+    ["url" => "https://www.youtube.com/@AasthaChannel/streams", "isStream" => true],
+    ["url" => "https://www.youtube.com/@AasthaChannel/videos", "isStream" => false],
+    ["url" => "https://www.youtube.com/@AasthaTV/streams", "isStream" => true],
+    ["url" => "https://www.youtube.com/@AasthaTV/videos", "isStream" => false],
+    ["url" => "https://www.youtube.com/@AasthaBhajan/streams", "isStream" => true],
+    ["url" => "https://www.youtube.com/@AasthaBhajan/videos", "isStream" => false]
 ];
 
 $allVideos = [];
-foreach ($channels as $url) {
-    $channelVideos = scrapeYoutubeStreams($url);
+foreach ($channelUrls as $channel) {
+    $channelVideos = scrapeYoutubeStreams($channel['url']);
+    // Tag each video with isStream flag
+    foreach ($channelVideos as &$v) {
+        $v['isStream'] = $channel['isStream'];
+    }
     $allVideos = array_merge($allVideos, $channelVideos);
 }
 
@@ -94,13 +98,17 @@ foreach ($allVideos as $video) {
     }
 }
 
-// Sort: LIVE videos first, then prioritize Morari Bapu content
+// Sort: LIVE videos first, then STREAMS, then prioritize Morari Bapu content
 usort($uniqueVideos, function($a, $b) {
     // 1. Prioritize LIVE
     if ($a['isLive'] && !$b['isLive']) return -1;
     if (!$a['isLive'] && $b['isLive']) return 1;
     
-    // 2. Both are LIVE or both are NOT LIVE, check for "Morari" or "Bapu"
+    // 2. Prioritize STREAMS
+    if ($a['isStream'] && !$b['isStream']) return -1;
+    if (!$a['isStream'] && $b['isStream']) return 1;
+    
+    // 3. Both are same category, check for "Morari" or "Bapu"
     $isAMorari = (stripos($a['title'], 'Morari') !== false || stripos($a['title'], 'Bapu') !== false);
     $isBMorari = (stripos($b['title'], 'Morari') !== false || stripos($b['title'], 'Bapu') !== false);
     
