@@ -4,7 +4,7 @@ header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
-include("../php/connection.php");
+include("connection.php");
 date_default_timezone_set("Asia/Kolkata");
 $con->query("SET time_zone = '+05:30'");
 
