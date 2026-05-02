@@ -9,7 +9,7 @@ if (!$user_id) {
     exit;
 }
 
-$sql = "SELECT id as partner_id, name as full_name, profile_photo, (last_active >= NOW() - INTERVAL 5 MINUTE) as is_online FROM tbl_members WHERE status != 'Blocked' AND id != $user_id ORDER BY name ASC LIMIT 500";
+$sql = "SELECT id as partner_id, name as full_name, profile_photo, (last_active >= NOW() - INTERVAL 5 MINUTE) as is_online FROM tbl_members WHERE status != 'Blocked' AND id != $user_id ORDER BY name ASC";
 $res = $con->query($sql);
 $users = [];
 
