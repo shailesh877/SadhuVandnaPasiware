@@ -6,7 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['inviteCode'])) {
     header("Content-Type: text/html; charset=UTF-8");
     $invite_code = $_GET['inviteCode'];
     $app_link = "sadhuvandna://join?inviteCode=" . htmlspecialchars($invite_code);
-    $intent_link = "intent://join?inviteCode=" . htmlspecialchars($invite_code) . "#Intent;scheme=sadhuvandna;package=com.sadhuvandna.app;end";
+    $intent_link = "intent://join?inviteCode=" . htmlspecialchars($invite_code) . "#Intent;scheme=sadhuvandna;end";
     ?>
     <!DOCTYPE html>
     <html lang="en">
