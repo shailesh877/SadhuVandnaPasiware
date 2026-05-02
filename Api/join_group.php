@@ -6,6 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['inviteCode'])) {
     header("Content-Type: text/html; charset=UTF-8");
     $invite_code = $_GET['inviteCode'];
     $app_link = "sadhuvandna://join?inviteCode=" . htmlspecialchars($invite_code);
+    $intent_link = "intent://join?inviteCode=" . htmlspecialchars($invite_code) . "#Intent;scheme=sadhuvandna;package=com.sadhuvandna.app;end";
     ?>
     <!DOCTYPE html>
     <html lang="en">
@@ -67,9 +68,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['inviteCode'])) {
             @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         </style>
         <script>
+            function openApp() {
+                var isAndroid = /android/i.test(navigator.userAgent.toLowerCase());
+                if (isAndroid) {
+                    window.location.href = "<?php echo $intent_link; ?>";
+                } else {
+                    window.location.href = "<?php echo $app_link; ?>";
+                }
+            }
+            
             // Try to open the app after a short delay
             setTimeout(function() {
-                window.location.href = "<?php echo $app_link; ?>";
+                openApp();
             }, 1000);
         </script>
     </head>
@@ -79,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['inviteCode'])) {
             <h2>Group Invitation</h2>
             <p>You've been invited to join a group. We're opening the SadhuVandna app for you...</p>
             <div class="loader"></div>
-            <a href="<?php echo $app_link; ?>" class="btn">Open App Now</a>
+            <a href="#" onclick="openApp(); return false;" class="btn">Open App Now</a>
             <p style="margin-top: 20px; font-size: 12px; color: #9ca3af;">If the app is not installed, please download it from the Play Store.</p>
         </div>
     </body>
