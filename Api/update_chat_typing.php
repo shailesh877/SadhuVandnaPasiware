@@ -17,6 +17,19 @@ if(!$profile_id || !$receiver_id){
 }
 
 try {
+    // Ensure table exists
+    $con->query("
+        CREATE TABLE IF NOT EXISTS tbl_chat_typing (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            profile_id VARCHAR(50) NOT NULL,
+            receiver_id VARCHAR(50) NOT NULL,
+            is_typing TINYINT(1) DEFAULT 0,
+            chat_platform VARCHAR(20) DEFAULT 'marriage',
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_chat_typing (profile_id, receiver_id, chat_platform)
+        )
+    ");
+
     // Update or Insert typing status
     // Using a simple table for typing status tracking
     $con->query("
