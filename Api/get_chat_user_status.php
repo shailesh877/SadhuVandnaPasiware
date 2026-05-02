@@ -43,15 +43,19 @@ if($row){
 // 2. Check Typing Status
 $is_typing = false;
 if($my_id){
-    $t_sql = "SELECT is_typing, updated_at FROM tbl_chat_typing 
-              WHERE profile_id='$receiver_id' AND target_id='$my_id' 
-              AND is_typing=1 
-              AND chat_platform='$platform'
-              AND (UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(updated_at) < 5) 
-              LIMIT 1";
-    $t_res = $con->query($t_sql);
-    if($t_res->num_rows > 0){
-        $is_typing = true;
+    try {
+        $t_sql = "SELECT is_typing, updated_at FROM tbl_chat_typing 
+                  WHERE profile_id='$receiver_id' AND target_id='$my_id' 
+                  AND is_typing=1 
+                  AND chat_platform='$platform'
+                  AND (UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(updated_at) < 5) 
+                  LIMIT 1";
+        $t_res = $con->query($t_sql);
+        if($t_res && $t_res->num_rows > 0){
+            $is_typing = true;
+        }
+    } catch (Exception $e) {
+        // Table might not exist, just ignore for now
     }
 }
 
