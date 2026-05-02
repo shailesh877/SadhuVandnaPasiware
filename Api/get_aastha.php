@@ -69,9 +69,13 @@ function scrapeYoutubeStreams($channelUrl) {
 
 $channels = [
     "https://www.youtube.com/@MorariBapu/streams",
+    "https://www.youtube.com/@MorariBapu/videos",
     "https://www.youtube.com/@AasthaChannel/streams",
+    "https://www.youtube.com/@AasthaChannel/videos",
     "https://www.youtube.com/@AasthaTV/streams",
-    "https://www.youtube.com/@AasthaBhajan/streams"
+    "https://www.youtube.com/@AasthaTV/videos",
+    "https://www.youtube.com/@AasthaBhajan/streams",
+    "https://www.youtube.com/@AasthaBhajan/videos"
 ];
 
 $allVideos = [];
