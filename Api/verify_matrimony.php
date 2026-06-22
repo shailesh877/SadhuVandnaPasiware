@@ -1,7 +1,7 @@
 <?php
 session_start();
 include("connection.php");
-require('vendor/autoload.php');
+require('../vendor/autoload.php');
 include("config.php");
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors\SignatureVerificationError;
