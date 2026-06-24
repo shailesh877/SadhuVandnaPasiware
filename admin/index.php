@@ -180,5 +180,17 @@ $totalEarnings = $totalEarnings ? $totalEarnings : 0;
       <h3 class="text-xl font-bold text-white mb-2">Setting</h3>
       <p class="text-sm text-indigo-100">Set matrimony profile fee</p>
     </a>
+      <!-- Anchor Applications Management Card -->
+    <a href="admin_anchor_applications" class="block bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
+          <i class="fa-solid fa-microphone-lines text-white text-2xl"></i>
+        </div>
+        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
+      </div>
+      <h3 class="text-xl font-bold text-white mb-2">Anchor Applications</h3>
+      <p class="text-sm text-orange-100">Approve/Reject news anchors</p>
+    </a>
+
   </div>
 </main>
