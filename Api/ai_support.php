@@ -3,7 +3,7 @@ include 'headers.php';
 include 'connection.php';
 
 // Define your Gemini API Key here (or retrieve it from environment variables / settings database)
-define('GEMINI_API_KEY', getenv('GEMINI_API_KEY') ?: 'YOUR_GEMINI_API_KEY_HERE');
+define('GEMINI_API_KEY', getenv('GEMINI_API_KEY') ?: 'AIzaSyC8-GlqTdHfXhNEoTfhsyi3v4FDu7ZFnkQ');
 
 // Read JSON input
 $json = file_get_contents('php://input');
@@ -91,17 +91,20 @@ if ($httpCode !== 200) {
             "नमस्कार! मैं आपका AI असिस्टेंट Linko हूँ। मैं Linkup ऐप में आपकी मदद के लिए तैयार हूँ। आप मुझसे मैट्रिमोनी प्रोफाइल बनाने, न्यूज़ पोस्ट करने या जॉब्स देखने के बारे में पूछ सकते हैं।",
             "Linkup ऐप में प्रोफाइल बनाने के लिए: Profile सेक्शन में जाकर 'Create Matrimony Profile' पर क्लिक करें और अपनी डिटेल्स भरें।",
             "News पोस्ट करने के लिए: News & Updates सेक्शन में जाएँ, और 'Post News' बटन पर क्लिक करें।",
-            "यदि आपको कोई और समस्या आ रही है, तो कृपया मुझे बताएं!"
+            "यदि आपको कोई और समस्या आ रही है, तो कृपया मुझे बताएं!",
+            "मेरा नाम Linko है। मैं Linkup ऐप का AI सपोर्ट असिस्टेंट हूँ। मैं आपकी सहायता के लिए हमेशा उपलब्ध हूँ।"
         ];
         
         $mockReply = $mockReplies[0];
         if (!empty($prompt)) {
-            $lowerPrompt = strtolower($prompt);
-            if (strpos($lowerPrompt, 'news') !== false || strpos($lowerPrompt, 'समाचार') !== false) {
+            $lowerPrompt = mb_strtolower($prompt, 'UTF-8');
+            if (strpos($lowerPrompt, 'news') !== false || strpos($lowerPrompt, 'समाचार') !== false || strpos($lowerPrompt, 'खबर') !== false) {
                 $mockReply = $mockReplies[2];
-            } else if (strpos($lowerPrompt, 'marriage') !== false || strpos($lowerPrompt, 'matrimony') !== false || strpos($lowerPrompt, 'शादी') !== false) {
+            } else if (strpos($lowerPrompt, 'marriage') !== false || strpos($lowerPrompt, 'matrimony') !== false || strpos($lowerPrompt, 'शादी') !== false || strpos($lowerPrompt, 'profile') !== false || strpos($lowerPrompt, 'प्रोफाइल') !== false) {
                 $mockReply = $mockReplies[1];
-            } else if (strpos($lowerPrompt, 'hi') !== false || strpos($lowerPrompt, 'hello') !== false || strpos($lowerPrompt, 'hey') !== false || strpos($lowerPrompt, 'नमस्ते') !== false) {
+            } else if (strpos($lowerPrompt, 'name') !== false || strpos($lowerPrompt, 'नाम') !== false || strpos($lowerPrompt, 'कौन') !== false || strpos($lowerPrompt, 'linko') !== false || strpos($lowerPrompt, 'लिंको') !== false) {
+                $mockReply = $mockReplies[4];
+            } else if (strpos($lowerPrompt, 'hi') !== false || strpos($lowerPrompt, 'hello') !== false || strpos($lowerPrompt, 'hey') !== false || strpos($lowerPrompt, 'नमस्ते') !== false || strpos($lowerPrompt, 'नमस्कार') !== false || strpos($lowerPrompt, 'हलो') !== false) {
                 $mockReply = $mockReplies[0];
             } else {
                 $mockReply = $mockReplies[3];
