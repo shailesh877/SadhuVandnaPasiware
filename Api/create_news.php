@@ -4,6 +4,7 @@ include 'connection.php';
 
 $title = $_POST['title'] ?? '';
 $description = $_POST['description'] ?? '';
+$category = $_POST['category'] ?? 'ताज़ा खबर';
 
 if (!$title || !$description) {
     echo json_encode(["status" => "error", "message" => "Title and description are required."]);
@@ -32,8 +33,8 @@ $mediaString = !empty($mediaFiles) ? implode(",", $mediaFiles) : '';
 date_default_timezone_set("Asia/Kolkata");
 $date = date("Y-m-d H:i:s");
 
-$stmt = $con->prepare("INSERT INTO tbl_news (title, description, image, created_at) VALUES (?, ?, ?, ?)");
-$stmt->bind_param("ssss", $title, $description, $mediaString, $date);
+$stmt = $con->prepare("INSERT INTO tbl_news (title, description, image, category, created_at) VALUES (?, ?, ?, ?, ?)");
+$stmt->bind_param("sssss", $title, $description, $mediaString, $category, $date);
 
 if ($stmt->execute()) {
     echo json_encode(["status" => "success", "message" => "News posted successfully."]);
