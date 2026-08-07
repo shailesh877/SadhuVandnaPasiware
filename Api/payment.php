@@ -2,7 +2,7 @@
 session_start();
 include("connection.php");
 require('../vendor/autoload.php');
-include("config.php");
+include("../config.php");
 use Razorpay\Api\Api;
 
 $uesr_email= $_SESSION['sadhu_user_id'] ?? '';
