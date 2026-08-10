@@ -24,50 +24,46 @@ if(isset($_POST['action']) && isset($_POST['id'])){
 $members = mysqli_query($con, "SELECT * FROM tbl_members WHERE status='Blocked' ORDER BY date DESC");
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Sadhu Vandana - Blocked Members</title>
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-<style>
-  /* Simple scrollable table max height */
-  .table-container { max-height: calc(100vh - 200px); overflow-y: auto; }
-</style>
-</head>
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen">
+<?php include("header.php"); ?>
 
-<!-- Header -->
-<header class="bg-white shadow-md sticky top-0 z-40">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <a href="index" class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition">
-          <i class="fa-solid fa-arrow-left text-orange-600"></i>
-        </a>
-        <div>
-          <h1 class="text-xl md:text-2xl font-bold text-gray-800">Blocked Members</h1>
-          <p class="text-xs text-gray-500">Manage all blocked members</p>
-        </div>
-      </div>
-      <span class="px-3 py-1.5 bg-red-100 text-red-600 rounded-full text-sm font-semibold"><?= mysqli_num_rows($members) ?> Blocked</span>
-    </div>
-  </div>
-</header>
-
-<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
 
 <?php if(isset($_SESSION['msg'])): ?>
-  <div class="mb-4 p-3 bg-green-100 text-green-800 rounded">
-      <?= $_SESSION['msg']; unset($_SESSION['msg']); ?>
-  </div>
+<div class="mb-2 p-1 bg-green-100 text-green-800 rounded text-sm text-center font-semibold border border-green-300">
+  <?= $_SESSION['msg']; unset($_SESSION['msg']); ?>
+</div>
 <?php endif; ?>
 
 <!-- Desktop Table -->
-<div class="hidden md:block bg-white rounded-xl shadow-lg overflow-hidden">
-  <div class="table-container">
+<div class="hidden md:block bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+  
+  <div class="p-2 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50">
+    <div class="flex items-center gap-3">
+      <a href="index.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+        <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+      </a>
+      <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+        Blocked Members
+      </h2>
+    </div>
+    
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <div class="relative w-full sm:w-64">
+        <i class="fa-solid fa-search absolute left-3 top-2.5 text-orange-400 text-sm"></i>
+        <input 
+          type="text" 
+          id="searchInput" 
+          placeholder="Search by name, mobile..." 
+          class="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-200 shadow-sm rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm text-gray-700"
+        >
+      </div>
+      <div class="text-sm font-medium text-gray-500 bg-white px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap">
+        Blocked: <span class="text-red-600 font-bold"><?= mysqli_num_rows($members) ?></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container overflow-y-auto" style="max-height: calc(100vh - 130px);">
     <table class="w-full text-sm">
       <thead class="bg-gradient-to-r from-orange-500 to-orange-600 text-white sticky top-0 z-10">
         <tr>
@@ -122,7 +118,7 @@ $a=1;
 mysqli_data_seek($members, 0);
 while($member = mysqli_fetch_assoc($members)):
 ?>
-<div class="bg-white rounded-xl shadow-lg p-4">
+<div class="bg-white rounded-xl shadow-lg p-4 mobile-card">
   <div class="flex items-start justify-between mb-3">
     <div class="flex items-center gap-3">
       <?php if($member['profile_photo'] && file_exists("../uploads/photo/".$member['profile_photo'])): ?>
@@ -192,7 +188,24 @@ document.getElementById("photoModal").onclick = (e) => {
     }
 };
 
-// Optional: add live search if needed
+// Search Functionality
+document.getElementById('searchInput')?.addEventListener('keyup', function() {
+    let filter = this.value.toLowerCase();
+    
+    // Filter Desktop Table
+    let tableRows = document.querySelectorAll('#tableBody tr');
+    tableRows.forEach(row => {
+        let text = row.innerText.toLowerCase();
+        row.style.display = text.includes(filter) ? '' : 'none';
+    });
+
+    // Filter Mobile Cards
+    let mobileCards = document.querySelectorAll('.mobile-card');
+    mobileCards.forEach(card => {
+        let text = card.innerText.toLowerCase();
+        card.style.display = text.includes(filter) ? '' : 'none';
+    });
+});
 </script>
 
 </body>

@@ -37,128 +37,114 @@ $month = date("m");
 $year = date("Y");
 $monthSum = $con->query("SELECT SUM(payment_ammount) FROM tbl_wallet WHERE status='success' AND MONTH(date)=$month AND YEAR(date)=$year")->fetch_row()[0] ?: 0;
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Sadhu Vandana - Wallet Transactions</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-</head>
-
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen">
-
-<!-- HEADER -->
-<header class="bg-white shadow-md sticky top-0 z-40">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-3">
-        <a href="index" class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition">
-          <i class="fa-solid fa-arrow-left text-orange-600"></i>
-        </a>
-        <div>
-          <h1 class="text-xl md:text-2xl font-bold text-gray-800">Total Earnings</h1>
-          <p class="text-xs text-gray-500">View all donations and contributions</p>
-        </div>
-      </div>
-
-      <span class="px-3 py-1.5 bg-blue-100 text-blue-600 rounded-full text-sm font-semibold">
-        ₹<?= $sum ?>
-      </span>
-    </div>
-
-    <!-- 🔍 SEARCH BAR HERE -->
-    <div class="mt-2">
-      <input 
-        type="text" 
-        id="searchInput" 
-        placeholder="Search by name, phone or transaction ID..." 
-        class="w-full px-4 py-2 bg-orange-50 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none"
-      >
-    </div>
-
-  </div>
-</header>
+<?php include("header.php"); ?>
 
 <!-- MAIN -->
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
+
+
   <!-- STATS CARDS -->
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-    <div class="bg-white rounded-xl shadow-md p-4">
+    <div class="bg-white rounded-xl shadow-md p-3 border border-gray-100">
       <div class="flex items-center gap-3">
-        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
           <i class="fa-solid fa-wallet text-blue-600 text-xl"></i>
         </div>
         <div>
-          <p class="text-xs text-gray-500">Total Amount</p>
-          <h3 class="text-xl font-bold text-gray-800">₹<?= $sum ?></h3>
+          <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Amount</p>
+          <h3 class="text-lg font-black text-gray-800">₹<?= $sum ?></h3>
         </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-md p-4">
+    <div class="bg-white rounded-xl shadow-md p-3 border border-gray-100">
       <div class="flex items-center gap-3">
-        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
           <i class="fa-solid fa-users text-green-600 text-xl"></i>
         </div>
         <div>
-          <p class="text-xs text-gray-500">Total Donors</p>
-          <h3 class="text-xl font-bold text-gray-800"><?= $donors ?></h3>
+          <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Donors</p>
+          <h3 class="text-lg font-black text-gray-800"><?= $donors ?></h3>
         </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-md p-4">
+    <div class="bg-white rounded-xl shadow-md p-3 border border-gray-100">
       <div class="flex items-center gap-3">
-        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+        <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
           <i class="fa-solid fa-calendar text-orange-600 text-xl"></i>
         </div>
         <div>
-          <p class="text-xs text-gray-500">This Month</p>
-          <h3 class="text-xl font-bold text-gray-800">₹<?= $monthSum ?></h3>
+          <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider">This Month</p>
+          <h3 class="text-lg font-black text-gray-800">₹<?= $monthSum ?></h3>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- TABLE DESKTOP -->
-  <div class="hidden md:block bg-white rounded-xl shadow-lg overflow-hidden">
-    <div class="max-h-[calc(100vh-350px)] overflow-y-auto" id="tableBodyDesktop">
+  <!-- LIST VIEW (Desktop Table) -->
+  <div class="hidden md:block bg-white rounded-xl shadow border border-gray-100 overflow-hidden mb-4">
+    
+    <div class="p-2 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50">
+      <div class="flex items-center gap-3">
+        <a href="index.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+          <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+        </a>
+        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <i class="fa-solid fa-wallet text-orange-600"></i>
+          Wallet & Earnings
+        </h2>
+      </div>
+      
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <div class="relative w-full sm:w-64">
+          <i class="fa-solid fa-search absolute left-3 top-2.5 text-orange-400 text-sm"></i>
+          <input 
+            type="search" 
+            id="searchInput" 
+            placeholder="Search name, phone, or TXN..." 
+            class="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-200 shadow-sm rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm text-gray-700"
+          >
+        </div>
+        <div class="text-sm font-medium text-gray-500 bg-white px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap">
+          Total: <span class="text-orange-600 font-bold"><?= count($transactions) ?></span>
+        </div>
+      </div>
+    </div>
 
-      <table class="w-full">
-        <thead class="bg-gradient-to-r from-orange-500 to-orange-600 text-white sticky top-0 z-10">
+    <div class="overflow-y-auto max-h-[525px]" id="tableBodyDesktop">
+      <table class="w-full text-sm border-t border-gray-100">
+        <thead class="bg-orange-500 text-white sticky top-0 z-10">
           <tr>
-            <th class="px-6 py-4">#</th>
-            <th class="px-6 py-4">Donor Name</th>
-            <th class="px-6 py-4">Phone</th>
-            <th class="px-6 py-4">Transaction ID</th>
-            <th class="px-6 py-4">Amount</th>
-            <th class="px-6 py-4">Date & Time</th>
-            <th class="px-6 py-4">Payment</th>
-            <th class="px-6 py-4">Status</th>
+            <th class="px-4 py-2 text-left font-medium">#</th>
+            <th class="px-4 py-2 text-left font-medium">Donor Name</th>
+            <th class="px-4 py-2 text-left font-medium">Phone</th>
+            <th class="px-4 py-2 text-left font-medium">Transaction ID</th>
+            <th class="px-4 py-2 text-left font-medium">Amount</th>
+            <th class="px-4 py-2 text-left font-medium">Date & Time</th>
+            <th class="px-4 py-2 text-center font-medium">Payment</th>
+            <th class="px-4 py-2 text-center font-medium">Status</th>
           </tr>
         </thead>
 
         <tbody id="searchDataDesktop" class="divide-y divide-gray-200">
           <?php foreach($transactions as $t): ?>
           <tr class="hover:bg-orange-50 transition search-row">
-            <td class="px-6 py-4"><?= $t['txn'] ?></td>
+            <td class="px-4 py-2 text-sm"><?= $t['txn'] ?></td>
 
-            <td class="px-6 py-4">
+            <td class="px-4 py-2 text-sm">
               <div class="flex items-center gap-3">
 
                 <?php if(!empty($t['profile']) && file_exists("../uploads/photo/".$t['profile'])): ?>
                  <img 
   src="../uploads/photo/<?= $t['profile'] ?>" 
-  class="w-12 h-12 rounded-full border-2 border-orange-400 shadow cursor-pointer"
+  class="w-8 h-8 rounded-full border-2 border-orange-400 shadow cursor-pointer"
   onclick="openImageModal('../uploads/photo/<?= $t['profile'] ?>')"
 />
 
                 <?php else: ?>
-                  <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold">
+                  <div class="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold">
                     <?= strtoupper(substr($t['name'],0,1)) ?>
                   </div>
                 <?php endif; ?>
@@ -167,17 +153,17 @@ $monthSum = $con->query("SELECT SUM(payment_ammount) FROM tbl_wallet WHERE statu
               </div>
             </td>
 
-            <td class="px-6 py-4"><?= $t['phone'] ?></td>
-            <td class="px-6 py-4"><?= $t['payment_id'] ?></td>
-            <td class="px-6 py-4 text-green-600 font-bold">₹<?= $t['amount'] ?></td>
-            <td class="px-6 py-4"><?= $t['date'] ?></td>
+            <td class="px-4 py-2 text-sm"><?= $t['phone'] ?></td>
+            <td class="px-4 py-2 text-sm"><?= $t['payment_id'] ?></td>
+            <td class="px-4 py-2 text-sm text-green-600 font-bold">₹<?= $t['amount'] ?></td>
+            <td class="px-4 py-2 text-sm"><?= $t['date'] ?></td>
 
-            <td class="px-6 py-4">
-              <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">Online</span>
+            <td class="px-4 py-2 text-center">
+              <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">Online</span>
             </td>
 
-            <td class="px-6 py-4">
-              <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs"><?= $t['status'] ?></span>
+            <td class="px-4 py-2 text-center">
+              <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium"><?= $t['status'] ?></span>
             </td>
           </tr>
           <?php endforeach; ?>
@@ -188,10 +174,21 @@ $monthSum = $con->query("SELECT SUM(payment_ammount) FROM tbl_wallet WHERE statu
     </div>
   </div>
 
-  <!-- MOBILE -->
+  <!-- MOBILE VIEW -->
   <div class="md:hidden space-y-4" id="searchDataMobile">
+    <!-- MOBILE SEARCH INPUT (Visible only on mobile, same ID won't work so we use class searchInputMob) -->
+    <div class="relative w-full mb-4">
+      <i class="fa-solid fa-search absolute left-3 top-2.5 text-orange-400 text-sm"></i>
+      <input 
+        type="search" 
+        id="searchInputMob" 
+        placeholder="Search name, phone, or TXN..." 
+        class="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 shadow-sm rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm text-gray-700"
+      >
+    </div>
+
     <?php foreach($transactions as $t): ?>
-    <div class="bg-white p-4 rounded-xl shadow search-row">
+    <div class="bg-white p-4 rounded-xl shadow border border-gray-100 search-row-mob">
 
       <div class="flex items-start justify-between">
         <div class="flex items-center gap-3">
@@ -199,12 +196,12 @@ $monthSum = $con->query("SELECT SUM(payment_ammount) FROM tbl_wallet WHERE statu
           <?php if(!empty($t['profile']) && file_exists("../uploads/photo/".$t['profile'])): ?>
             <img 
   src="../uploads/photo/<?= $t['profile'] ?>" 
-  class="w-12 h-12 rounded-full border-2 border-orange-400 shadow cursor-pointer"
+  class="w-8 h-8 rounded-full border-2 border-orange-400 shadow cursor-pointer"
   onclick="openImageModal('../uploads/photo/<?= $t['profile'] ?>')"
 />
 
           <?php else: ?>
-            <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold">
+            <div class="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold">
               <?= strtoupper(substr($t['name'],0,1)) ?>
             </div>
           <?php endif; ?>
@@ -275,17 +272,20 @@ document.getElementById('imageModal').addEventListener('click', function(e){
 
 <!-- SEARCH SCRIPT -->
 <script>
+// Desktop Search
 document.getElementById("searchInput").addEventListener("keyup", function () {
-
   var value = this.value.toLowerCase();
-
-  document.querySelectorAll(".search-row").forEach(row => {
-    row.style.display =
-      row.innerText.toLowerCase().includes(value)
-        ? ""
-        : "none";
+  document.querySelectorAll("#searchDataDesktop .search-row").forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(value) ? "" : "none";
   });
+});
 
+// Mobile Search
+document.getElementById("searchInputMob").addEventListener("keyup", function () {
+  var value = this.value.toLowerCase();
+  document.querySelectorAll(".search-row-mob").forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(value) ? "" : "none";
+  });
 });
 </script>
 

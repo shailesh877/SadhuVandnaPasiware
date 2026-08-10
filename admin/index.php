@@ -1,6 +1,6 @@
 <?php
 include("header.php");
-include("../connection.php");
+// No need to include connection if header already did, but it's safe.
 
 // Fetch counts dynamically
 $newRegCount = mysqli_fetch_assoc(mysqli_query($con, "SELECT COUNT(*) as cnt FROM tbl_members WHERE status='Pending'"))['cnt'];
@@ -8,189 +8,228 @@ $approvedCount = mysqli_fetch_assoc(mysqli_query($con, "SELECT COUNT(*) as cnt F
 $blockedCount = mysqli_fetch_assoc(mysqli_query($con, "SELECT COUNT(*) as cnt FROM tbl_members WHERE status='Blocked'"))['cnt'];
 $totalEarnings = mysqli_fetch_assoc(mysqli_query($con, "SELECT SUM(payment_ammount) as total FROM tbl_wallet WHERE status='success'"))['total'];
 $totalEarnings = $totalEarnings ? $totalEarnings : 0;
+
+$todayEarnings = mysqli_fetch_assoc(mysqli_query($con, "SELECT SUM(payment_ammount) as total FROM tbl_wallet WHERE status='success' AND DATE(date) = CURDATE()"))['total'];
+$todayEarnings = $todayEarnings ? $todayEarnings : 0;
+
+$chartLabels = [];
+$regData = [];
+$revData = [];
+for($i=6; $i>=0; $i--) {
+    $dateStr = date('Y-m-d', strtotime("-$i days"));
+    $displayLabel = date('D', strtotime("-$i days"));
+    $chartLabels[] = $displayLabel;
+    
+    $regQ = mysqli_query($con, "SELECT COUNT(*) as c FROM tbl_members WHERE DATE(date) = '$dateStr'");
+    $regData[] = mysqli_fetch_assoc($regQ)['c'] ?? 0;
+    
+    $revQ = mysqli_query($con, "SELECT SUM(payment_ammount) as s FROM tbl_wallet WHERE DATE(date) = '$dateStr' AND status='success'");
+    $revData[] = mysqli_fetch_assoc($revQ)['s'] ?? 0;
+}
 ?>
 
-<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-  
-  <!-- Member Management Cards-->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    
-    <!-- Card 1: New Registration -->
-    <a href="admin_new_registration" class="block bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-4 group border-t-4 border-orange-500">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center group-hover:scale-110 transition-transform">
-          <i class="fa-solid fa-user-plus text-orange-600 text-2xl"></i>
-        </div>
-        <span class="text-xs font-semibold text-orange-600 bg-orange-100 px-3 py-1.5 rounded-full">New</span>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+ 
+  <!-- Welcome & Revenue Highlight -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Welcome Banner (Spans 2 cols on lg) -->
+      <div class="lg:col-span-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-3xl p-8 sm:p-10 text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex flex-col justify-center relative overflow-hidden">
+          <!-- Decorative shapes -->
+          <div class="absolute -top-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
+          <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-yellow-500/20 rounded-full blur-xl"></div>
+          
+          <div class="relative z-10">
+              <p class="text-orange-100 mb-2 text-sm font-semibold uppercase tracking-wider"><?= date('l, d F Y') ?></p>
+              <h2 class="text-3xl sm:text-4xl font-extrabold mb-3">Welcome Back, Admin! 👋</h2>
+              <p class="text-orange-100 max-w-lg text-sm sm:text-base leading-relaxed">Here's your community snapshot. Monitor member growth, manage content, and track revenue seamlessly.</p>
+          </div>
       </div>
-      <h3 class="text-3xl font-bold text-gray-800 mb-1"><?= $newRegCount ?></h3>
-      <p class="text-sm text-gray-600 font-medium">New Registration</p>
-      <p class="text-xs text-gray-400 mt-2">Pending approval</p>
-    </a>
 
-    <!-- Card 2: All Members -->
-    <a href="admin_all_community_member" class="block bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-4 group border-t-4 border-green-500">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center group-hover:scale-110 transition-transform">
-          <i class="fa-solid fa-users text-green-600 text-2xl"></i>
-        </div>
-        <span class="text-xs font-semibold text-green-600 bg-green-100 px-3 py-1.5 rounded-full">Active</span>
+      <!-- Revenue Highlight Card -->
+      <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex flex-col justify-between relative overflow-hidden">
+         <div class="absolute top-0 right-0 p-6 opacity-[0.05]">
+             <i class="fa-solid fa-wallet text-8xl"></i>
+         </div>
+         <div class="relative z-10">
+             <div class="flex items-center gap-2 text-gray-400 text-sm font-semibold mb-2">
+                 <i class="fa-solid fa-indian-rupee-sign text-emerald-400"></i> Total Revenue
+             </div>
+             <h3 class="text-4xl sm:text-5xl font-black text-white tracking-tight mb-8">₹<?= number_format($totalEarnings) ?></h3>
+             
+             <div class="pt-5 border-t border-gray-700/50 flex justify-between items-end">
+                 <div>
+                     <p class="text-xs text-gray-400 mb-1 uppercase tracking-wider font-semibold">Today's Earnings</p>
+                     <p class="text-xl font-bold text-emerald-400">+₹<?= number_format($todayEarnings) ?></p>
+                 </div>
+                 <a href="admin_wallet.php" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition">
+                     <i class="fa-solid fa-arrow-right"></i>
+                 </a>
+             </div>
+         </div>
       </div>
-      <h3 class="text-3xl font-bold text-gray-800 mb-1"><?= $approvedCount ?></h3>
-      <p class="text-sm text-gray-600 font-medium">All Members</p>
-      <p class="text-xs text-gray-400 mt-2">Total registered</p>
-    </a>
-
-    <!-- Card 3: Blocked Members -->
-    <a href="admin_block_user" class="block bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-4 group border-t-4 border-red-500">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center group-hover:scale-110 transition-transform">
-          <i class="fa-solid fa-user-slash text-red-600 text-2xl"></i>
-        </div>
-        <span class="text-xs font-semibold text-red-600 bg-red-100 px-3 py-1.5 rounded-full">Blocked</span>
-      </div>
-      <h3 class="text-3xl font-bold text-gray-800 mb-1"><?= $blockedCount ?></h3>
-      <p class="text-sm text-gray-600 font-medium">Blocked Members</p>
-      <p class="text-xs text-gray-400 mt-2">Restricted access</p>
-    </a>
-
-    <!-- Card 4: Wallet / Total Earnings -->
-    <a href="admin_wallet" class="block bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-4 group border-t-4 border-blue-500">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center group-hover:scale-110 transition-transform">
-          <i class="fa-solid fa-wallet text-blue-600 text-2xl"></i>
-        </div>
-        <span class="text-xs font-semibold text-blue-600 bg-blue-100 px-3 py-1.5 rounded-full">₹</span>
-      </div>
-      <h3 class="text-3xl font-bold text-gray-800 mb-1">₹<?php echo number_format($totalEarnings); ?></h3>
-      <p class="text-sm text-gray-600 font-medium">Total Earnings</p>
-      <p class="text-xs text-gray-400 mt-2">From all donations</p>
-    </a>
-
   </div>
 
-  <!-- Management Actions -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+  <!-- Overview Stats -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
     
-    <a href="create_temple" class="block bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
-          <i class="fa-solid fa-place-of-worship text-white text-2xl"></i>
-        </div>
-        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
+    <!-- New Registration -->
+    <a href="admin_new_registration.php" class="bg-white rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 flex items-center gap-6 group relative overflow-hidden">
+      <div class="absolute right-0 top-0 w-32 h-32 bg-orange-50 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="w-16 h-16 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-2xl shadow-sm relative z-10 group-hover:scale-110 transition-transform">
+        <i class="fa-solid fa-user-plus"></i>
       </div>
-      <h3 class="text-xl font-bold text-white mb-2">Create Temple</h3>
-      <p class="text-sm text-orange-100">Add new temple location</p>
+      <div class="relative z-10">
+          <p class="text-sm font-bold text-gray-500 mb-1 uppercase tracking-wider">Pending</p>
+          <h3 class="text-3xl font-black text-gray-800"><?= $newRegCount ?></h3>
+      </div>
     </a>
 
-    <a href="create_branch" class="block bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
-          <i class="fa-solid fa-code-branch text-white text-2xl"></i>
-        </div>
-        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
+    <!-- All Members -->
+    <a href="admin_all_community_member.php" class="bg-white rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 flex items-center gap-6 group relative overflow-hidden">
+      <div class="absolute right-0 top-0 w-32 h-32 bg-green-50 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="w-16 h-16 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center text-2xl shadow-sm relative z-10 group-hover:scale-110 transition-transform">
+        <i class="fa-solid fa-users"></i>
       </div>
-      <h3 class="text-xl font-bold text-white mb-2">Create Branch</h3>
-      <p class="text-sm text-orange-100">Add temple branch</p>
+      <div class="relative z-10">
+          <p class="text-sm font-bold text-gray-500 mb-1 uppercase tracking-wider">Active Members</p>
+          <h3 class="text-3xl font-black text-gray-800"><?= $approvedCount ?></h3>
+      </div>
     </a>
 
-    <a href="add_views_news" class="block bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
-          <i class="fa-solid fa-newspaper text-white text-2xl"></i>
-        </div>
-        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
+    <!-- Blocked Members -->
+    <a href="admin_block_user.php" class="bg-white rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 flex items-center gap-6 group relative overflow-hidden">
+      <div class="absolute right-0 top-0 w-32 h-32 bg-red-50 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+      <div class="w-16 h-16 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center text-2xl shadow-sm relative z-10 group-hover:scale-110 transition-transform">
+        <i class="fa-solid fa-user-slash"></i>
       </div>
-      <h3 class="text-xl font-bold text-white mb-2">Create News</h3>
-      <p class="text-sm text-orange-100">Post latest updates</p>
-    </a>
-</div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-    <a href="admin_jobs_education" class="block bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
-          <i class="fa-solid fa-chalkboard-user text-white text-2xl"></i>
-        </div>
-        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
+      <div class="relative z-10">
+          <p class="text-sm font-bold text-gray-500 mb-1 uppercase tracking-wider">Blocked</p>
+          <h3 class="text-3xl font-black text-gray-800"><?= $blockedCount ?></h3>
       </div>
-      <h3 class="text-xl font-bold text-white mb-2">Job And Education</h3>
-      <p class="text-sm text-orange-100">Post latest updates</p>
     </a>
-    <a href="admin_gallery" class="block bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
-          <i class="fa-solid fa-image text-white text-2xl"></i>
-        </div>
-        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
-      </div>
-      <h3 class="text-xl font-bold text-white mb-2">Add Gallery</h3>
-      <p class="text-sm text-orange-100">Post latest updates</p>
-    </a>
-    <a href="admin_post" class="block bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
-          <i class="fa-solid fa-photo-film text-white text-2xl"></i>
-        </div>
-        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
-      </div>
-      <h3 class="text-xl font-bold text-white mb-2">Manage Posts</h3>
-      <p class="text-sm text-orange-100">All Members' Posts</p>
-    </a>
-<!-- Festival Frames Card -->
-    <a href="admin_festival_frames.php" class="block bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
-          <i class="fa-solid fa-wand-magic-sparkles text-white text-2xl"></i>
-        </div>
-        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
-      </div>
-      <h3 class="text-xl font-bold text-white mb-2">Festival Frames</h3>
-      <p class="text-sm text-orange-100">Add/Remove Frames</p>
-    </a>
-      <!-- Bulk WhatsApp Card -->
-    <a href="admin_whatsapp_bulk.php" class="block bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
-          <i class="fa-brands fa-whatsapp text-white text-3xl"></i>
-        </div>
-        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
-      </div>
-      <h3 class="text-xl font-bold text-white mb-2">Bulk WhatsApp</h3>
-      <p class="text-sm text-green-100">Send via MSG91</p>
-    </a>
-      <!-- Add Contact Card -->
-    <a href="admin_add_contact.php" class="block bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
-          <i class="fa-solid fa-address-book text-white text-2xl"></i>
-        </div>
-        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
-      </div>
-      <h3 class="text-xl font-bold text-white mb-2">Add Contact</h3>
-      <p class="text-sm text-orange-100">Manual or Excel Import</p>
-    </a>
-      <!-- settin  -->
-      <a href="admin_setting.php" class="block bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
-          <i class="fa-solid fa-gear text-white text-3xl"></i>
-        </div>
-        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
-      </div>
-      <h3 class="text-xl font-bold text-white mb-2">Setting</h3>
-      <p class="text-sm text-indigo-100">Set matrimony profile fee</p>
-    </a>
-      <!-- Anchor Applications Management Card -->
-    <a href="admin_anchor_applications" class="block bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-4 group hover:scale-105">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-14 h-14 rounded-lg bg-white/10 bg-opacity-20 backdrop-blur flex items-center justify-center">
-          <i class="fa-solid fa-microphone-lines text-white text-2xl"></i>
-        </div>
-        <i class="fa-solid fa-arrow-right text-white text-lg opacity-0 group-hover:opacity-100 transition"></i>
-      </div>
-      <h3 class="text-xl font-bold text-white mb-2">Anchor Applications</h3>
-      <p class="text-sm text-orange-100">Approve/Reject news anchors</p>
-    </a>
-
   </div>
+
+  <!-- Charts Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- Registrations Chart -->
+      <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8">
+          <div class="flex items-center justify-between mb-6">
+              <h3 class="text-lg font-bold text-gray-800">User Growth</h3>
+              <span class="text-xs font-semibold bg-gray-100 text-gray-600 px-3 py-1 rounded-full">Last 7 Days</span>
+          </div>
+          <div class="relative h-72 w-full">
+              <canvas id="regChart"></canvas>
+          </div>
+      </div>
+
+      <!-- Revenue Chart -->
+      <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8">
+          <div class="flex items-center justify-between mb-6">
+              <h3 class="text-lg font-bold text-gray-800">Revenue Analytics</h3>
+              <span class="text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100 px-3 py-1 rounded-full">Last 7 Days</span>
+          </div>
+          <div class="relative h-72 w-full">
+              <canvas id="revChart"></canvas>
+          </div>
+      </div>
+      
+  </div>
+
 </main>
+
+<script>
+// Parse data from PHP
+const labels = <?= json_encode($chartLabels) ?>;
+const regData = <?= json_encode($regData) ?>;
+const revData = <?= json_encode($revData) ?>;
+
+// Registration Line Chart
+const ctxReg = document.getElementById('regChart').getContext('2d');
+new Chart(ctxReg, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'New Users',
+            data: regData,
+            borderColor: '#f97316', // orange-500
+            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+            borderWidth: 3,
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#f97316',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { borderDash: [4, 4], color: '#f3f4f6' },
+                ticks: { padding: 10, font: { family: 'inherit' } }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { padding: 10, font: { family: 'inherit' } }
+            }
+        },
+        interaction: { mode: 'index', intersect: false }
+    }
+});
+
+// Revenue Bar Chart
+const ctxRev = document.getElementById('revChart').getContext('2d');
+new Chart(ctxRev, {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Revenue (₹)',
+            data: revData,
+            backgroundColor: '#10b981', // emerald-500
+            borderRadius: 6,
+            barThickness: 'flex',
+            maxBarThickness: 32
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { borderDash: [4, 4], color: '#f3f4f6' },
+                ticks: {
+                    padding: 10,
+                    font: { family: 'inherit' },
+                    callback: function(value) {
+                        if (value >= 1000) return '₹' + (value/1000) + 'k';
+                        return '₹' + value;
+                    }
+                }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { padding: 10, font: { family: 'inherit' } }
+            }
+        },
+        interaction: { mode: 'index', intersect: false }
+    }
+});
+</script>
+
+</body>
+</html>

@@ -62,43 +62,24 @@ if (isset($_POST['update'])) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Edit Gallery Image</title>
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<link rel="stylesheet"
- href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-</head>
-
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen">
-
-<!-- HEADER -->
-<header class="bg-white shadow-md sticky top-0 z-40">
-  <div class="max-w-6xl mx-auto flex items-center px-4 py-2">
-    <a href="admin_gallery.php"
-      class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-2">
-      <i class="fa-solid fa-arrow-left text-orange-600"></i>
-    </a>
-    <h1 class="text-xl font-bold text-orange-600 flex-1 text-center">
-      Edit Gallery Image
-    </h1>
-  </div>
-</header>
-
+<?php include("header.php"); ?>
 
 <!-- MAIN -->
-<main class="flex items-center justify-center py-8 px-4">
- <div class="bg-white rounded-xl shadow-lg p-8 max-w-xl w-full">
-
-    <div class="flex items-center gap-2 mb-4">
-      <i class="fa-solid fa-image text-orange-600"></i>
-      <h2 class="text-lg font-bold">Update Image</h2>
+<main class="max-w-3xl mx-auto py-8 px-4">
+ <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+    
+    <div class="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50">
+      <a href="admin_gallery.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+        <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+      </a>
+      <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+        <i class="fa-solid fa-image text-orange-600"></i>
+        Edit Gallery Image
+      </h2>
     </div>
 
-   <form method="POST" enctype="multipart/form-data"
-         class="space-y-5">
+    <div class="p-6">
+       <form method="POST" enctype="multipart/form-data" class="space-y-5">
 
       <!-- Title -->
       <div>
@@ -139,7 +120,9 @@ if (isset($_POST['update'])) {
         </a>
       </div>
 
+      </div>
    </form>
+   </div>
  </div>
 </main>
 

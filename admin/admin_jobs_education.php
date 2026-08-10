@@ -67,37 +67,9 @@ $data = mysqli_query($con, "SELECT * FROM tbl_jobs_education ORDER BY id DESC");
 ?>
 
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Jobs & Education Admin</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-<style>
-.desc-text{
-  max-height: 3.2rem;     /* approx 2 lines */
-  overflow: hidden;
-  transition: max-height 0.3s ease;
-}
-</style>
+<?php include("header.php"); ?>
 
-</head>
 
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen">
-
-<header class="bg-white shadow-md sticky top-0 z-40">
-  <div class="max-w-6xl mx-auto flex items-center px-4 py-2">
-    <a href="index"
-      class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-2">
-      <i class="fa-solid fa-arrow-left text-orange-600"></i>
-    </a>
-    <h1 class="text-xl font-bold text-orange-600 flex-1 text-center">
-      Jobs & Education Management
-    </h1>
-  </div>
-</header>
 
 <main class="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-8">
 
@@ -162,9 +134,37 @@ if(isset($_GET['msg'])){
   </div>
 
   <!-- ================= LIST VIEW ================= -->
-<div class="overflow-x-auto max-h-[500px] relative">
+<div class="w-full md:w-2/3">
+<div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+  
+  <div class="p-2 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50">
+    <div class="flex items-center gap-3">
+      <a href="index" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+        <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+      </a>
+      <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+        Jobs & Education
+      </h2>
+    </div>
+    
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <div class="relative w-full sm:w-64">
+        <i class="fa-solid fa-search absolute left-3 top-2.5 text-orange-400 text-sm"></i>
+        <input 
+          type="search" 
+          id="searchInput" 
+          placeholder="Search..." 
+          class="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-200 shadow-sm rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm text-gray-700"
+        >
+      </div>
+      <div class="text-sm font-medium text-gray-500 bg-white px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap">
+        Total: <span class="text-orange-600 font-bold"><?= mysqli_num_rows($data) ?></span>
+      </div>
+    </div>
+  </div>
 
-<table class="min-w-full text-sm border border-orange-200">
+  <div class="overflow-y-auto max-h-[525px]">
+    <table class="w-full text-sm border-t border-gray-100">
   <thead class="bg-orange-500 text-white sticky top-0 z-10">
     <tr>
       <th class="px-4 py-2 text-left whitespace-nowrap">Sr No</th>
@@ -201,10 +201,10 @@ if(isset($_GET['msg'])){
 
       <!-- ✅ DESCRIPTION WITH READ MORE -->
       <td class="px-4 py-2 max-w-xs">
-        <p class="desc-text text-gray-700 text-[13px]" id="desc-<?= $row['id'] ?>">
+        <p class="line-clamp-1 text-gray-700 text-[13px]" id="desc-<?= $row['id'] ?>">
           <?= htmlspecialchars($row['description']) ?>
         </p>
-        <button onclick="toggleDesc('desc-<?= $row['id'] ?>', this)"
+        <button onclick="toggleDescription('desc-<?= $row['id'] ?>', this)"
           class="text-orange-600 text-xs font-semibold hover:underline mt-1">
           Read more
         </button>
@@ -233,7 +233,7 @@ if(isset($_GET['msg'])){
 
   <?php if(mysqli_num_rows($data) == 0){ ?>
     <tr>
-      <td colspan="6" class="text-center py-4 text-gray-500">
+      <td colspan="7" class="text-center py-4 text-gray-500">
         No data found
       </td>
     </tr>
@@ -241,21 +241,32 @@ if(isset($_GET['msg'])){
   </tbody>
 </table>
 
+  </div>
 </div>
-
+</div>
 
 </main>
 <script>
-function toggleDesc(id, btn){
-  const el = document.getElementById(id);
-  if(el.style.maxHeight && el.style.maxHeight !== "3.2rem"){
-    el.style.maxHeight = "3.2rem";
-    btn.innerText = "Read more";
-  }else{
-    el.style.maxHeight = el.scrollHeight + "px";
+function toggleDescription(id, btn) {
+  let el = document.getElementById(id);
+  if (el.classList.contains('line-clamp-1')) {
+    el.classList.remove('line-clamp-1');
     btn.innerText = "Read less";
+  } else {
+    el.classList.add('line-clamp-1');
+    btn.innerText = "Read more";
   }
 }
+
+document.getElementById("searchInput").addEventListener("input", function(){
+  let v = this.value.toLowerCase();
+  document.querySelectorAll("tbody tr").forEach(r => {
+    // Only search rows that are not the "No data found" row
+    if (r.children.length > 1) {
+      r.style.display = r.innerText.toLowerCase().includes(v) ? "" : "none";
+    }
+  });
+});
 </script>
 
 </body>

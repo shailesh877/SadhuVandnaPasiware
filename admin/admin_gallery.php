@@ -63,30 +63,9 @@ if(isset($_GET["delete"])){
 $data = mysqli_query($con,"SELECT * FROM tbl_gallery ORDER BY id DESC");
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Gallery Management</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-</head>
+<?php include("header.php"); ?>
 
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen">
 
-<!-- HEADER (same vibe as Jobs & Education) -->
-<header class="bg-white shadow-md sticky top-0 z-40">
-  <div class="max-w-6xl mx-auto flex items-center px-4 py-2">
-    <a href="index"
-      class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-2">
-      <i class="fa-solid fa-arrow-left text-orange-600"></i>
-    </a>
-    <h1 class="text-xl font-bold text-orange-600 flex-1 text-center">
-      Gallery Management
-    </h1>
-  </div>
-</header>
 
 <main class="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row gap-8">
 
@@ -134,15 +113,36 @@ $data = mysqli_query($con,"SELECT * FROM tbl_gallery ORDER BY id DESC");
 
   <!-- ================= LIST VIEW ================= -->
   <div class="w-full md:w-2/3">
-    <div class="bg-white rounded-xl shadow-lg p-4 md:p-6">
+    <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
 
-      <div class="flex items-center gap-2 mb-4">
-        <i class="fa-solid fa-images text-orange-600"></i>
-        <h2 class="text-lg font-bold">Gallery Images</h2>
+      <div class="p-2 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50">
+        <div class="flex items-center gap-3">
+          <a href="index" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+            <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+          </a>
+          <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+            Gallery Images
+          </h2>
+        </div>
+        
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <div class="relative w-full sm:w-64">
+            <i class="fa-solid fa-search absolute left-3 top-2.5 text-orange-400 text-sm"></i>
+            <input 
+              type="search" 
+              id="searchInput" 
+              placeholder="Search..." 
+              class="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-200 shadow-sm rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm text-gray-700"
+            >
+          </div>
+          <div class="text-sm font-medium text-gray-500 bg-white px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap">
+            Total: <span class="text-orange-600 font-bold"><?= mysqli_num_rows($data) ?></span>
+          </div>
+        </div>
       </div>
 
-      <div class="overflow-x-auto max-h-[500px] relative border border-orange-200 rounded-lg">
-        <table class="min-w-full text-sm">
+      <div class="overflow-y-auto max-h-[525px]">
+        <table class="w-full text-sm border-t border-gray-100">
           <thead class="bg-orange-500 text-white sticky top-0 z-10">
             <tr>
               <th class="px-4 py-2 text-left whitespace-nowrap">Sr No</th>
@@ -212,4 +212,14 @@ $data = mysqli_query($con,"SELECT * FROM tbl_gallery ORDER BY id DESC");
 </main>
 
 </body>
+<script>
+document.getElementById("searchInput").addEventListener("input", function(){
+  let v = this.value.toLowerCase();
+  document.querySelectorAll("tbody tr").forEach(r => {
+    if (r.children.length > 1) {
+      r.style.display = r.innerText.toLowerCase().includes(v) ? "" : "none";
+    }
+  });
+});
+</script>
 </html>

@@ -164,15 +164,7 @@ if (isset($_SESSION['msg'])) {
 <?php include("header.php"); ?>
 
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-  <div class="flex items-center gap-3 mb-6">
-    <a href="index.php" class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition">
-      <i class="fa-solid fa-arrow-left text-orange-600"></i>
-    </a>
-    <div>
-      <h1 class="text-2xl font-bold text-gray-800">Bulk WhatsApp Messaging</h1>
-      <p class="text-sm text-gray-500">Send "New Update" notification via MSG91</p>
-    </div>
-  </div>
+
 
   <?php if (!empty($msg)): ?>
     <div class="p-4 mb-6 rounded-lg font-medium shadow-sm <?php echo $msgType == 'success' ? 'bg-green-100 text-green-700 border-l-4 border-green-500' : 'bg-red-100 text-red-700 border-l-4 border-red-500'; ?>">
@@ -180,11 +172,15 @@ if (isset($_SESSION['msg'])) {
     </div>
   <?php endif; ?>
 
-  <div class="bg-white rounded-2xl shadow-xl overflow-hidden mb-8 border border-gray-100">
-    <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
-        <h2 class="text-white text-lg font-semibold flex items-center gap-2">
-            <i class="fa-brands fa-whatsapp text-2xl"></i> Send Community Update
-        </h2>
+  <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden mb-8">
+    <div class="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50">
+      <a href="index.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+        <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+      </a>
+      <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+        <i class="fa-brands fa-whatsapp text-green-600"></i>
+        Bulk WhatsApp Messaging
+      </h2>
     </div>
     
     <div class="p-6">
@@ -225,7 +221,7 @@ if (isset($_SESSION['msg'])) {
                 <div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm">
                     <label class="block text-sm font-bold text-gray-800 mb-3">2. Template Preview</label>
                     <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 italic leading-relaxed">
-                        Hello Sadhuvandna Community, We have introduced a new feature: <span class="font-bold text-blue-900 bg-blue-200 px-1 rounded">{{Feature Name}}</span>. Please check the app to explore the update. Thank you.
+                        Hello linkup Community, We have introduced a new feature: <span class="font-bold text-blue-900 bg-blue-200 px-1 rounded">{{Feature Name}}</span>. Please check the app to explore the update. Thank you.
                     </div>
                 </div>
 

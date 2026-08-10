@@ -87,59 +87,9 @@ if(isset($_GET['delete'])){
 $branches=mysqli_query($con,"SELECT * FROM tbl_branch ORDER BY id DESC");
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Branch Create & View</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-<style>
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-</style>
-<script>
-function toggleDetail(id, btn){
-  let el=document.getElementById(id);
-  if(el.classList.contains("line-clamp-1")){
-    el.classList.remove("line-clamp-1");
-    btn.textContent="See less";
-  } else {
-    el.classList.add("line-clamp-1");
-    btn.textContent="See more";
-  }
-}
+<?php include("header.php"); ?>
 
-function previewBranchPhoto(input){
-  const box=document.getElementById("branch-photo-preview");
-  if(input.files && input.files[0]){
-    let reader=new FileReader();
-    reader.onload=e=>{
-      box.innerHTML='<img src="'+e.target.result+'" class="w-16 h-16 rounded-full object-cover"/>';
-    };
-    reader.readAsDataURL(input.files[0]);
-  } else {
-    box.innerHTML='<i class="fa-solid fa-user-tie text-gray-300 text-xl"></i>';
-  }
-}
-</script>
-</head>
-<body class="bg-orange-50 min-h-screen">
 
-<!-- Header -->
-<header class="bg-white shadow-md sticky top-0 z-40">
-  <div class="max-w-6xl mx-auto px-4 py-2 flex items-center">
-    <a href="index" class="mr-2 w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition">
-      <i class="fa-solid fa-arrow-left text-orange-600"></i>
-    </a>
-    <h1 class="text-xl font-bold text-orange-600 flex-1 text-center">Add / View Branch</h1>
-  </div>
-</header>
 
 <main class="flex gap-5 max-w-6xl mx-auto p-4 mt-4">
 
@@ -199,11 +149,86 @@ function previewBranchPhoto(input){
       </form>
     </div>
 
+  </div> <!-- END OF LEFT FORM -->
+
+  <!-- LIST VIEW (Mobile + Desktop) -->
+  <div class="w-full md:w-3/5">
+    
+    <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden mb-4">
+      <div class="p-2 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50">
+        <div class="flex items-center gap-3">
+          <a href="index" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+            <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+          </a>
+          <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+            Branch List
+          </h2>
+        </div>
+        
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <div class="relative w-full sm:w-64">
+            <i class="fa-solid fa-search absolute left-3 top-2.5 text-orange-400 text-sm"></i>
+            <input 
+              type="search" 
+              id="searchInput" 
+              placeholder="Search branch..." 
+              class="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-200 shadow-sm rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm text-gray-700"
+            >
+          </div>
+          <div class="text-sm font-medium text-gray-500 bg-white px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap">
+            Total: <span class="text-orange-600 font-bold"><?= mysqli_num_rows($branches) ?></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop Table -->
+      <div class="hidden md:block overflow-y-auto max-h-[525px]">
+        <table class="w-full text-sm border-t border-gray-100">
+          <thead class="bg-orange-500 text-white sticky top-0">
+            <tr>
+              <th class="px-3 py-2 text-left">Photo</th>
+              <th class="px-3 py-2 text-left">Branch</th>
+              <th class="px-3 py-2 text-left">Mahant</th>
+              <th class="px-3 py-2 text-left">Village</th>
+              <th class="px-3 py-2 text-left">Mobile</th>
+              <th class="px-3 py-2 text-left">Details</th>
+              <th class="px-3 py-2 text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+          <?php mysqli_data_seek($branches,0); while($row=mysqli_fetch_assoc($branches)): ?>
+            <tr>
+              <td class="px-3 py-2 text-center">
+                <?php if($row['photo'] && file_exists("../uploads/branches/".$row['photo'])): ?>
+                  <img src="../uploads/branches/<?= $row['photo'] ?>" class="w-10 h-10 rounded-full object-cover mx-auto">
+                <?php else: ?>
+                  <i class="fa-solid fa-user-tie text-gray-300 text-xl"></i>
+                <?php endif; ?>
+              </td>
+              <td class="px-3 py-2"><?= $row['branch_name'] ?></td>
+              <td class="px-3 py-2"><?= $row['mahant_name'] ?></td>
+              <td class="px-3 py-2"><?= $row['branch_village'] ?></td>
+              <td class="px-3 py-2"><?= $row['mahant_mobile'] ?></td>
+              <td class="px-3 py-2">
+                <span id="desk-detail-<?= $row['id'] ?>" class="line-clamp-1"><?= $row['details'] ?></span>
+                <button onclick="toggleDetail('desk-detail-<?= $row['id'] ?>',this)" class="text-orange-600 text-xs">See more</button>
+              </td>
+              <td class="px-3 py-2 text-center flex justify-center gap-2">
+                <a href="branch_edit?id=<?= $row['id'] ?>" class="w-7 h-7 bg-blue-100 text-blue-600 rounded flex items-center justify-center"><i class="fa fa-edit"></i></a>
+                <a href="create_branch.php?delete=<?= $row['id'] ?>" onclick="return confirm('Delete?')" class="w-7 h-7 bg-red-100 text-red-600 rounded flex items-center justify-center"><i class="fa fa-trash"></i></a>
+              </td>
+            </tr>
+          <?php endwhile; ?>
+          </tbody>
+        </table>
+      </div>
+    </div> <!-- /bg-white -->
+
     <!-- Mobile Cards -->
-    <div class="md:hidden mt-4 space-y-4">
-      <h2 class="text-lg font-semibold text-orange-600 mb-3">Branch List</h2>
+    <div class="md:hidden space-y-4" id="mobileCards">
       <?php mysqli_data_seek($branches,0); $i=1; while($row=mysqli_fetch_assoc($branches)): ?>
-      <div class="bg-white border rounded-xl p-4 shadow flex gap-4">
+      <div class="bg-white border rounded-xl p-4 shadow flex gap-4 mobile-card" 
+           data-search="<?= htmlspecialchars(strtolower($row['branch_name'].' '.$row['mahant_name'].' '.$row['branch_village'].' '.$row['mahant_mobile'])) ?>">
         <div>
           <?php if($row['photo'] && file_exists("../uploads/branches/".$row['photo'])): ?>
             <img src="../uploads/branches/<?= $row['photo'] ?>" class="w-16 h-16 rounded-full object-cover">
@@ -227,56 +252,50 @@ function previewBranchPhoto(input){
       </div>
       <?php $i++; endwhile; ?>
     </div>
-  </div>
 
-  <!-- Desktop Table -->
-  <div class="hidden md:block w-3/5">
-    <div class="bg-white rounded-xl shadow p-6">
-      <h2 class="text-lg font-semibold text-orange-600 mb-3">Branch List</h2>
-      <div class="h-[500px] overflow-auto">
-        <table class="min-w-full text-sm">
-          <thead class="bg-orange-500 text-white sticky top-0">
-            <tr>
-              <th class="px-3 py-2">Photo</th>
-              <th class="px-3 py-2">Branch</th>
-              <th class="px-3 py-2">Mahant</th>
-              <th class="px-3 py-2">Village</th>
-              <th class="px-3 py-2">Mobile</th>
-              <th class="px-3 py-2">Details</th>
-              <th class="px-3 py-2 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y">
-          <?php mysqli_data_seek($branches,0); while($row=mysqli_fetch_assoc($branches)): ?>
-            <tr>
-              <td class="px-3 py-2 text-center">
-                <?php if($row['photo'] && file_exists("../uploads/branches/".$row['photo'])): ?>
-                  <img src="../uploads/branches/<?= $row['photo'] ?>" class="w-10 h-10 rounded-full object-cover mx-auto">
-                <?php else: ?>
-                  <i class="fa-solid fa-user-tie text-gray-300"></i>
-                <?php endif; ?>
-              </td>
-              <td class="px-3 py-2"><?= $row['branch_name'] ?></td>
-              <td class="px-3 py-2"><?= $row['mahant_name'] ?></td>
-              <td class="px-3 py-2"><?= $row['branch_village'] ?></td>
-              <td class="px-3 py-2"><?= $row['mahant_mobile'] ?></td>
-              <td class="px-3 py-2">
-                <span id="desk-detail-<?= $row['id'] ?>" class="line-clamp-1"><?= $row['details'] ?></span>
-                <button onclick="toggleDetail('desk-detail-<?= $row['id'] ?>',this)" class="text-orange-600 text-xs">See more</button>
-              </td>
-              <td class="px-3 py-2 text-center">
-                <a href="branch_edit?id=<?= $row['id'] ?>" class="w-7 h-7 bg-blue-100 text-blue-600 rounded flex items-center justify-center inline-block"><i class="fa fa-edit"></i></a>
-                <a href="create_branch.php?delete=<?= $row['id'] ?>" onclick="return confirm('Delete?')" class="w-7 h-7 bg-red-100 text-red-600 rounded flex items-center justify-center inline-block"><i class="fa fa-trash"></i></a>
-              </td>
-            </tr>
-          <?php endwhile; ?>
-          </tbody>
-        </table>
-      </div>
-    </div>
   </div>
 
 </main>
+
+<script>
+// Live Search
+document.getElementById("searchInput").addEventListener("input", function(){
+  let v = this.value.toLowerCase();
+  
+  // Desktop table search
+  document.querySelectorAll("tbody tr").forEach(r => {
+    r.style.display = r.innerText.toLowerCase().includes(v) ? "" : "none";
+  });
+  
+  // Mobile cards search
+  document.querySelectorAll(".mobile-card").forEach(c => {
+    c.style.display = c.dataset.search.includes(v) ? "" : "none";
+  });
+});
+
+// Photo Preview
+function previewBranchPhoto(input){
+  if(input.files && input.files[0]){
+    let reader = new FileReader();
+    reader.onload = function(e){
+      document.getElementById('branch-photo-preview').innerHTML = '<img src="'+e.target.result+'" class="w-full h-full object-cover rounded-full border">';
+    }
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// Toggle See More / Show Less
+function toggleDetail(id, btn){
+  let el = document.getElementById(id);
+  if(el.classList.contains('line-clamp-1')){
+    el.classList.remove('line-clamp-1');
+    btn.innerText = "Show less";
+  } else {
+    el.classList.add('line-clamp-1');
+    btn.innerText = "See more";
+  }
+}
+</script>
 
 </body>
 </html>

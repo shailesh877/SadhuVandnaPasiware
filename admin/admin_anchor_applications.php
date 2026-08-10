@@ -73,42 +73,31 @@ if ($applications_q) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Sadhu Vandana - News Anchor Applications</title>
-<!-- Tailwind CSS v4 -->
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<!-- FontAwesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-</head>
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen text-gray-800">
-
-<!-- Header -->
-<header class="bg-white shadow-md sticky top-0 z-40">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-    <div class="flex items-center gap-3">
-      <a href="index" class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
-        <i class="fa-solid fa-arrow-left text-orange-600"></i>
-      </a>
-      <div>
-        <h1 class="text-xl md:text-2xl font-bold text-gray-900">Anchor Applications</h1>
-        <p class="text-xs text-gray-500">Review, approve, and manage applicants for news anchors</p>
-      </div>
-    </div>
-    
-    <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-      <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold border border-yellow-200"><?= $pending_count ?> Pending</span>
-      <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold border border-green-200"><?= $approved_count ?> Approved</span>
-      <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold border border-red-200"><?= $rejected_count ?> Rejected</span>
-      <input type="text" id="searchInput" placeholder="Search by name, phone, email..." class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 w-full md:w-64 mt-2 md:mt-0">
-    </div>
-  </div>
-</header>
+<?php include("header.php"); ?>
 
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+  <!-- Secondary Header -->
+  <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden mb-6">
+    <div class="p-4 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50">
+      <div class="flex items-center gap-3">
+        <a href="index.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+          <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+        </a>
+        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <i class="fa-solid fa-microphone-lines text-orange-600"></i>
+          Anchor Applications
+        </h2>
+      </div>
+      
+      <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold border border-yellow-200"><?= $pending_count ?> Pending</span>
+        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold border border-green-200"><?= $approved_count ?> Approved</span>
+        <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold border border-red-200"><?= $rejected_count ?> Rejected</span>
+        <input type="text" id="searchInput" placeholder="Search by name, phone, email..." class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 w-full md:w-64">
+      </div>
+    </div>
+  </div>
 
   <!-- Message Toast -->
   <?php if(isset($_SESSION['msg'])): ?>
@@ -139,11 +128,11 @@ if ($applications_q) {
   <?php else: ?>
 
     <!-- Desktop Table View -->
-    <div class="hidden md:block bg-white rounded-2xl shadow-lg border border-orange-100 overflow-hidden">
+    <div class="hidden md:block bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-left border-collapse" id="appsTable">
-          <thead class="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs uppercase tracking-wider font-bold">
-            <tr>
+          <thead class="bg-gray-50 sticky top-0">
+            <tr class="text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
               <th class="px-6 py-4">Photo</th>
               <th class="px-6 py-4">Applicant details</th>
               <th class="px-6 py-4">Education</th>

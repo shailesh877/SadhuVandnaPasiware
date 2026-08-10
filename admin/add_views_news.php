@@ -96,72 +96,9 @@ if(isset($_GET["delete"])){
 $fetch_news = mysqli_query($con, "SELECT * FROM tbl_news ORDER BY id DESC");
 
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1.0" />
-<title>Sadhu Vandana - News Management</title>
+<?php include("header.php"); ?>
 
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-<style>
-.truncate-line {
-  display: -webkit-box !important;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.overflow-y-auto::-webkit-scrollbar {
-  width: 0px;
-  display: none;
-}
-</style>
-
-<script>
-function toggleDescription(id, btn){
-  const p = document.getElementById(id);
-  if(p.classList.contains("truncate-line")){
-    p.classList.remove("truncate-line");
-    btn.textContent = "see less";
-  } else {
-    p.classList.add("truncate-line");
-    btn.textContent = "see more";
-  }
-}
-
-// ✅ MULTIPLE IMAGE PREVIEW
-function previewImages(event){
-  const previewBox = document.getElementById("previewBox");
-  previewBox.innerHTML = "";
-
-  Array.from(event.target.files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = function(){
-      const img = document.createElement("img");
-      img.src = reader.result;
-      img.className = "w-24 h-24 object-cover rounded-lg border";
-      previewBox.appendChild(img);
-    };
-    reader.readAsDataURL(file);
-  });
-}
-</script>
-</head>
-
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen">
-
-<header class="bg-white shadow-md sticky top-0 z-40">
-  <div class="max-w-6xl mx-auto px-4 py-2 flex items-center">
-    <a href="index"
-      class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition mr-2">
-      <i class="fa-solid fa-arrow-left text-orange-600"></i>
-    </a>
-    <h1 class="text-xl font-bold text-orange-600 flex-1 text-center">News Management</h1>
-  </div>
-</header>
 
 <main class="max-w-8xl mx-auto px-4 py-4 flex flex-col md:flex-row gap-8">
 
@@ -206,16 +143,40 @@ function previewImages(event){
 
 <!-- LEFT: NEWS LIST -->
 <div class="w-full md:w-2/3 md:order-1">
-  <div class="bg-white rounded-xl shadow-lg p-6">
+  <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
 
-    <h2 class="text-xl font-bold text-gray-800 mb-6">All News</h2>
+  <div class="p-2 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50">
+    <div class="flex items-center gap-3">
+      <a href="index" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+        <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+      </a>
+      <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+        All News
+      </h2>
+    </div>
+    
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <div class="relative w-full sm:w-64">
+        <i class="fa-solid fa-search absolute left-3 top-2.5 text-orange-400 text-sm"></i>
+        <input 
+          type="search" 
+          id="searchInput" 
+          placeholder="Search news..." 
+          class="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-200 shadow-sm rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm text-gray-700"
+        >
+      </div>
+      <div class="text-sm font-medium text-gray-500 bg-white px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap">
+        Total: <span class="text-orange-600 font-bold"><?= mysqli_num_rows($fetch_news) ?></span>
+      </div>
+    </div>
+  </div>
 
     <div class="overflow-y-auto h-[525px]">
 
       <table class="w-full">
         <thead class="bg-orange-500 text-white sticky top-0">
           <tr>
-            <th class="px-4 py-3">ID</th>
+            <th class="px-4 py-3 whitespace-nowrap">Sr No</th>
             <th class="px-4 py-3">Images</th>
             <th class="px-4 py-3">Title</th>
             <th class="px-4 py-3">Description</th>
@@ -228,21 +189,22 @@ function previewImages(event){
         <?php $i=1; while($row = mysqli_fetch_assoc($fetch_news)){ ?>
           <tr class="border-b hover:bg-orange-50">
 
-            <td class="px-4 py-3">#<?= $row["id"] ?></td>
+            <td class="px-4 py-3 font-semibold"><?= $i ?></td>
 
             <td class="px-4 py-3">
               <?php
               $imgs = explode(",", $row["image"]);
               foreach($imgs as $img){
+                  $path = "../uploads/news/" . $img;
               ?>
-              <img src="../uploads/news/<?= $img ?>" class="w-12 h-12 rounded inline-block mr-1 mb-1">
+              <img src="<?= $path ?>" onclick="openImageModal('<?= $path ?>')" class="w-12 h-12 object-cover rounded inline-block mr-1 mb-1 cursor-pointer hover:opacity-80 transition shadow-sm border border-gray-200">
               <?php } ?>
             </td>
 
             <td class="px-4 py-3"><?= $row["title"] ?></td>
 
             <td class="px-4 py-3 max-w-xs">
-              <p class="truncate-line text-sm" id="desc-<?= $i ?>">
+              <p class="line-clamp-1 text-sm" id="desc-<?= $i ?>">
                 <?= $row["description"] ?>
               </p>
               <button onclick="toggleDescription('desc-<?= $i ?>', this)"
@@ -277,5 +239,54 @@ function previewImages(event){
 </div>
 </main>
 
+<!-- IMAGE PREVIEW MODAL -->
+<div id="imagePreviewModal" class="fixed inset-0 z-[100] bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+  <button onclick="closeImageModal()" class="absolute top-4 right-4 md:top-6 md:right-6 text-white hover:text-orange-500 bg-white/10 hover:bg-white/20 w-10 h-10 rounded-full flex items-center justify-center transition-all z-10">
+    <i class="fa-solid fa-xmark text-xl"></i>
+  </button>
+  <div class="max-w-4xl w-full max-h-[90vh] flex items-center justify-center relative">
+    <img id="modalPreviewImage" src="" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl">
+  </div>
+</div>
+
 </body>
+<script>
+document.getElementById("searchInput").addEventListener("input", function(){
+  let v = this.value.toLowerCase();
+  document.querySelectorAll("tbody tr").forEach(r => {
+    r.style.display = r.innerText.toLowerCase().includes(v) ? "" : "none";
+  });
+});
+
+function toggleDescription(id, btn) {
+  let el = document.getElementById(id);
+  if (el.classList.contains('line-clamp-1')) {
+    el.classList.remove('line-clamp-1');
+    btn.innerText = "see less";
+  } else {
+    el.classList.add('line-clamp-1');
+    btn.innerText = "see more";
+  }
+}
+
+function openImageModal(src) {
+  document.getElementById('modalPreviewImage').src = src;
+  document.getElementById('imagePreviewModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeImageModal() {
+  document.getElementById('imagePreviewModal').classList.add('hidden');
+  document.getElementById('modalPreviewImage').src = "";
+  document.body.style.overflow = '';
+}
+
+// Close modal on escape key or clicking outside
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeImageModal();
+});
+document.getElementById('imagePreviewModal').addEventListener('click', function(e) {
+  if (e.target === this) closeImageModal();
+});
+</script>
 </html>

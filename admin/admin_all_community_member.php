@@ -25,42 +25,45 @@ $members = mysqli_query($con, "SELECT * FROM tbl_members WHERE status='Approved'
 ?>
 
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Sadhu Vandana - Community Members</title>
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-</head>
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen">
+<?php include("header.php"); ?>
 
-<header class="bg-white shadow-md sticky top-0 z-40">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-    <div class="flex items-center gap-3">
-      <a href="index" class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition">
-        <i class="fa-solid fa-arrow-left text-orange-600"></i>
-      </a>
-      <div>
-        <h1 class="text-xl md:text-2xl font-bold text-gray-800">Community Members</h1>
-        <p class="text-xs text-gray-500">Manage all registered members</p>
-      </div>
-    </div>
-    <div class="flex gap-2 items-center">
-      <input type="text" id="searchInput" placeholder="Search by name, email, phone, caste..." class="px-3 py-2 border rounded-lg w-full md:w-64 text-sm">
-    </div>
-  </div>
-</header>
-
-<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
 
 <?php if(isset($_SESSION['msg'])): ?>
-<div class="mb-4 p-3 bg-green-100 text-green-800 rounded"><?= $_SESSION['msg']; unset($_SESSION['msg']); ?></div>
+<div class="mb-2 p-1 bg-green-100 text-green-800 rounded text-sm text-center font-semibold border border-green-300">
+  <?= $_SESSION['msg']; unset($_SESSION['msg']); ?>
+</div>
 <?php endif; ?>
 
-<div class="hidden md:block bg-white rounded-xl shadow-lg overflow-hidden">
-  <div class="max-h-[calc(100vh-200px)] overflow-y-auto">
+<div class="hidden md:block bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+  
+  <div class="p-2 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50">
+    <div class="flex items-center gap-3">
+      <a href="index.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+        <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+      </a>
+      <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+        Community Members
+      </h2>
+    </div>
+    
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <div class="relative w-full sm:w-64">
+        <i class="fa-solid fa-search absolute left-3 top-2.5 text-orange-400 text-sm"></i>
+        <input 
+          type="text" 
+          id="searchInput" 
+          placeholder="Search..." 
+          class="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-200 shadow-sm rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm text-gray-700"
+        >
+      </div>
+      <div class="text-sm font-medium text-gray-500 bg-white px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap">
+        Total: <span class="text-orange-600 font-bold"><?= mysqli_num_rows($members) ?></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="overflow-y-auto" style="max-height: calc(100vh - 130px);">
     <table class="w-full text-sm" id="memberTable">
       <thead class="bg-gradient-to-r from-orange-500 to-orange-600 text-white sticky top-0 z-10">
         <tr>

@@ -86,27 +86,9 @@ if (isset($_POST['addTemple'])) {
 $temples = mysqli_query($con, "SELECT * FROM tbl_temple ORDER BY temple_id DESC");
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-    <title>Add / View Temple</title>
+<?php include("header.php"); ?>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-</head>
 
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen flex flex-col">
-
-<header class="bg-white shadow-md sticky top-0 z-40">
-    <div class="max-w-6xl mx-auto px-4 py-2 flex items-center">
-        <a href="index.php" class="mr-2 w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-            <i class="fa-solid fa-arrow-left text-orange-600"></i>
-        </a>
-        <h1 class="text-xl font-bold text-orange-600 flex-1 text-center">Add / View Temple</h1>
-    </div>
-</header>
 
 <main class="flex-1 flex flex-col md:flex-row gap-8 p-4 w-full justify-center">
 
@@ -166,14 +148,36 @@ $temples = mysqli_query($con, "SELECT * FROM tbl_temple ORDER BY temple_id DESC"
 
     <!-- Table -->
     <div class="w-full md:w-3/5">
-        <div class="bg-white rounded-xl shadow-lg p-4">
-            <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-list text-orange-500"></i>
-                Temple List
+      <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+        
+        <div class="p-2 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50">
+          <div class="flex items-center gap-3">
+            <a href="index.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+              <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+            </a>
+            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+              Temple List
             </h2>
+          </div>
+          
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <div class="relative w-full sm:w-64">
+              <i class="fa-solid fa-search absolute left-3 top-2.5 text-orange-400 text-sm"></i>
+              <input 
+                type="search" 
+                id="searchInput" 
+                placeholder="Search temple..." 
+                class="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-200 shadow-sm rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm text-gray-700"
+              >
+            </div>
+            <div class="text-sm font-medium text-gray-500 bg-white px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap">
+              Total: <span class="text-orange-600 font-bold"><?= mysqli_num_rows($temples) ?></span>
+            </div>
+          </div>
+        </div>
 
-            <div class="overflow-y-auto h-[500px]">
-                <table class="w-full">
+        <div class="overflow-y-auto max-h-[525px]">
+          <table class="w-full text-sm border-t border-gray-100">
                     <thead class="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
                         <tr>
                             <th class="px-3 py-2 text-left text-xs">Photo</th>
@@ -225,6 +229,13 @@ $temples = mysqli_query($con, "SELECT * FROM tbl_temple ORDER BY temple_id DESC"
 </main>
 
 <script>
+document.getElementById("searchInput").addEventListener("input", function(){
+  let v = this.value.toLowerCase();
+  document.querySelectorAll("tbody tr").forEach(r => {
+    r.style.display = r.innerText.toLowerCase().includes(v) ? "" : "none";
+  });
+});
+
 function showPreview(event) {
     document.getElementById("previewImg").src = URL.createObjectURL(event.target.files[0]);
     document.getElementById("previewImg").classList.remove("hidden");

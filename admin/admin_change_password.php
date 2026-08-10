@@ -32,31 +32,20 @@ if (isset($_POST['changePass'])) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<?php include("header.php"); ?>
 
-<head>
-    <meta charset="UTF-8">
-    <title>Change Password</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-</head>
-
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen flex justify-center items-center px-4">
-
-    <div class="bg-white/80 backdrop-blur shadow-2xl rounded-2xl p-8 w-full max-w-lg border border-orange-200 transition-all">
-
-        <!-- Header with Back Button -->
-        <div class="flex items-center mb-6">
-            <a href="index.php" 
-               class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center hover:bg-orange-200 transition">
-                <i class="fa-solid fa-arrow-left text-orange-600"></i>
+<main class="max-w-3xl mx-auto py-8 px-4">
+    <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden w-full max-w-lg mx-auto">
+        <div class="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50">
+            <a href="index.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+                <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
             </a>
-
-            <h1 class="flex-1 text-center text-2xl font-bold text-orange-600">
+            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-lock-open text-orange-600"></i>
                 Change Password
-            </h1>
+            </h2>
         </div>
+        <div class="p-6">
 
         <!-- Messages -->
         <?php if ($error) { ?>
@@ -109,7 +98,9 @@ if (isset($_POST['changePass'])) {
 
         </form>
 
+        </div>
     </div>
+</main>
 
 </body>
 

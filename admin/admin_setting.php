@@ -45,41 +45,31 @@ if ($res && mysqli_num_rows($res) > 0) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<title>Admin - Settings</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-</head>
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen">
+<?php include("header.php"); ?>
 
-<!-- HEADER -->
-<header class="bg-white shadow sticky top-0 z-40">
-	<div class="max-w-7xl mx-auto px-4 py-4 space-y-3">
-		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-3">
-				<a href="index" class="w-9 h-9 flex items-center justify-center bg-orange-100 rounded-lg">
-					<i class="fa-solid fa-arrow-left text-orange-600"></i>
-				</a>
-				<h1 class="text-xl font-bold">Site Settings</h1>
-			</div>
-		</div>
-	</div>
-</header>
 
-<main class="max-w-3xl mx-auto px-4 py-8">
+
+<main class="max-w-3xl mx-auto py-8 px-4">
 
 <?php if(isset($_SESSION['msg'])): ?>
-<div class="mb-4 p-3 bg-green-100 text-green-700 rounded">
+<div class="mb-4 p-3 bg-green-100 text-green-700 rounded-lg shadow-sm border-l-4 border-green-500 font-medium">
 	<?= $_SESSION['msg']; unset($_SESSION['msg']); ?>
 </div>
 <?php endif; ?>
 
-<div class="bg-white rounded-xl shadow p-6">
-	<h2 class="text-lg font-semibold mb-4">Matrimony Profile Fee</h2>
+<div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden w-full max-w-lg mx-auto">
+    <div class="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50">
+      <a href="index.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+        <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+      </a>
+      <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+        <i class="fa-solid fa-gear text-orange-600"></i>
+        Site Settings
+      </h2>
+    </div>
+
+    <div class="p-6">
+	<h2 class="text-lg font-semibold mb-4 text-gray-700">Matrimony Profile Fee</h2>
 
 	<form method="post" class="space-y-4">
 		<div>
@@ -92,6 +82,7 @@ if ($res && mysqli_num_rows($res) > 0) {
 			<a href="index" class="text-sm text-gray-500">Cancel</a>
 		</div>
 	</form>
+    </div>
 </div>
 
 </main>

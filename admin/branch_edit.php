@@ -89,35 +89,24 @@ if (isset($_POST['update'])) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Edit Branch</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<script>
-function previewImage(input){
-    if(input.files && input.files[0]){
-        document.getElementById('preview').src = URL.createObjectURL(input.files[0]);
-    }
-}
-</script>
-</head>
-<body class="bg-orange-50 min-h-screen">
+<?php include("header.php"); ?>
 
-<header class="bg-white shadow-md sticky top-0 z-40">
-    <div class="max-w-5xl mx-auto px-4 py-2 flex items-center">
-        <a href="create_branch.php" class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition mr-2">
-            <i class="fa-solid fa-arrow-left text-orange-600"></i>
-        </a>
-        <h1 class="text-xl font-bold text-orange-600 flex-1 text-center">Edit Branch</h1>
+
+
+<main class="max-w-3xl mx-auto py-8 px-4">
+ <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden w-full max-w-xl mx-auto">
+    
+    <div class="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50">
+      <a href="create_branch.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+        <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+      </a>
+      <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+        <i class="fa-solid fa-code-branch text-orange-600"></i>
+        Edit Branch
+      </h2>
     </div>
-</header>
 
-<main class="flex justify-center items-center py-6">
-    <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-xl">
-
+    <div class="p-6">
         <?php if(!empty($errors)){ ?>
             <div class="bg-red-100 border border-red-300 text-red-700 p-3 rounded mb-4">
                 <ul><?php foreach($errors as $e) echo "<li>$e</li>"; ?></ul>
@@ -177,6 +166,7 @@ function previewImage(input){
 
         </form>
     </div>
+ </div>
 </main>
 
 </body>

@@ -122,15 +122,7 @@ include("header.php");
 ?>
 
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-gray-800">
-    <div class="flex items-center gap-3 mb-6">
-        <a href="index.php" class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition">
-            <i class="fa-solid fa-arrow-left text-orange-600"></i>
-        </a>
-        <div>
-            <h1 class="text-2xl font-bold">Manage Contacts</h1>
-            <p class="text-sm text-gray-500">Add or Import contacts for Bulk Messaging</p>
-        </div>
-    </div>
+
 
     <?php if ($msg): ?>
         <div class="p-4 mb-6 rounded-lg font-medium shadow-sm <?= $msgType == 'success' ? 'bg-green-100 text-green-700 border-l-4 border-green-500' : 'bg-red-100 text-red-700 border-l-4 border-red-500' ?>">
@@ -138,8 +130,19 @@ include("header.php");
         </div>
     <?php endif; ?>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <!-- Manual Add Form -->
+    <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden mb-8">
+        <div class="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50">
+            <a href="index.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+                <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+            </a>
+            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-address-book text-orange-600"></i>
+                Manage Contacts
+            </h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Manual Add Form -->
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
             <div class="bg-gradient-to-r from-orange-400 to-orange-600 px-6 py-4">
                 <h2 class="text-white text-lg font-semibold flex items-center gap-2">
@@ -191,6 +194,8 @@ include("header.php");
             </div>
         </div>
     </div>
+  </div>
+</div>
 
     <!-- Contact List Table -->
     <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
@@ -205,7 +210,7 @@ include("header.php");
                 </a>
             </div>
         </div>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto overflow-y-auto" style="max-height: calc(100vh - 260px);">
             <table class="w-full text-left">
                 <thead class="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
                     <tr>

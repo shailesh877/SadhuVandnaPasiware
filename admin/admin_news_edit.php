@@ -100,34 +100,26 @@ if (isset($_POST['update'])) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Edit News - Admin Panel</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-</head>
-
-<body class="bg-gradient-to-br from-orange-50 to-orange-100 min-h-screen">
+<?php include("header.php"); ?>
   
-<header class="bg-white shadow-md sticky top-0 z-40">
-    <div class="max-w-6xl mx-auto px-4 py-2 flex items-center">
-        <a href="add_views_news.php"
-          class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition mr-2">
-          <i class="fa-solid fa-arrow-left text-orange-600"></i>
-        </a>
-        <h1 class="text-xl font-bold text-orange-600 flex-1 text-center">Edit News</h1>
+
+
+<main class="max-w-3xl mx-auto py-8 px-4">
+ <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+    
+    <div class="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50">
+      <a href="add_views_news.php" class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition shadow-sm">
+        <i class="fa-solid fa-arrow-left text-orange-600 text-sm"></i>
+      </a>
+      <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+        <i class="fa-solid fa-newspaper text-orange-600"></i>
+        Edit News
+      </h2>
     </div>
-</header>
 
-<main class="flex-1 flex justify-center items-center py-4">
-  <div class="bg-white rounded-xl shadow-lg p-8 max-w-xl w-full">
-
-    <form method="POST" enctype="multipart/form-data">
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="p-6">
+       <form method="POST" enctype="multipart/form-data">
+         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         <!-- Existing Images -->
         <div class="md:col-span-2">
@@ -192,8 +184,9 @@ if (isset($_POST['update'])) {
           </a>
         </div>
 
-      </div>
-    </form>
+         </div>
+       </form>
+    </div>
   </div>
 </main>
 
