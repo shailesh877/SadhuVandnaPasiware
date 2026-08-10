@@ -1,6 +1,17 @@
 <?php
 session_start();
-include("../connection.php");
+include("header.php");
+
+// Ensure tbl_reports table exists
+$createTableQuery = "CREATE TABLE IF NOT EXISTS `tbl_reports` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `post_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `reason` text,
+  `date` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+mysqli_query($con, $createTableQuery);
 
 // Ensure tbl_posts has is_suspended column
 $checkColumn = mysqli_query($con, "SHOW COLUMNS FROM tbl_posts LIKE 'is_suspended'");
@@ -47,7 +58,7 @@ $reportsQuery = "
 $reports = mysqli_query($con, $reportsQuery);
 ?>
 
-<?php include("header.php"); ?>
+
 
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
 
