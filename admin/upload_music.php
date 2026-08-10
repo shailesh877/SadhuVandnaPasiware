@@ -1,6 +1,6 @@
 <?php
 session_start();
-include("../connection.php");
+include("header.php");
 
 if (!isset($_SESSION['admin_id'])) {
     header("Location: admin_login.php");
@@ -96,7 +96,6 @@ if (isset($_GET['delete'])) {
 $data = mysqli_query($con, "SELECT * FROM tbl_music ORDER BY id DESC");
 ?>
 
-<?php include("header.php"); ?>
 
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
