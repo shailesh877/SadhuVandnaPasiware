@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['music'])) {
     $total = count($files['name']);
     $uploaded = 0;
 
-    $createTable = "CREATE TABLE IF NOT EXISTS tbl_music (
+    $createTable = "CREATE TABLE IF NOT EXISTS music (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         artist VARCHAR(255),
@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['music'])) {
         $hash = sha1_file($temp_name);
         
         // check duplicate by hash
-        $chk = mysqli_prepare($con, "SELECT id FROM tbl_music WHERE file_hash = ? LIMIT 1");
+        $chk = mysqli_prepare($con, "SELECT id FROM music WHERE file_hash = ? LIMIT 1");
         mysqli_stmt_bind_param($chk, 's', $hash);
         mysqli_stmt_execute($chk);
         mysqli_stmt_store_result($chk);
@@ -93,7 +93,7 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
-$data = mysqli_query($con, "SELECT * FROM tbl_music ORDER BY id DESC");
+$data = mysqli_query($con, "SELECT * FROM music ORDER BY id DESC");
 ?>
 
 
