@@ -2,6 +2,9 @@
 session_start();
 include("../connection.php");
 
+$page_limit = 20;
+
+
 /* DELETE POST */
 if (isset($_POST['action'], $_POST['id']) && $_POST['action'] === "delete") {
     $id = intval($_POST['id']);
@@ -19,39 +22,36 @@ if (isset($_POST['action'], $_POST['id']) && $_POST['action'] === "delete") {
     exit;
 }
 
-/* FETCH POSTS */
-$limit = 20;
-$page = isset($_GET['page']) && is_numeric($_GET['page']) ? intval($_GET['page']) : 1;
-if ($page < 1) $page = 1;
-$offset = ($page - 1) * $limit;
-
-$search = isset($_GET['search']) ? mysqli_real_escape_string($con, $_GET['search']) : '';
-$whereClause = "";
-if (!empty($search)) {
-    $whereClause = " WHERE p.status LIKE '%$search%' OR m.name LIKE '%$search%' OR m.mobile LIKE '%$search%' ";
-}
-
-$total_q = mysqli_query($con, "SELECT COUNT(*) as cnt FROM tbl_posts p LEFT JOIN tbl_members m ON m.id = p.user_id $whereClause");
-$total_row = mysqli_fetch_assoc($total_q);
-$total_posts = $total_row['cnt'];
-$total_pages = ceil($total_posts / $limit);
-
-$posts = mysqli_query($con, "
-SELECT p.*, m.name, m.mobile
-FROM tbl_posts p
-LEFT JOIN tbl_members m ON m.id = p.user_id
-$whereClause
-ORDER BY p.created_at DESC
-LIMIT $offset, $limit
-");
-
-if (isset($_GET['ajax'])) {
-    $response = [
-        'desktop' => '',
-        'mobile' => '',
-        'has_more' => ($page < $total_pages)
-    ];
+// Handle AJAX Request for Infinite Scroll
+if(isset($_GET['ajax']) && $_GET['ajax'] == 1) {
+    $limit = $page_limit;
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $offset = ($page - 1) * $limit;
+    
+    $search = isset($_GET['search']) ? mysqli_real_escape_string($con, $_GET['search']) : '';
+    
+    $whereClause = "";
+    if($search !== '') {
+        $whereClause = " WHERE p.status LIKE '%$search%' OR m.name LIKE '%$search%' OR m.mobile LIKE '%$search%' ";
+    }
+    
+    $total_q = mysqli_query($con, "SELECT COUNT(*) as cnt FROM tbl_posts p LEFT JOIN tbl_members m ON m.id = p.user_id $whereClause");
+    $total_row = mysqli_fetch_assoc($total_q);
+    $total_posts = $total_row['cnt'];
+    
+    $posts = mysqli_query($con, "
+    SELECT p.*, m.name, m.mobile
+    FROM tbl_posts p
+    LEFT JOIN tbl_members m ON m.id = p.user_id
+    $whereClause
+    ORDER BY p.created_at DESC
+    LIMIT $limit OFFSET $offset
+    ");
+    
+    $desktop_html = '';
+    $mobile_html = '';
     $i = $offset + 1;
+    
     while($p = mysqli_fetch_assoc($posts)) {
         // Desktop HTML
         $mediaHtml = '';
@@ -69,44 +69,58 @@ if (isset($_GET['ajax'])) {
         $status = htmlspecialchars($p['status']);
         $id = $p['id'];
         
-        $response['desktop'] .= '<tr class="hover:bg-orange-50">
-<td class="px-4 py-3">'.$i.'</td>
-<td class="px-4 py-3"><div class="font-semibold">'.$name.'</div><div class="text-xs text-gray-500">'.$mobile.'</div></td>
-<td class="px-4 py-3">'.$status.'</td>
-<td class="px-4 py-3">'.$mediaHtml.'</td>
-<td class="px-4 py-3">'.$linkHtml.'</td>
-<td class="px-4 py-3">'.$dateHtml.'</td>
-<td class="px-4 py-3 text-center">
-<form method="post" onsubmit="return confirm(\'Delete this post?\')">
-<input type="hidden" name="id" value="'.$id.'">
-<button name="action" value="delete" class="w-8 h-8 bg-red-100 text-red-600 rounded"><i class="fa-solid fa-trash"></i></button>
-</form>
-</td>
-</tr>';
-
+        $desktop_html .= '<tr class="hover:bg-orange-50">
+        <td class="px-4 py-3">'.$i.'</td>
+        <td class="px-4 py-3"><div class="font-semibold">'.$name.'</div><div class="text-xs text-gray-500">'.$mobile.'</div></td>
+        <td class="px-4 py-3">'.$status.'</td>
+        <td class="px-4 py-3">'.$mediaHtml.'</td>
+        <td class="px-4 py-3">'.$linkHtml.'</td>
+        <td class="px-4 py-3">'.$dateHtml.'</td>
+        <td class="px-4 py-3 text-center">
+        <form method="post" onsubmit="return confirm(\'Delete this post?\')">
+        <input type="hidden" name="id" value="'.$id.'">
+        <button name="action" value="delete" class="w-8 h-8 bg-red-100 text-red-600 rounded"><i class="fa-solid fa-trash"></i></button>
+        </form>
+        </td>
+        </tr>';
+        
         // Mobile HTML
-        $response['mobile'] .= '<div class="bg-white rounded-xl shadow p-4 mobile-card">
-<h3 class="font-bold">'.$name.'</h3>
-<p class="text-xs text-gray-500 mb-1">'.$mobile.'</p>
-<p class="text-sm mb-2">'.$status.'</p>';
+        $mobile_html .= '<div class="bg-white rounded-xl shadow p-4 mobile-card">
+        <h3 class="font-bold">'.$name.'</h3>
+        <p class="text-xs text-gray-500 mb-1">'.$mobile.'</p>
+        <p class="text-sm mb-2">'.$status.'</p>';
         if($p['media']){
             if(preg_match('/mp4|webm|ogg/i',$p['media'])){
-                $response['mobile'] .= '<video src="../uploads/posts/'.$p['media'].'" class="w-full rounded mb-2 cursor-pointer view-video" muted></video>';
+                $mobile_html .= '<video src="../uploads/posts/'.$p['media'].'" class="w-full rounded mb-2 cursor-pointer view-video" muted></video>';
             }else{
-                $response['mobile'] .= '<img src="../uploads/posts/'.$p['media'].'" class="w-full rounded mb-2 cursor-pointer view-img">';
+                $mobile_html .= '<img src="../uploads/posts/'.$p['media'].'" class="w-full rounded mb-2 cursor-pointer view-img">';
             }
         }
-        $response['mobile'] .= '<form method="post" onsubmit="return confirm(\'Delete this post?\')">
-<input type="hidden" name="id" value="'.$id.'">
-<button name="action" value="delete" class="w-full bg-red-100 text-red-600 py-2 rounded">Delete Post</button>
-</form>
-</div>';
+        $mobile_html .= '<form method="post" onsubmit="return confirm(\'Delete this post?\')">
+        <input type="hidden" name="id" value="'.$id.'">
+        <button name="action" value="delete" class="w-full bg-red-100 text-red-600 py-2 rounded">Delete Post</button>
+        </form>
+        </div>';
         $i++;
     }
-    header('Content-Type: application/json');
-    echo json_encode($response);
+    
+    echo json_encode(['desktop' => $desktop_html, 'mobile' => $mobile_html, 'total' => $total_posts]);
     exit;
 }
+
+// Fetch total count for display
+$total_q = mysqli_query($con, "SELECT COUNT(*) as cnt FROM tbl_posts");
+$total_row = mysqli_fetch_assoc($total_q);
+$total_posts = $total_row['cnt'];
+
+// Initial Load
+$posts = mysqli_query($con, "
+    SELECT p.*, m.name, m.mobile
+    FROM tbl_posts p
+    LEFT JOIN tbl_members m ON m.id = p.user_id
+    ORDER BY p.created_at DESC
+    LIMIT $page_limit
+");
 ?>
 
 <?php include("header.php"); ?>
@@ -133,23 +147,22 @@ if (isset($_GET['ajax'])) {
     </div>
     
     <div class="flex items-center gap-2 w-full sm:w-auto">
-      <form method="get" class="relative w-full sm:w-64">
+      <div class="relative w-full sm:w-64">
         <i class="fa-solid fa-search absolute left-3 top-2.5 text-orange-400 text-sm"></i>
         <input 
-          type="search" 
-          name="search" 
-          value="<?= htmlspecialchars($search) ?>"
+          type="text" 
+          id="searchInput"
           placeholder="Search..." 
           class="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-200 shadow-sm rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm text-gray-700"
         >
-      </form>
+      </div>
       <div class="text-sm font-medium text-gray-500 bg-white px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap">
-        Total: <span class="text-orange-600 font-bold"><?= $total_posts ?></span>
+        Total: <span id="totalPostsCount" class="text-orange-600 font-bold"><?= $total_posts ?></span>
       </div>
     </div>
   </div>
 
-<div class="overflow-y-auto" style="max-height: calc(100vh - 130px);">
+<div class="overflow-y-auto" style="max-height: calc(100vh - 130px);" id="tableScrollContainer">
 <table class="w-full text-sm">
 <thead class="bg-orange-600 text-white sticky top-0 z-20">
 <tr>
@@ -162,7 +175,7 @@ if (isset($_GET['ajax'])) {
   <th class="px-4 py-3 text-center">Action</th>
 </tr>
 </thead>
-<tbody>
+<tbody id="tableBody">
 <?php $i=1; while($p=mysqli_fetch_assoc($posts)): ?>
 <tr class="hover:bg-orange-50">
 <td class="px-4 py-3"><?= $i ?></td>
@@ -209,9 +222,17 @@ if (isset($_GET['ajax'])) {
 
 <!-- MOBILE CARDS -->
 <div class="md:hidden space-y-4" id="mobileCards">
-<?php mysqli_data_seek($posts,0); while($p=mysqli_fetch_assoc($posts)): ?>
-<div class="bg-white rounded-xl shadow p-4 mobile-card"
-     data-search="<?= strtolower(($p['name']??'').' '.($p['mobile']??'').' '.$p['status']) ?>">
+<?php
+$posts = mysqli_query($con, "
+    SELECT p.*, m.name, m.mobile
+    FROM tbl_posts p
+    LEFT JOIN tbl_members m ON m.id = p.user_id
+    ORDER BY p.created_at DESC
+    LIMIT $page_limit
+");
+while($p=mysqli_fetch_assoc($posts)): 
+?>
+<div class="bg-white rounded-xl shadow p-4 mobile-card">
 
 <h3 class="font-bold"><?= htmlspecialchars($p['name'] ?? 'Unknown') ?></h3>
 <p class="text-xs text-gray-500 mb-1"><?= htmlspecialchars($p['mobile'] ?? '-') ?></p>
@@ -235,10 +256,7 @@ Delete Post
 <?php endwhile; ?>
 </div>
 
-<!-- LOADING SENTINEL -->
-<div id="loadingSentinel" class="py-4 text-center text-gray-500 font-medium">
-    <i class="fa-solid fa-spinner fa-spin text-orange-600 mr-2"></i> Loading more posts...
-</div>
+
 
 </main>
 
@@ -250,64 +268,78 @@ Delete Post
 </div>
 
 <script>
-// INFINITE SCROLL
-let currentPage = <?= $page ?>;
-let totalPages = <?= $total_pages ?>;
-let isLoading = false;
-let searchQuery = "<?= urlencode($search) ?>";
+// Server-side Live search & Infinite Scroll Logic
+let currentPage = 1;
+let loading = false;
+let hasMore = true;
+let currentSearch = '';
 
-const desktopTbody = document.querySelector("tbody");
-const mobileContainer = document.getElementById("mobileCards");
-const sentinel = document.getElementById("loadingSentinel");
-const desktopTableContainer = document.querySelector(".overflow-y-auto");
-
-if (currentPage >= totalPages) {
-    sentinel.style.display = "none";
+const searchInput = document.getElementById('searchInput');
+if(searchInput) {
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+          currentSearch = searchInput.value.trim();
+          currentPage = 1;
+          hasMore = true;
+          document.querySelector('#tableBody').innerHTML = '';
+          document.getElementById('mobileCards').innerHTML = '';
+          loadMore(true);
+      }
+    });
 }
 
-function loadMore() {
-    if (isLoading || currentPage >= totalPages) return;
-    isLoading = true;
-    currentPage++;
-    fetch(`?ajax=1&page=${currentPage}&search=${searchQuery}`)
-        .then(r => r.json())
-        .then(data => {
-            desktopTbody.insertAdjacentHTML('beforeend', data.desktop);
-            mobileContainer.insertAdjacentHTML('beforeend', data.mobile);
-            isLoading = false;
-            if (!data.has_more) {
-                if(sentinel) sentinel.style.display = "none";
-            } else {
-                // Check if we need to keep loading because the container still doesn't overflow
-                setTimeout(() => {
-                    let shouldLoad = false;
-                    if (sentinel) {
-                        const rect = sentinel.getBoundingClientRect();
-                        if (rect.top >= 0 && rect.top <= window.innerHeight + 100) shouldLoad = true;
-                    }
-                    if (desktopTableContainer && (desktopTableContainer.scrollHeight - desktopTableContainer.scrollTop - desktopTableContainer.clientHeight < 100)) {
-                        shouldLoad = true;
-                    }
-                    if (shouldLoad) loadMore();
-                }, 100);
-            }
-        })
-        .catch(e => { console.error(e); isLoading = false; });
-}
+const tableContainer = document.getElementById('tableScrollContainer');
 
-// Observer for mobile (body scroll)
-const observer = new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting) loadMore();
-}, { rootMargin: "100px" });
-if (sentinel) observer.observe(sentinel);
-
-// For desktop table container scroll
-if (desktopTableContainer) {
-    desktopTableContainer.addEventListener("scroll", function() {
-        if (this.scrollHeight - this.scrollTop - this.clientHeight < 100) {
+if (tableContainer) {
+    tableContainer.addEventListener('scroll', () => {
+        if (Math.ceil(tableContainer.scrollTop + tableContainer.clientHeight) >= tableContainer.scrollHeight - 150) {
             loadMore();
         }
     });
+}
+
+window.addEventListener('scroll', () => {
+    if (window.innerWidth < 768) { 
+        const scrollY = window.scrollY || document.documentElement.scrollTop;
+        if (Math.ceil(window.innerHeight + scrollY) >= document.documentElement.scrollHeight - 200) {
+            loadMore();
+        }
+    }
+});
+
+function loadMore(isSearch = false) {
+    if (loading || (!hasMore && !isSearch)) return;
+    loading = true;
+    
+    if (!isSearch) {
+        currentPage++;
+    }
+    
+    fetch(`admin_post.php?ajax=1&page=${currentPage}&search=${encodeURIComponent(currentSearch)}`)
+        .then(res => res.json())
+        .then(data => {
+            if(data.desktop.trim() === '' && data.mobile.trim() === '') {
+                hasMore = false;
+            } else {
+                document.querySelector('#tableBody').insertAdjacentHTML('beforeend', data.desktop);
+                document.getElementById('mobileCards').insertAdjacentHTML('beforeend', data.mobile);
+            }
+            
+            if (data.total !== undefined) {
+                document.getElementById('totalPostsCount').innerText = data.total;
+            }
+            
+            loading = false;
+            
+            // Auto-load if no scrollbar
+            if (tableContainer && tableContainer.scrollHeight <= tableContainer.clientHeight && hasMore) {
+                loadMore();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            loading = false;
+        });
 }
 
 // MEDIA MODAL
