@@ -1,6 +1,9 @@
 <?php
 session_start();
-include("header.php");
+include("../connection.php"); // header.php shouldn't be included here, it needs connection
+
+$page_limit = 20; // Kitne members/reports ek baar mein load karne hain
+
 
 // Ensure tbl_reports table exists
 $createTableQuery = "CREATE TABLE IF NOT EXISTS `tbl_reports` (
@@ -37,7 +40,152 @@ if (isset($_POST['action']) && isset($_POST['post_id'])) {
     exit;
 }
 
-// Fetch reported posts
+// Handle AJAX Request for Infinite Scroll
+if(isset($_GET['ajax']) && $_GET['ajax'] == 1) {
+    $limit = $page_limit;
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $offset = ($page - 1) * $limit;
+    
+    $search = isset($_GET['search']) ? mysqli_real_escape_string($con, $_GET['search']) : '';
+    
+    $whereClause = "1=1";
+    if($search !== '') {
+        $whereClause .= " AND (p.status LIKE '%$search%' OR m_poster.name LIKE '%$search%' OR m_reporter.name LIKE '%$search%')";
+    }
+    
+    $countQuery = "
+        SELECT COUNT(*) as count 
+        FROM tbl_reports r
+        JOIN tbl_posts p ON r.post_id = p.id
+        JOIN tbl_members m_poster ON p.user_id = m_poster.id
+        JOIN tbl_members m_reporter ON r.user_id = m_reporter.id
+        WHERE $whereClause
+    ";
+    $total_search_query = mysqli_query($con, $countQuery);
+    $total_search_row = mysqli_fetch_assoc($total_search_query);
+    $total_reports = $total_search_row['count'];
+    
+    $dataQuery = "
+        SELECT 
+            r.id AS report_id, 
+            r.reason, 
+            r.date AS report_date, 
+            p.id AS post_id, 
+            p.status AS post_text, 
+            p.media, 
+            p.is_suspended, 
+            m_poster.name AS poster_name, 
+            m_reporter.name AS reporter_name 
+        FROM tbl_reports r
+        JOIN tbl_posts p ON r.post_id = p.id
+        JOIN tbl_members m_poster ON p.user_id = m_poster.id
+        JOIN tbl_members m_reporter ON r.user_id = m_reporter.id
+        WHERE $whereClause
+        ORDER BY r.date DESC 
+        LIMIT $limit OFFSET $offset
+    ";
+    $reports_ajax = mysqli_query($con, $dataQuery);
+    
+    $desktop_html = '';
+    
+    while($row = mysqli_fetch_assoc($reports_ajax)){
+        
+        $media_html = '';
+        if(!empty($row['media'])){
+            $media_html .= '<div class="flex gap-2 flex-wrap mt-2">';
+            $mediaFiles = explode(',', $row['media']);
+            foreach($mediaFiles as $mediaFile){
+                $mediaFile = trim($mediaFile);
+                $mediaPath = "../uploads/posts/" . $mediaFile;
+                if(preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $mediaFile)){
+                    $media_html .= '<div class="w-16 h-16 rounded overflow-hidden border cursor-pointer hover:opacity-80 transition" onclick="openMediaModal(\''.$mediaPath.'\', \'image\')">
+                        <img src="'.$mediaPath.'" class="w-full h-full object-cover">
+                      </div>';
+                } elseif(preg_match('/\.(mp4|webm|ogg)$/i', $mediaFile)){
+                    $media_html .= '<div class="w-16 h-16 bg-black rounded flex items-center justify-center border text-white text-xs cursor-pointer hover:bg-gray-800 transition" onclick="openMediaModal(\''.$mediaPath.'\', \'video\')">
+                        <i class="fa-solid fa-play text-xl"></i>
+                      </div>';
+                }
+            }
+            $media_html .= '</div>';
+        }
+        
+        $see_more = '';
+        if(strlen($row['post_text']) > 100){
+            $see_more = '<button type="button" onclick="toggleDescription(\'desc-'.$row['post_id'].'-'.$row['report_id'].'\', this)" class="text-orange-600 text-xs font-bold hover:underline mb-2">See More</button>';
+        }
+
+        $status_html = '';
+        if($row['is_suspended'] == 1){
+            $status_html = '<span class="inline-flex items-center gap-1 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-200 shadow-sm">
+                   <i class="fa-solid fa-ban"></i> Suspended
+                 </span>';
+        } else {
+            $status_html = '<span class="inline-flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200 shadow-sm">
+                   <i class="fa-solid fa-check-circle"></i> Active
+                 </span>';
+        }
+
+        $action_html = '';
+        if($row['is_suspended'] == 1){
+            $action_html = '<input type="hidden" name="action" value="activate">
+                    <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all w-full flex items-center justify-center gap-2">
+                       <i class="fa-solid fa-check"></i> Activate
+                    </button>';
+        } else {
+            $action_html = '<input type="hidden" name="action" value="suspend">
+                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all w-full flex items-center justify-center gap-2">
+                       <i class="fa-solid fa-ban"></i> Suspend
+                    </button>';
+        }
+
+        $desktop_html .= '<tr class="hover:bg-orange-50/50 transition-colors">
+            <!-- Report Info -->
+            <td class="py-4 px-6 align-top">
+              <div class="flex flex-col gap-1">
+                <span class="text-sm font-bold text-gray-800"><i class="fa-solid fa-user-shield text-orange-500 mr-1"></i> '.htmlspecialchars($row['reporter_name']).'</span>
+                <span class="text-xs text-gray-500">Reported <span class="font-bold text-orange-600">'.htmlspecialchars($row['poster_name']).'</span>\'s post</span>
+                <span class="text-xs text-gray-400"><i class="fa-regular fa-clock"></i> '.date("d M Y, h:i A", strtotime($row['report_date'])).'</span>
+                <div class="mt-2 bg-red-50 p-2 rounded border border-red-100 text-sm text-red-800">
+                  <span class="font-bold">Reason:</span> '.nl2br(htmlspecialchars($row['reason'])).'
+                </div>
+              </div>
+            </td>
+
+            <!-- Post Content -->
+            <td class="py-4 px-6 align-top">
+              <div class="text-sm text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                <p class="mb-2 whitespace-pre-wrap line-clamp-2 text-[13px]" id="desc-'.$row['post_id'].'-'.$row['report_id'].'">'.htmlspecialchars($row['post_text']).'</p>
+                '.$see_more.'
+                '.$media_html.'
+              </div>
+            </td>
+
+            <!-- Status -->
+            <td class="py-4 px-6 text-center align-top">
+               '.$status_html.'
+            </td>
+
+            <!-- Actions -->
+            <td class="py-4 px-6 text-center align-top">
+               <form method="POST" onsubmit="return confirm(\'Are you sure you want to change the status of this post?\');">
+                 <input type="hidden" name="post_id" value="'.$row['post_id'].'">
+                 '.$action_html.'
+               </form>
+            </td>
+          </tr>';
+    }
+    
+    echo json_encode(['desktop' => $desktop_html, 'total' => $total_reports]);
+    exit;
+}
+
+// Fetch total count for display
+$total_query = mysqli_query($con, "SELECT COUNT(*) as count FROM tbl_reports");
+$total_row = mysqli_fetch_assoc($total_query);
+$total_reports = $total_row['count'];
+
+// Initial Load
 $reportsQuery = "
     SELECT 
         r.id AS report_id, 
@@ -53,12 +201,13 @@ $reportsQuery = "
     JOIN tbl_posts p ON r.post_id = p.id
     JOIN tbl_members m_poster ON p.user_id = m_poster.id
     JOIN tbl_members m_reporter ON r.user_id = m_reporter.id
-    ORDER BY r.date DESC
+    ORDER BY r.date DESC 
+    LIMIT $page_limit
 ";
 $reports = mysqli_query($con, $reportsQuery);
 ?>
 
-
+<?php include("header.php"); ?>
 
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
 
@@ -87,12 +236,24 @@ $reports = mysqli_query($con, $reportsQuery);
        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
          <i class="fa-solid fa-flag text-red-500"></i> All Reports
        </h2>
-       <div class="text-sm font-medium text-gray-500 bg-white px-4 py-2 rounded-lg border shadow-sm">
-         Total Reports: <span class="text-orange-600 font-bold"><?= mysqli_num_rows($reports) ?></span>
+       
+       <div class="flex items-center gap-2 w-full sm:w-auto">
+         <div class="relative w-full sm:w-64">
+           <i class="fa-solid fa-search absolute left-3 top-2.5 text-orange-400 text-sm"></i>
+           <input 
+             type="text" 
+             id="searchInput" 
+             placeholder="Search posts, users..." 
+             class="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-200 shadow-sm rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition text-sm text-gray-700"
+           >
+         </div>
+         <div class="text-sm font-medium text-gray-500 bg-white px-4 py-2 rounded-lg border shadow-sm whitespace-nowrap">
+           Total Reports: <span class="text-orange-600 font-bold" id="totalReportsCount"><?= $total_reports ?></span>
+         </div>
        </div>
     </div>
 
-    <div class="table-container p-0 overflow-y-auto" style="max-height: calc(100vh - 130px);">
+    <div class="table-container p-0 overflow-y-auto" style="max-height: calc(100vh - 130px);" id="tableScrollContainer">
       <?php if(mysqli_num_rows($reports) > 0): ?>
       <table class="w-full text-left border-collapse">
         <thead class="bg-gray-100 sticky top-0 z-10 shadow-sm">
@@ -103,7 +264,7 @@ $reports = mysqli_query($con, $reportsQuery);
             <th class="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Action</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody class="divide-y divide-gray-100" id="tableBody">
           <?php while($row = mysqli_fetch_assoc($reports)): ?>
           <tr class="hover:bg-orange-50/50 transition-colors">
             
@@ -248,6 +409,78 @@ document.addEventListener('keydown', function(e) {
 document.getElementById('mediaModal').addEventListener('click', function(e) {
     if (e.target === this) closeMediaModal();
 });
+
+// Server-side Live search & Infinite Scroll Logic
+let currentPage = 1;
+let loading = false;
+let hasMore = true;
+let currentSearch = '';
+
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+          currentSearch = searchInput.value.trim();
+          currentPage = 1;
+          hasMore = true;
+          document.querySelector('#tableBody').innerHTML = '';
+          loadMore(true);
+      }
+    });
+}
+
+const tableContainer = document.getElementById('tableScrollContainer');
+
+if (tableContainer) {
+    tableContainer.addEventListener('scroll', () => {
+        if (Math.ceil(tableContainer.scrollTop + tableContainer.clientHeight) >= tableContainer.scrollHeight - 150) {
+            loadMore();
+        }
+    });
+}
+
+window.addEventListener('scroll', () => {
+    if (window.innerWidth < 768) { 
+        const scrollY = window.scrollY || document.documentElement.scrollTop;
+        if (Math.ceil(window.innerHeight + scrollY) >= document.documentElement.scrollHeight - 200) {
+            loadMore();
+        }
+    }
+});
+
+function loadMore(isSearch = false) {
+    if (loading || (!hasMore && !isSearch)) return;
+    loading = true;
+    
+    if (!isSearch) {
+        currentPage++;
+    }
+    
+    fetch(`admin_reported_posts.php?ajax=1&page=${currentPage}&search=${encodeURIComponent(currentSearch)}`)
+        .then(res => res.json())
+        .then(data => {
+            if(data.desktop.trim() === '') {
+                hasMore = false;
+            } else {
+                document.querySelector('#tableBody').insertAdjacentHTML('beforeend', data.desktop);
+            }
+            
+            if (data.total !== undefined) {
+                document.getElementById('totalReportsCount').innerText = data.total;
+            }
+            
+            loading = false;
+            
+            // Auto-load if no scrollbar
+            if (tableContainer && tableContainer.scrollHeight <= tableContainer.clientHeight && hasMore) {
+                loadMore();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            loading = false;
+        });
+}
 </script>
 
 </body>
