@@ -2,6 +2,9 @@
 session_start();
 include("../connection.php");
 
+$page_limit = 20; // Kitne members ek baar mein load karne hain
+
+
 // Handle Approve / Block
 if(isset($_POST['action']) && isset($_POST['id'])){
     $id = intval($_POST['id']);
@@ -27,8 +30,120 @@ if(isset($_POST['action']) && isset($_POST['id'])){
     exit;
 }
 
-// Fetch all pending users
-$users = mysqli_query($con, "SELECT * FROM tbl_members WHERE status='Pending' ORDER BY date DESC");
+// Handle AJAX Request for Infinite Scroll
+if(isset($_GET['ajax']) && $_GET['ajax'] == 1) {
+    $limit = $page_limit;
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $offset = ($page - 1) * $limit;
+    
+    $search = isset($_GET['search']) ? mysqli_real_escape_string($con, $_GET['search']) : '';
+    
+    $whereClause = "status='Pending'";
+    if($search !== '') {
+        $whereClause .= " AND (name LIKE '%$search%' OR email LIKE '%$search%' OR mobile LIKE '%$search%' OR cast LIKE '%$search%')";
+    }
+    
+    $total_search_query = mysqli_query($con, "SELECT COUNT(*) as count FROM tbl_members WHERE $whereClause");
+    $total_search_row = mysqli_fetch_assoc($total_search_query);
+    $total_members = $total_search_row['count'];
+    
+    $query = "SELECT * FROM tbl_members WHERE $whereClause ORDER BY date DESC LIMIT $limit OFFSET $offset";
+    $users_ajax = mysqli_query($con, $query);
+    
+    $desktop_html = '';
+    $mobile_html = '';
+    
+    while($user = mysqli_fetch_assoc($users_ajax)){
+        // Build Desktop HTML
+        $photo_html = '';
+        if($user['profile_photo'] && file_exists("../uploads/photo/".$user['profile_photo'])){
+            $photo_html = '<img src="../uploads/photo/'.$user['profile_photo'].'" class="w-12 h-12 rounded-full object-cover cursor-pointer view-photo"/>';
+        } else {
+            $photo_html = '<i class="fa-solid fa-user text-gray-300 text-xl"></i>';
+        }
+
+        $desktop_html .= '<tr class="hover:bg-orange-50 transition">
+          <td class="px-3 py-2">'.$photo_html.'</td>
+          <td class="px-3 py-2 font-medium">'.htmlspecialchars($user['name']).'</td>
+          <td class="px-3 py-2">'.htmlspecialchars($user['email']).'</td>
+          <td class="px-3 py-2">'.htmlspecialchars($user['mobile']).'</td>
+          <td class="px-3 py-2">'.htmlspecialchars($user['cast']).'</td>
+          <td class="px-3 py-2">'.date("d M Y", strtotime($user['date'])).'</td>
+          <td class="px-3 py-2">
+            <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">Pending</span>
+          </td>
+          <td class="px-3 py-2 text-center">
+            <form method="post" class="flex justify-center gap-2">
+              <input type="hidden" name="id" value="'.$user['id'].'">
+              <button type="submit" name="action" value="approve" class="w-8 h-8 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition" title="Approve">
+                <i class="fa-solid fa-check text-sm"></i>
+              </button>
+              <button type="submit" name="action" value="block" class="w-8 h-8 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition" title="Block">
+                <i class="fa-solid fa-ban text-sm"></i>
+              </button>
+            </form>
+          </td>
+        </tr>';
+        
+        // Build Mobile HTML
+        $m_photo_html = '';
+        if($user['profile_photo'] && file_exists("../uploads/photo/".$user['profile_photo'])){
+            $m_photo_html = '<img src="../uploads/photo/'.$user['profile_photo'].'" class="w-12 h-12 rounded-full object-cover cursor-pointer view-photo"/>';
+        } else {
+            $m_photo_html = '<i class="fa-solid fa-user text-gray-300 w-12 h-12 text-2xl flex items-center justify-center rounded-full bg-gray-100"></i>';
+        }
+
+        $mobile_html .= '<div class="bg-white rounded-xl shadow-lg p-4 user-card">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3">
+              '.$m_photo_html.'
+              <div>
+                <h3 class="text-base font-bold text-gray-800">'.htmlspecialchars($user['name']).'</h3>
+                <p class="text-xs text-gray-500">'.htmlspecialchars($user['cast']).' | '.date("d M Y", strtotime($user['date'])).'</p>
+              </div>
+            </div>
+            <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">Pending</span>
+          </div>
+          <div class="space-y-2 mb-3">
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+              <i class="fa-solid fa-envelope text-orange-500 w-4"></i>
+              <span>'.htmlspecialchars($user['email']).'</span>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+              <i class="fa-solid fa-phone text-orange-500 w-4"></i>
+              <span>'.htmlspecialchars($user['mobile']).'</span>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <form method="post">
+              <input type="hidden" name="id" value="'.$user['id'].'">
+              <button type="submit" name="action" value="approve" class="flex flex-col items-center gap-1 px-3 py-2 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition w-full">
+                <i class="fa-solid fa-check text-lg"></i>
+                <span class="text-xs font-medium">Approve</span>
+              </button>
+            </form>
+            <form method="post">
+              <input type="hidden" name="id" value="'.$user['id'].'">
+              <button type="submit" name="action" value="block" class="flex flex-col items-center gap-1 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition w-full">
+                <i class="fa-solid fa-ban text-lg"></i>
+                <span class="text-xs font-medium">Block</span>
+              </button>
+            </form>
+          </div>
+        </div>';
+    }
+    
+    echo json_encode(['desktop' => $desktop_html, 'mobile' => $mobile_html, 'total' => $total_members]);
+    exit;
+}
+
+// Fetch total count for display
+$total_query = mysqli_query($con, "SELECT COUNT(*) as count FROM tbl_members WHERE status='Pending'");
+$total_row = mysqli_fetch_assoc($total_query);
+$total_members = $total_row['count'];
+
+// Initial Load
+$users = mysqli_query($con, "SELECT * FROM tbl_members WHERE status='Pending' ORDER BY date DESC LIMIT $page_limit");
 ?>
 
 <?php include("header.php"); ?>
@@ -65,12 +180,12 @@ $users = mysqli_query($con, "SELECT * FROM tbl_members WHERE status='Pending' OR
         >
       </div>
       <div class="text-sm font-medium text-gray-500 bg-white px-3 py-1.5 rounded-lg border shadow-sm whitespace-nowrap">
-        Pending: <span class="text-orange-600 font-bold" id="pending-count"><?= mysqli_num_rows($users) ?></span>
+        Pending: <span class="text-orange-600 font-bold" id="pending-count"><?= $total_members ?></span>
       </div>
     </div>
   </div>
 
-  <div class="overflow-y-auto" style="max-height: calc(100vh - 130px);">
+  <div class="overflow-y-auto" style="max-height: calc(100vh - 130px);" id="tableScrollContainer">
     <table class="w-full text-sm" id="userTable">
       <thead class="bg-gradient-to-r from-orange-500 to-orange-600 text-white sticky top-0 z-10">
         <tr>
@@ -123,7 +238,8 @@ $users = mysqli_query($con, "SELECT * FROM tbl_members WHERE status='Pending' OR
 <!-- Mobile Cards -->
 <div class="md:hidden space-y-4 mt-4" id="userCards">
 <?php
-mysqli_data_seek($users, 0);
+// Initial load for mobile view
+$users = mysqli_query($con, "SELECT * FROM tbl_members WHERE status='Pending' ORDER BY date DESC LIMIT $page_limit");
 while($user = mysqli_fetch_assoc($users)):
 ?>
 <div class="bg-white rounded-xl shadow-lg p-4 user-card">
@@ -178,18 +294,20 @@ while($user = mysqli_fetch_assoc($users)):
 </div>
 
 <script>
-// Modal Image view
-document.querySelectorAll(".view-photo").forEach(img => {
-    img.onclick = () => {
-        document.getElementById("modalUserPhoto").src = img.src;
+// Event Delegation for Image modal
+document.body.addEventListener('click', (e) => {
+    if (e.target.classList.contains('view-photo')) {
+        document.getElementById("modalUserPhoto").src = e.target.src;
         document.getElementById("photoModal").classList.remove("hidden");
         document.getElementById("photoModal").classList.add("flex");
-    };
+    }
 });
+
 document.getElementById("closePhotoModal").onclick = () => {
     document.getElementById("photoModal").classList.add("hidden");
     document.getElementById("photoModal").classList.remove("flex");
 };
+
 document.getElementById("photoModal").onclick = e => {
     if(e.target === document.getElementById("photoModal")){
         document.getElementById("photoModal").classList.add("hidden");
@@ -197,22 +315,77 @@ document.getElementById("photoModal").onclick = e => {
     }
 };
 
-// Live Search
+// Server-side Live search & Infinite Scroll Logic
+let currentPage = 1;
+let loading = false;
+let hasMore = true;
+let currentSearch = '';
+
 const searchInput = document.getElementById('searchInput');
-searchInput.addEventListener('input', () => {
-    const val = searchInput.value.toLowerCase();
-    // Desktop table
-    document.querySelectorAll('#userTable tbody tr').forEach(row => {
-        row.style.display = row.innerText.toLowerCase().includes(val) ? '' : 'none';
-    });
-    // Mobile cards
-    document.querySelectorAll('#userCards .user-card').forEach(card => {
-        card.style.display = card.innerText.toLowerCase().includes(val) ? '' : 'none';
-    });
-    // Update pending count
-    const count = document.querySelectorAll('#userTable tbody tr:not([style*="display: none"])').length;
-    document.getElementById('pending-count').innerText = count + ' Pending';
+searchInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+      currentSearch = searchInput.value.trim();
+      currentPage = 1;
+      hasMore = true;
+      document.querySelector('#userTable tbody').innerHTML = '';
+      document.getElementById('userCards').innerHTML = '';
+      loadMore(true);
+  }
 });
+
+const tableContainer = document.getElementById('tableScrollContainer');
+
+if (tableContainer) {
+    tableContainer.addEventListener('scroll', () => {
+        if (Math.ceil(tableContainer.scrollTop + tableContainer.clientHeight) >= tableContainer.scrollHeight - 150) {
+            loadMore();
+        }
+    });
+}
+
+window.addEventListener('scroll', () => {
+    if (window.innerWidth < 768) { 
+        const scrollY = window.scrollY || document.documentElement.scrollTop;
+        if (Math.ceil(window.innerHeight + scrollY) >= document.documentElement.scrollHeight - 200) {
+            loadMore();
+        }
+    }
+});
+
+function loadMore(isSearch = false) {
+    if (loading || (!hasMore && !isSearch)) return;
+    loading = true;
+    
+    if (!isSearch) {
+        currentPage++;
+    }
+    
+    fetch(`admin_new_registration.php?ajax=1&page=${currentPage}&search=${encodeURIComponent(currentSearch)}`)
+        .then(res => res.json())
+        .then(data => {
+            if(data.desktop.trim() === '' && data.mobile.trim() === '') {
+                hasMore = false;
+            } else {
+                document.querySelector('#userTable tbody').insertAdjacentHTML('beforeend', data.desktop);
+                document.getElementById('userCards').insertAdjacentHTML('beforeend', data.mobile);
+            }
+            
+            if (data.total !== undefined) {
+                document.getElementById('pending-count').innerText = data.total;
+            }
+            
+            loading = false;
+            
+            // Auto-load if no scrollbar
+            if (tableContainer && tableContainer.scrollHeight <= tableContainer.clientHeight && hasMore) {
+                loadMore();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            loading = false;
+        });
+}
 </script>
 
 </body>
