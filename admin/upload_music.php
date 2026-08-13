@@ -1,6 +1,6 @@
 <?php
 session_start();
-include("header.php");
+include("../connection.php");
 
 if (!isset($_SESSION['admin_id'])) {
     header("Location: admin_login.php");
@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['music'])) {
     $files = $_FILES['music'];
     $total = count($files['name']);
     $uploaded = 0;
+    $errors = array();
 
     $createTable = "CREATE TABLE IF NOT EXISTS music (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -25,11 +26,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['music'])) {
         file_hash VARCHAR(64),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-    mysqli_query($con, $createTable);
+    if (!mysqli_query($con, $createTable)) {
+        $errors[] = "Database error: " . mysqli_error($con);
+    }
+    
+    // Add file_hash column if it doesn't exist
+    $checkColumn = mysqli_query($con, "SHOW COLUMNS FROM music LIKE 'file_hash'");
+    if (!$checkColumn || mysqli_num_rows($checkColumn) == 0) {
+        $alterTable = "ALTER TABLE music ADD COLUMN file_hash VARCHAR(64) AFTER file_name";
+        if (!mysqli_query($con, $alterTable)) {
+            $errors[] = "Failed to add file_hash column: " . mysqli_error($con);
+        }
+    }
 
     $uploadDir = __DIR__ . '/../uploads/music/';
     if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
+        if (!mkdir($uploadDir, 0755, true)) {
+            $errors[] = "Failed to create upload directory";
+        }
     }
 
     for ($i = 0; $i < $total; $i++) {
@@ -37,7 +51,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['music'])) {
         $temp_name = $files['tmp_name'][$i];
         $error = $files['error'][$i];
 
-        if ($file_name == '' || $error !== 0) continue;
+        if ($file_name == '' || $error !== 0) {
+            if ($error !== 0) {
+                $errors[] = "File '$file_name': Upload error code $error";
+            }
+            continue;
+        }
 
         $new_file_name = time() . "_" . rand(1000,9999) . "_" . preg_replace("/[^a-zA-Z0-9.]/", "_", $file_name);
         
@@ -45,11 +64,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['music'])) {
         
         // check duplicate by hash
         $chk = mysqli_prepare($con, "SELECT id FROM music WHERE file_hash = ? LIMIT 1");
-        mysqli_stmt_bind_param($chk, 's', $hash);
-        mysqli_stmt_execute($chk);
-        mysqli_stmt_store_result($chk);
-        $is_dup = mysqli_stmt_num_rows($chk) > 0;
-        mysqli_stmt_close($chk);
+        if ($chk) {
+            mysqli_stmt_bind_param($chk, 's', $hash);
+            mysqli_stmt_execute($chk);
+            mysqli_stmt_store_result($chk);
+            $is_dup = mysqli_stmt_num_rows($chk) > 0;
+            mysqli_stmt_close($chk);
+        } else {
+            $is_dup = false;
+        }
         
         if ($is_dup) continue;
 
@@ -58,8 +81,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['music'])) {
         $parts = explode("_", $fileWithoutExt);
 
         $artist_auto = $parts[0] ?? "Unknown";
-        $title_auto  = $parts[1] ?? $fileWithoutExt;
+        
+        // Title = everything after first part (artist)
+        $title_parts = array_slice($parts, 1);
+        $title_auto = implode(" ", $title_parts);
+        if (empty($title_auto)) {
+            $title_auto = $fileWithoutExt;
+        }
 
+        // Tags = parts after the title (2+ index)
         $tags_array = array_slice($parts, 2);
         $tags_auto = implode(",", $tags_array);
 
@@ -67,35 +97,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['music'])) {
         $title_auto = ucwords(strtolower(str_replace("_", " ", $title_auto)));
 
         if (move_uploaded_file($temp_name, $uploadDir . $new_file_name)) {
-            $stmt = mysqli_prepare($con, "INSERT INTO tbl_music (title, artist, file_name, tags, file_hash) VALUES (?, ?, ?, ?, ?)");
-            mysqli_stmt_bind_param($stmt, 'sssss', $title_auto, $artist_auto, $new_file_name, $tags_auto, $hash);
-            mysqli_stmt_execute($stmt);
-            mysqli_stmt_close($stmt);
-
-            $uploaded++;
+            $stmt = mysqli_prepare($con, "INSERT INTO music (title, artist, file_name, tags, file_hash) VALUES (?, ?, ?, ?, ?)");
+            if ($stmt) {
+                mysqli_stmt_bind_param($stmt, 'sssss', $title_auto, $artist_auto, $new_file_name, $tags_auto, $hash);
+                if (!mysqli_stmt_execute($stmt)) {
+                    $errors[] = "Database insert failed for '$file_name': " . mysqli_stmt_error($stmt);
+                } else {
+                    $uploaded++;
+                }
+                mysqli_stmt_close($stmt);
+            } else {
+                $errors[] = "Database prepare failed for '$file_name': " . mysqli_error($con);
+            }
+        } else {
+            $errors[] = "Failed to move file '$file_name' to upload directory";
         }
     }
     
-    header("Location: music.php?msg=".urlencode("$uploaded songs uploaded successfully!")."&type=success");
+    $msg = "$uploaded songs uploaded successfully!";
+    $type = "success";
+    if (!empty($errors)) {
+        $msg .= " | Errors: " . implode(" | ", $errors);
+        $type = $uploaded == 0 ? "error" : "warning";
+    }
+    
+    header("Location: upload_music.php?msg=".urlencode($msg)."&type=".$type);
     exit;
 }
 
 /* ============= DELETE ===============*/
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
-    $old = mysqli_fetch_assoc(mysqli_query($con, "SELECT file_name FROM tbl_music WHERE id='$id'"));
-    if ($old && $old['file_name']) {
-        $file = __DIR__ . '/../uploads/music/' . $old['file_name'];
-        if (file_exists($file)) unlink($file);
+    $result = mysqli_query($con, "SELECT file_name FROM music WHERE id='$id'");
+    if ($result) {
+        $old = mysqli_fetch_assoc($result);
+        if ($old && $old['file_name']) {
+            $file = __DIR__ . '/../uploads/music/' . $old['file_name'];
+            if (file_exists($file)) unlink($file);
+        }
     }
-    mysqli_query($con, "DELETE FROM tbl_music WHERE id='$id'");
-    header("Location: music.php?msg=".urlencode("Music Deleted")."&type=success");
+    mysqli_query($con, "DELETE FROM music WHERE id='$id'");
+    header("Location: upload_music.php?msg=".urlencode("Music Deleted")."&type=success");
     exit;
 }
 
 $data = mysqli_query($con, "SELECT * FROM music ORDER BY id DESC");
+if (!$data) {
+    $data = null;
+}
 ?>
 
+<?php include("header.php"); ?>
 
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
@@ -121,8 +173,15 @@ $data = mysqli_query($con, "SELECT * FROM music ORDER BY id DESC");
     <div class="bg-white rounded-xl shadow-lg p-6">
       <?php
       if(isset($_GET['msg'])){
-        $color = (isset($_GET['type']) && $_GET['type']=='success') ? 'green' : 'red';
-        echo "<p class='mb-3 text-".$color."-600 font-semibold text-sm'>" . htmlspecialchars($_GET['msg']) . "</p>";
+        $type = isset($_GET['type']) ? $_GET['type'] : 'error';
+        if($type == 'success') {
+          $colorClass = 'text-green-600 bg-green-50';
+        } elseif($type == 'warning') {
+          $colorClass = 'text-yellow-600 bg-yellow-50';
+        } else {
+          $colorClass = 'text-red-600 bg-red-50';
+        }
+        echo "<p class='mb-3 ".$colorClass." font-semibold text-sm p-3 rounded-lg'>" . htmlspecialchars($_GET['msg']) . "</p>";
       }
       ?>
 
@@ -160,7 +219,7 @@ $data = mysqli_query($con, "SELECT * FROM music ORDER BY id DESC");
           <thead class="bg-orange-500 text-white sticky top-0 z-10">
             <tr>
               <th class="px-4 py-2 text-left whitespace-nowrap">Sr No</th>
-              <th class="px-4 py-2 text-left whitespace-nowrap">Title</th>
+              <th class="px-4 py-2 text-left whitespace-nowrap " style="min-width:200px;">Title</th>
               <th class="px-4 py-2 text-left whitespace-nowrap">Artist</th>
               <th class="px-4 py-2 text-left whitespace-nowrap">Tags</th>
               <th class="px-4 py-2 text-left whitespace-nowrap">Preview</th>
@@ -170,10 +229,10 @@ $data = mysqli_query($con, "SELECT * FROM music ORDER BY id DESC");
           </thead>
 
           <tbody class="divide-y bg-white">
-          <?php $sr = 1; while($row = mysqli_fetch_assoc($data)) { ?>
+          <?php if ($data) { $sr = 1; while($row = mysqli_fetch_assoc($data)) { ?>
             <tr class="hover:bg-orange-50">
               <td class="px-4 py-2 font-semibold"><?= $sr++ ?></td>
-              <td class="px-4 py-2 font-medium"><?= htmlspecialchars($row['title']) ?></td>
+              <td class="px-4 py-2"><?= htmlspecialchars($row['title']) ?></td>
               <td class="px-4 py-2"><?= htmlspecialchars($row['artist']) ?></td>
               <td class="px-4 py-2 text-xs text-gray-600"><?= htmlspecialchars($row['tags']) ?></td>
               <td class="px-4 py-2">
@@ -189,8 +248,14 @@ $data = mysqli_query($con, "SELECT * FROM music ORDER BY id DESC");
               </td>
             </tr>
           <?php } ?>
+          
+          <?php } else { ?>
+            <tr>
+              <td colspan="7" class="px-4 py-4 text-center text-gray-500">No music found</td>
+            </tr>
+          <?php } ?>
 
-          <?php if(mysqli_num_rows($data) == 0){ ?>
+          <?php if($data && mysqli_num_rows($data) == 0){ ?>
             <tr>
               <td colspan="7" class="text-center py-4 text-gray-500">No tracks uploaded yet.</td>
             </tr>
@@ -208,5 +273,3 @@ $data = mysqli_query($con, "SELECT * FROM music ORDER BY id DESC");
 
 </body>
 </html>
-
-
