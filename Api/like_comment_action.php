@@ -102,6 +102,27 @@ if ($action === 'comment') {
 }
 
 /* ============================
+   📢 REPORT POST
+============================ */
+if ($action === 'report') {
+    $pid = intval($data['id'] ?? $_POST['id'] ?? 0);
+    $reason = trim($data['reason'] ?? $_POST['reason'] ?? '');
+
+    if ($pid > 0 && $reason != "") {
+        $stmt = $con->prepare("INSERT INTO tbl_reports (post_id, user_id, reason, date) VALUES (?, ?, ?, NOW())");
+        $stmt->bind_param("iis", $pid, $user_id, $reason);
+        if ($stmt->execute()) {
+            echo json_encode(["ok" => true]);
+        } else {
+            echo json_encode(["ok" => false, "message" => "Db error: " . $con->error]);
+        }
+    } else {
+        echo json_encode(["ok" => false, "message" => "Invalid input: pid=$pid, reason=$reason"]);
+    }
+    exit;
+}
+
+/* ============================
    📦 FETCH ALL POSTS (with likes/comments)
 ============================ */
 if ($action === 'fetch_all') {
