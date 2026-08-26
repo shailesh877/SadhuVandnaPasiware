@@ -2,17 +2,6 @@
 // Api/like_comment_action.php
 include("headers.php"); // Added CORS headers for App
 include("connection.php");
-
-CREATE TABLE IF NOT EXISTS tbl_reports (
-  id int NOT NULL AUTO_INCREMENT,
-  post_id int NOT NULL,
-  user_id int NOT NULL,
-  reason text,
-  date datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
-) ENGINE=MyISAM AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-
 session_start();
 header('Content-Type: application/json');
 date_default_timezone_set("Asia/Kolkata");
