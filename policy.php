@@ -1,10 +1,11 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Privacy Policy | SadhuVandna</title>
+    <title>Privacy Policy | linkup</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Privacy Policy of SadhuVandna - Learn how we collect, use and protect your personal information.">
+    <meta name="description" content="Privacy Policy of linkup - Learn how we collect, use and protect your personal information.">
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
@@ -61,7 +62,7 @@
     <div class="updated">Last Updated: 19 December 2025</div>
 
     <p>
-        Welcome to <strong>SadhuVandna.co.in</strong> ("we", "our", "us").
+        Welcome to <strong>linkup</strong> ("we", "our", "us").
         Your privacy is very important to us. This Privacy Policy explains how we
         collect, use, protect, and handle your information when you visit or use our website.
     </p>
@@ -149,10 +150,11 @@
     </p>
 
     <footer>
-        © 2025 SadhuVandna. All Rights Reserved.
+        © 2025 linkup. All Rights Reserved.
     </footer>
 
 </div>
 
 </body>
 </html>
+```
