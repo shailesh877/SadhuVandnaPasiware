@@ -1,3 +1,0 @@
-2026-09-05 15:41:26 | User: 1765 | Token: ExponentPushToken[vtG51MBYEMKaKhjcoqN65O] | Status: 200 | Error:  | Resp: {"data":{"status":"ok","id":"01a0710d-347c-729f-bde5-abadfc7cd3c7"}}
-2026-09-07 12:06:50 | User: 1755 | Token: ExponentPushToken[f15S2DL4vluS6q_c0mLB9T] | Status: 200 | Error:  | Resp: {"data":{"status":"ok","id":"01a07a95-76fe-745c-8cd4-a529c1171447"}}
-2026-09-07 13:19:12 | User: 7 | Token: ExponentPushToken[TEiiH9OW4V8teRt7Rrvv7V] | Status: 200 | Error:  | Resp: {"data":{"status":"ok","id":"01a07ad7-b665-743f-94a5-ede013da31bf"}}
