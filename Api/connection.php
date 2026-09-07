@@ -4,7 +4,7 @@ if ((isset($_SERVER['SERVER_ADDR']) && $_SERVER['SERVER_ADDR'] == '127.0.0.1') |
     $host = "178.16.137.167"; // Remote connection from local PC
 }
 
-$con=mysqli_connect($host,"u941015828_sadhuvandna","Sadhuvandna7832%^","u941015828_sadhuvandna",3307);
+$con=mysqli_connect($host,"u941015828_sadhuvandna","Sadhuvandna7832%^","u941015828_sadhuvandna",3306);
 if (mysqli_connect_errno()) {
     echo "Failed to connect to MySQL: " . mysqli_connect_error();
     exit();
