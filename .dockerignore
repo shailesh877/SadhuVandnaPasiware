@@ -1,0 +1,11 @@
+.git
+.expo
+android
+android_backup
+jdk17
+jdk17.zip
+node_modules
+*.log
+*.zip
+*.jks
+*.pem
