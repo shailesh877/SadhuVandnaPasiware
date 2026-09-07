@@ -10,7 +10,6 @@ if (!$con) {
     echo json_encode(["status" => "error", "message" => "Database connection failed"]);
     exit;
 }
-session_start();
 
 // Logged-in user
 

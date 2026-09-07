@@ -121,7 +121,7 @@ if (isset($_REQUEST['post_id']) && intval($_REQUEST['post_id']) > 0) {
 $whereBlocked = "m.status != 'Blocked'";
 $finalWhere = $whereClause ? "$whereClause AND $whereBlocked" : "WHERE $whereBlocked";
 
-$query = "SELECT p.*, m.name, m.profile_photo 
+$query = "SELECT p.*, m.name, m.profile_photo, m.is_business, m.category 
           FROM tbl_posts p
           JOIN tbl_members m ON p.user_id = m.id 
           $finalWhere
@@ -179,6 +179,8 @@ while ($p = $result->fetch_assoc()) {
         'user_id' => $p['user_id'],
         'name' => $p['name'] ?? 'Unknown User',
         'profile_photo' => $p['profile_photo'],
+        'is_business' => $p['is_business'] ?? 0,
+        'category' => $p['category'] ?? '',
         'description' => $p['status'] ?? $p['description'] ?? '', // Map status to description for app compatibility
         'link' => $p['link'] ?? '',
         'likes' => $likes,

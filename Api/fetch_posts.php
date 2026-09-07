@@ -1,8 +1,7 @@
 <?php
 include('connection.php');
 
-// Corrected query
-$stmt = $pdo->prepare("\
+$query = "
     SELECT 
         p.*, 
         m.name, 
@@ -10,9 +9,15 @@ $stmt = $pdo->prepare("\
     FROM tbl_posts p
     JOIN tbl_members m ON p.user_id = m.id AND m.status != 'Blocked'
     ORDER BY p.created_at DESC
-");
-$stmt->execute();
-$posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+";
+$result = mysqli_query($con, $query);
+
+$posts = [];
+if ($result) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        $posts[] = $row;
+    }
+}
 
 // Add time ago
 foreach ($posts as &$post) {
