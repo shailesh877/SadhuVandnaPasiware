@@ -1,0 +1,788 @@
+<?php
+include("header.php");
+include("connection.php");
+
+
+$user_id = intval($_GET['id'] ?? 0);
+if(!$user_id) die("<div class='text-center p-10 text-red-600 text-xl font-bold'>Invalid user!</div>");
+
+$user = $con->query("SELECT * FROM tbl_members WHERE id=$user_id")->fetch_assoc();
+if(!$user) die("<div class='text-center p-10 text-red-600 text-xl font-bold'>User not found!</div>");
+
+// Hide blocked users' profiles
+// if(isset($user['status']) && strtolower($user['status']) === 'blocked'){
+//   die("<div class='text-center p-10 text-red-600 text-xl font-bold'>User not found!</div>");
+// }
+
+$logged_mobile = $_SESSION['sadhu_user_id'] ?? '';
+$logged_user = $con->query("SELECT id,email,profile_photo FROM tbl_members WHERE mobile='$logged_mobile'")->fetch_assoc();
+$logged_id = $logged_user['id'] ?? 0;
+$loged_profile_photo = $logged_user['profile_photo'] ?? '';
+?>
+
+<main class="flex-1 px-3 md:px-10 py-15 bg-white md:ml-20 mb-14 md:mb-0">
+
+  <!-- 🖼️ Cover -->
+  <?php if (!empty($user['cover_photo'])): ?>
+  <div class="relative w-full h-52 md:h-64 rounded-xl overflow-hidden shadow">
+    <img src="uploads/photo/<?php echo htmlspecialchars($user['cover_photo']); ?>" class="w-full h-full object-cover"
+      onclick="openImageModal(this.src)">
+  </div>
+  <?php endif; ?>
+
+  <!-- 👤 Profile -->
+  <div class="bg-white rounded-xl shadow-lg border border-orange-200 mt-[-3rem] md:mt-[-4rem] relative z-10 px-6 py-5">
+    <div class="flex flex-col md:flex-row items-center md:items-end gap-6">
+      <div class="relative">
+        <img src="uploads/photo/<?php echo htmlspecialchars($user['profile_photo']); ?>"
+          class="w-32 h-32 rounded-full border-4 border-orange-300 shadow-xl bg-white object-cover" onclick="openImageModal(this.src)">
+      </div>
+      
+      <div class="flex flex-col flex-1 w-full">
+        <div class="flex flex-col md:flex-row justify-between items-center md:items-start gap-4">
+          <div class="text-center md:text-left">
+            <h1 class="text-2xl font-bold text-orange-700">
+              <?php echo htmlspecialchars($user['name']); ?>
+              <span id="followsMeBadge" class="hidden ml-2 text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full uppercase tracking-wider vertical-middle">Follows You</span>
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">
+              <i class="fa-solid fa-calendar-days mr-1"></i> Joined: <?php echo date("d M, Y", strtotime($user['date'])); ?>
+            </p>
+          </div>
+
+          <div class="flex flex-wrap gap-2 items-center justify-center md:justify-start">
+            <?php if($logged_id && $logged_id !== $user_id): ?>
+              <button id="followBtn" data-id="<?php echo $user_id; ?>" class="px-6 py-2 rounded-full font-bold transition-all shadow-md">
+                Connect
+              </button>
+              <a id="msgBtn" href="message.php?receiver_id=<?php echo $user_id; ?>&platform=community" class="hidden px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full font-bold transition-all shadow-md flex items-center gap-2">
+                <i class="fa-solid fa-comments"></i> Message
+              </a>
+            <?php endif; ?>
+            
+            <?php if($logged_mobile === $user['mobile']): ?>
+              <a href="edit_profile.php" class="bg-orange-500 text-white px-6 py-2 rounded-full shadow-md hover:bg-orange-600 transition font-bold">
+                Edit Profile
+              </a>
+            <?php endif; ?>
+          </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="flex justify-around md:justify-start md:gap-12 mt-6 border-t border-orange-100 pt-4">
+          <div class="text-center">
+            <div id="postsCount" class="font-bold text-xl text-orange-700">0</div>
+            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Posts</div>
+          </div>
+          <div class="text-center cursor-pointer hover:bg-orange-50 px-3 rounded-xl transition" onclick="openFollowsModal('fetch_followers', 'Followers')">
+            <div id="followersCount" class="font-bold text-xl text-orange-700">0</div>
+            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Followers</div>
+          </div>
+          <div class="text-center cursor-pointer hover:bg-orange-50 px-3 rounded-xl transition" onclick="openFollowsModal('fetch_following', 'Following')">
+            <div id="followingCount" class="font-bold text-xl text-orange-700">0</div>
+            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Following</div>
+          </div>
+        </div>
+
+        <div class="mt-4 text-center md:text-left">
+             <button id="moreBtn" class="text-sm font-semibold text-orange-600 hover:text-orange-700 hover:underline flex items-center gap-1 mx-auto md:mx-0">
+               <i class="fa-solid fa-circle-info"></i> View More Details
+             </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <?php
+// FAMILY MEMBERS FROM tbl_family_members
+$family_members = $con->query("
+    SELECT * FROM tbl_family_members 
+    WHERE user_id='$user_id' ORDER BY id DESC
+");
+
+// MARRIAGE PROFILE
+$marriage_profile = $con->query("
+    SELECT * FROM tbl_marriage_profiles 
+    WHERE user_id='$user_id' LIMIT 1
+")->fetch_assoc();
+?>
+
+  <!-- FAMILY & MARRIAGE SECTION -->
+  <div class="bg-white mt-6 p-6 rounded-xl shadow-lg border border-orange-200">
+
+    <h2 class="text-xl font-bold text-orange-700 mb-4 flex items-center gap-2">
+      <i class="fa-solid fa-users"></i> Family & Marriage Information
+    </h2>
+
+    <div class="grid md:grid-cols-2 gap-6">
+
+      <!-- FAMILY MEMBERS -->
+      <div class="p-4 bg-orange-50 border border-orange-200 rounded-xl shadow-sm">
+        <h3 class="text-lg font-bold text-orange-800 mb-3">
+          <i class="fa fa-people-roof"></i> Family Members
+        </h3>
+
+        <?php if($family_members->num_rows > 0): ?>
+
+        <!-- Scrollable Box -->
+        <div class="flex flex-col gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scroll">
+
+          <?php while($fm = $family_members->fetch_assoc()): ?>
+          <div class="flex gap-3 items-center p-2 bg-white rounded-lg border border-orange-100 shadow-sm">
+
+            <img src="<?= !empty($fm['photo']) && file_exists('uploads/family/'.$fm['photo']) 
+                        ? 'uploads/family/'.$fm['photo'] 
+                        : 'https://via.placeholder.com/60?text=Photo' ?>"
+              class="w-12 h-12 rounded-full border border-orange-300 object-cover cursor-pointer"
+              onclick="openImageModal(this.src)" />
+
+           <div class="flex-1 text-xs text-gray-700">
+
+  <!-- BASIC INFO (ALWAYS VISIBLE) -->
+  <div class="font-bold text-orange-700 text-sm">
+    <?= htmlspecialchars($fm['name']) ?>
+  </div>
+
+  <div class="text-xs text-gray-600">
+    <?= htmlspecialchars($fm['relation']) ?> | <?= htmlspecialchars($fm['gender']) ?>
+  </div>
+
+  <?php if(!empty($fm['dob'])): 
+    $dob_obj = date_create($fm['dob']);
+    if($dob_obj):
+      $age = date_diff($dob_obj, date_create('today'))->y; ?>
+      <div class="text-xs text-gray-600">
+        Age: <?= $age ?> Years
+      </div>
+    <?php endif; ?>
+  <?php endif; ?>
+
+  <div class="text-xs bg-orange-200 text-orange-700 px-2 py-0.5 rounded-full inline-block mt-1">
+    <?= htmlspecialchars($fm['marital_status']) ?>
+  </div>
+
+  <!-- READ MORE CONTENT -->
+  <div class="hidden mt-2 space-y-1 family-more">
+
+    <?php if($fm['dob']): ?>
+      <div>DOB: <?= date("d-m-Y", strtotime($fm['dob'])) ?></div>
+    <?php endif; ?>
+
+    <?php if($fm['height']): ?>
+      <div>Height: <?= htmlspecialchars($fm['height']) ?></div>
+    <?php endif; ?>
+
+    <?php if($fm['weight']): ?>
+      <div>Weight: <?= htmlspecialchars($fm['weight']) ?></div>
+    <?php endif; ?>
+
+    <?php if($fm['education']): ?>
+      <div>Education: <?= htmlspecialchars($fm['education']) ?></div>
+    <?php endif; ?>
+
+    <?php if($fm['occupation']): ?>
+      <div>Occupation: <?= htmlspecialchars($fm['occupation']) ?></div>
+    <?php endif; ?>
+
+    <?php if($fm['income']): ?>
+      <div>Income: <?= htmlspecialchars($fm['income']) ?></div>
+    <?php endif; ?>
+
+    <?php if($fm['caste']): ?>
+      <div>Caste: <?= htmlspecialchars($fm['caste']) ?></div>
+    <?php endif; ?>
+
+    <?php if($fm['kuldevi']): ?>
+      <div>Kuldevi: <?= htmlspecialchars($fm['kuldevi']) ?></div>
+    <?php endif; ?>
+
+  </div>
+
+  <!-- READ MORE BUTTON -->
+  <button type="button"
+          class="text-orange-600 text-xs font-semibold mt-1 readMoreBtn">
+    Read more
+  </button>
+
+</div>
+
+          </div>
+          <?php endwhile; ?>
+
+        </div>
+        <?php else: ?>
+        <p class="text-gray-500 text-sm">No family members added.</p>
+        <?php endif; ?>
+
+      </div>
+
+      <!-- MARRIAGE PROFILE -->
+      <?php if($marriage_profile): ?>
+
+      <a href="view_marriage_profile.php?id=<?= $marriage_profile['id'] ?>"
+        class="block bg-orange-50 hover:bg-orange-100 transition border border-orange-200 rounded-xl p-4 shadow-sm">
+
+        <h3 class="text-lg font-bold text-orange-800 mb-3 flex items-center gap-2">
+          <i class="fa fa-ring"></i> Marriage Profile
+        </h3>
+
+        <div class="flex items-center gap-4">
+
+          <img src="<?= !empty($marriage_profile['photo']) 
+                      ? 'uploads/photo/'.$marriage_profile['photo'] 
+                      : 'https://via.placeholder.com/80?text=Photo' ?>"
+            class="w-16 h-16 rounded-full border-4 border-orange-400 object-cover shadow" />
+
+          <div>
+            <div class="font-bold text-orange-700 text-lg">
+              <?= htmlspecialchars($marriage_profile['full_name']); ?>
+            </div>
+
+            <?php if(!empty($marriage_profile['dob'])): 
+              $dob_obj = date_create($marriage_profile['dob']);
+              if($dob_obj):
+                $age = date_diff($dob_obj, date_create('today'))->y; ?>
+                <div class="text-sm text-gray-600">
+                  Age:
+                  <?= $age ?> Years
+                </div>
+              <?php endif; ?>
+            <?php endif; ?>
+
+            <div class="text-sm text-gray-600">
+              <?= htmlspecialchars($marriage_profile['city']) ?>,
+              <?= htmlspecialchars($marriage_profile['caste']) ?>
+            </div>
+
+            <p class="text-xs text-orange-600 mt-1">Click to view full marriage profile →</p>
+          </div>
+
+        </div>
+
+      </a>
+
+      <?php endif; ?>
+
+    </div>
+
+  </div>
+
+  <!-- Scrollbar Design -->
+  <style>
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #fb923c;
+      border-radius: 10px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #fdecd5;
+    }
+  </style>
+
+
+
+  <!-- 📝 Posts -->
+  <section id="postContainer" class="mt-6"></section>
+</main>
+
+<!-- Follows Modal -->
+<div id="followsModal" class="fixed inset-0 bg-black/50 z-[1000] hidden items-center justify-center backdrop-blur-sm p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+        <div class="p-4 border-b border-orange-100 flex justify-between items-center bg-orange-50">
+            <h3 id="followsModalTitle" class="font-bold text-orange-700 text-lg capitalize">List</h3>
+            <button onclick="closeFollowsModal()" class="text-gray-400 hover:text-orange-600 text-2xl">&times;</button>
+        </div>
+        <div id="followsList" class="max-h-[60vh] overflow-y-auto p-2 space-y-2 custom-scroll">
+            <!-- Items loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+async function openFollowsModal(action, title) {
+    const modal = document.getElementById('followsModal');
+    const list = document.getElementById('followsList');
+    const titleEl = document.getElementById('followsModalTitle');
+    
+    titleEl.innerText = title;
+    list.innerHTML = `<div class="p-10 text-center"><i class="fa-solid fa-spinner fa-spin text-orange-500 text-2xl"></i></div>`;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    const res = await fetch(`follow_action.php?action=${action}&user_id=<?php echo $user_id; ?>`);
+    const data = await res.json();
+    
+    if(data.ok){
+        if(data.list.length === 0){
+            list.innerHTML = `<div class="p-10 text-center text-gray-400 italic">No ${title.toLowerCase()} yet.</div>`;
+            return;
+        }
+        
+        list.innerHTML = data.list.map(u => `
+            <div class="flex items-center justify-between p-3 bg-white border border-gray-50 rounded-xl hover:shadow-sm transition">
+                <a href="user_profile?id=${u.id}" class="flex items-center gap-3">
+                    ${u.profile_photo ? 
+                        `<img src="${u.profile_photo}" class="w-10 h-10 rounded-full object-cover border border-orange-200">` : 
+                        `<div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold border border-orange-200">${u.initials}</div>`
+                    }
+                    <div>
+                        <div class="font-bold text-gray-800 text-sm">${u.name}</div>
+                        <div class="text-[10px] text-gray-400">${u.city || ''} ${u.follows_me ? '• <span class="text-green-600">Follows You</span>' : ''}</div>
+                    </div>
+                </a>
+                <button onclick="toggleFollowInModal(${u.id}, this, '${action}', '${title}')" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${u.i_follow ? 'bg-gray-100 text-gray-600' : 'bg-orange-500 text-white'}">
+                    ${u.i_follow ? (u.my_status === 'accepted' ? 'Friends' : 'Requested') : (u.follows_me ? 'Accept Request' : 'Send Request')}
+                </button>
+            </div>
+        `).join('');
+    }
+}
+
+function closeFollowsModal() {
+    const modal = document.getElementById('followsModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+async function toggleFollowInModal(id, btn, action, title) {
+    const res = await fetch('follow_action.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=follow&user_id=${id}`
+    });
+    const data = await res.json();
+    if(data.ok){
+        // Refresh the list to keep stats accurate
+        openFollowsModal(action, title);
+        // Also refresh page stats in background
+        if(typeof fetchCounts === 'function') fetchCounts();
+    }
+}
+</script>
+
+<!-- Premium Compact Profile Modal -->
+<div id="profileModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+
+  <div class="bg-white w-[92%] max-w-md rounded-xl shadow-2xl overflow-hidden border border-orange-200">
+
+    <!-- HEADER (fixed) -->
+    <div class="bg-gradient-to-r from-orange-600 to-orange-500 p-5 text-white relative">
+
+      <button id="closeModal" class="absolute top-3 right-4 text-white/90 text-2xl hover:text-white font-bold">
+        &times;
+      </button>
+
+      <div class="flex items-center gap-4">
+
+        <!-- Photo -->
+        <?php if(!empty($user['profile_photo']) && file_exists("uploads/photo/".$user['profile_photo'])): ?>
+        <img src="uploads/photo/<?= $user['profile_photo']; ?>"
+          class="w-16 h-16 rounded-lg object-cover shadow-md border-2 border-white">
+        <?php else: ?>
+        <div
+          class="w-16 h-16 rounded-lg bg-white/30 flex items-center justify-center text-white text-3xl font-bold shadow">
+          <?= strtoupper($user['name'][0] ?? 'U'); ?>
+        </div>
+        <?php endif; ?>
+
+        <!-- Name -->
+        <div>
+          <h2 class="text-xl font-bold">
+            <?= htmlspecialchars($user['name']); ?>
+          </h2>
+          <p class="text-sm text-white/80">User Profile Details</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CONTENT (scrollable) -->
+    <div class="p-5 max-h-[65vh] overflow-y-auto space-y-4">
+
+      <!-- FIELD COMPONENT -->
+      <?php
+      function field($icon, $title, $value){
+          echo "
+            <div class='flex items-start gap-3 bg-orange-50 border border-orange-200 p-3 rounded-lg shadow-sm'>
+              <i class='fa-solid $icon text-orange-600 text-lg mt-1'></i>
+              <p>
+                <b>$title:</b><br>
+                ".htmlspecialchars($value)."
+              </p>
+            </div>
+          ";
+      }
+      ?>
+
+      <?php
+        field('fa-cake-candles', 'Date of Birth', $user['dob'] ?? 'Not available');
+        field('fa-location-dot', 'Address', $user['address'] ?? 'Not available');
+        field('fa-city', 'City', $user['city'] ?? 'Not available');
+        field('fa-ring', 'Marital Status', $user['maritial_status'] ?? 'Not specified');
+        field('fa-heart', 'Hobbies', $user['hobbi'] ?? 'Not listed');
+        field('fa-user-pen', 'About', $user['about'] ?? 'No bio added');
+        field('fa-graduation-cap', 'Education', $user['education'] ?? 'Not updated');
+        field('fa-briefcase', 'Occupation', $user['occupation'] ?? 'Not updated');
+        field('fa-people-group', 'Community / Caste', $user['cast'] ?? 'Not specified');
+      ?>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal (Hidden by default) marriage_profile view-->
+<div id="imageModal" class="modal" onclick="closeImageModal()">
+  <span class="close">&times;</span>
+  <img class="modal-content" id="modalImage">
+</div>
+<style>
+  /* Modal background */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    padding-top: 60px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.8);
+    text-align: center;
+  }
+
+  /* Image inside modal */
+  .modal-content {
+    margin: auto;
+    display: block;
+    max-width: 90%;
+    max-height: 80vh;
+    border-radius: 10px;
+  }
+
+  /* Close button */
+  .close {
+    position: absolute;
+    top: 20px;
+    right: 35px;
+    color: white;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .close:hover {
+    color: orange;
+  }
+</style>
+<!-- family member js  -->
+<script>
+document.addEventListener("click", function(e){
+  if(e.target.classList.contains("readMoreBtn")){
+    const btn = e.target;
+    const more = btn.previousElementSibling;
+
+    if(more.classList.contains("hidden")){
+      more.classList.remove("hidden");
+      btn.innerText = "Read less";
+    } else {
+      more.classList.add("hidden");
+      btn.innerText = "Read more";
+    }
+  }
+});
+</script>
+
+
+<script>
+  function openImageModal(src) {
+    document.getElementById('modalImage').src = src;
+    document.getElementById('imageModal').style.display = "block";
+  }
+
+  function closeImageModal() {
+    document.getElementById('imageModal').style.display = "none";
+  }
+</script>
+
+
+<script>
+  // Modal JS
+  document.querySelectorAll("[data-modal-target]").forEach(button => {
+    button.addEventListener("click", () => {
+      const modal = document.getElementById(button.getAttribute("data-modal-target"));
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    });
+  });
+</script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+  const user_id = <?php echo $user_id; ?>;
+  const logged_id = <?php echo $logged_id ?? 0; ?>;
+
+  // Fetch Counts
+  async function fetchCounts() {
+      const res = await fetch(`follow_action.php?action=get_counts&user_id=${user_id}`);
+      const data = await res.json();
+      if(data.ok){
+          if(document.getElementById('followersCount')) document.getElementById('followersCount').innerText = data.followers;
+          if(document.getElementById('followingCount')) document.getElementById('followingCount').innerText = data.following;
+          document.getElementById('postsCount').innerText = data.posts;
+          
+          const followBtn = document.getElementById('followBtn');
+          const msgBtn = document.getElementById('msgBtn');
+          const badge = document.getElementById('followsMeBadge');
+
+          if(followBtn){
+              if(data.is_connected){
+                  followBtn.innerText = "Friends";
+                  followBtn.className = "px-6 py-2 bg-green-100 text-green-700 rounded-full font-bold transition-all shadow-sm border border-green-200";
+                  if(msgBtn) msgBtn.classList.remove('hidden');
+              } else if(data.is_requested){
+                  followBtn.innerText = "Requested";
+                  followBtn.className = "px-6 py-2 bg-gray-100 text-gray-500 rounded-full font-bold transition-all shadow-sm border border-gray-200";
+                  if(msgBtn) msgBtn.classList.add('hidden');
+              } else if(data.follows_me){
+                  followBtn.innerText = "Accept Request";
+                  followBtn.className = "px-6 py-2 bg-orange-500 text-white rounded-full font-bold transition-all shadow-md hover:bg-orange-600";
+                  if(msgBtn) msgBtn.classList.add('hidden');
+              } else if(data.is_following){
+                  // Fallback for simple follow
+                  followBtn.innerText = "Friends";
+                  followBtn.className = "px-6 py-2 bg-green-100 text-green-700 rounded-full font-bold transition-all shadow-sm border border-green-200";
+                  if(msgBtn) msgBtn.classList.remove('hidden');
+              } else {
+                  followBtn.innerText = "Send Request";
+                  followBtn.className = "px-6 py-2 bg-orange-600 text-white rounded-full font-bold transition-all shadow-md hover:bg-orange-700";
+                  if(msgBtn) msgBtn.classList.add('hidden');
+              }
+          }
+
+          if(badge){
+              if(data.follows_me) badge.classList.remove('hidden');
+              else badge.classList.add('hidden');
+          }
+      }
+  }
+
+  // Follow Action
+  if(document.getElementById('followBtn')){
+      document.getElementById('followBtn').onclick = async () => {
+          const btn = document.getElementById('followBtn');
+          const res = await fetch('follow_action.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: `action=follow&user_id=${user_id}`
+          });
+          const data = await res.json();
+          if(data.ok){
+              fetchCounts();
+          } else {
+              alert(data.message);
+          }
+      };
+  }
+
+  // ✅ Fetch only this user's posts (like old style)
+  async function fetchAll() {
+    const res = await fetch(`like_comment_action.php?action=fetch_all&user_id=${user_id}`);
+    const posts = await res.json();
+    const container = document.getElementById("postContainer");
+    container.innerHTML = '';
+    
+    if(posts.length === 0){
+        container.innerHTML = '<div class="text-center py-10 text-gray-400 bg-white rounded-xl shadow border border-orange-100 italic">No posts yet.</div>';
+        return;
+    }
+
+    posts.forEach(p => {
+      const likedClass = p.user_liked ? 'fa-solid text-red-500' : 'fa-regular text-gray-400';
+      const postHTML = `
+      <div class="bg-white rounded-xl shadow-lg border border-orange-200 px-6 py-5 mt-5" id="post-${p.id}">
+        <div class="flex items-center gap-3">
+          <a href="user_profile.php?id=${p.user_id}" class="flex items-center gap-3 hover:opacity-90 transition">
+            <img src="uploads/photo/${p.profile_photo}" class="w-10 h-10 rounded-full border-2 border-orange-300">
+            <div>
+              <div class="font-bold text-orange-700 hover:underline">${p.name}</div>
+              <div class="text-xs text-gray-500">${p.date}</div>
+            </div>
+          </a>
+        </div>
+
+        <div class="mt-3 text-gray-800 text-lg">${p.status}</div>
+          <div class="mt-3 text-gray-800 text-lg break-all">
+  <a href="${p.link}" 
+     class="text-blue-700 break-all" 
+     target="_blank">
+     ${p.link}
+  </a>
+</div>
+
+        ${p.media.map(m => m.endsWith('.jpg') || m.endsWith('.png') || m.endsWith('.jpeg') || m.endsWith('.gif') ?
+        `<img src="uploads/posts/${m}" class="rounded-xl mt-3 max-h-[500px] mx-auto">` :
+        `<video src="uploads/posts/${m}" class="rounded-xl mt-3 max-h-[500px] mx-auto" controls></video>`).join('')}
+
+        <div class="flex gap-6 mt-3 text-gray-700 text-base">
+          <button class="like-btn flex items-center gap-1" data-id="${p.id}">
+            <i class="${likedClass} fa-heart text-lg"></i>
+            <span class="like-count">${p.likes}</span>
+          </button>
+          <button class="comment-toggle hover:text-orange-600 flex items-center gap-1" data-id="${p.id}">
+            <i class="fa-regular fa-comment-dots"></i> 
+            <span class="comment-count">${p.comments.length}</span>
+          </button>
+        </div>
+
+        <div id="comments-${p.id}" class="comment-section hidden mt-4 bg-orange-50/40 rounded-xl border border-orange-200 p-4">
+
+    <!-- Add Comment -->
+    <form class="comment-form flex items-center gap-3 mb-3" data-id="${p.id}">
+        <img src="uploads/photo/<?=$loged_profile_photo?>" class="w-9 h-9 rounded-full border border-orange-300">
+        <input 
+            type="text" 
+            name="comment"
+            class="flex-1 bg-white border border-orange-200 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-400"
+            placeholder="Write a comment..."
+            required
+        >
+        <button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm shadow">
+            Post
+        </button>
+    </form>
+
+    <!-- Comments List -->
+    <div class="comment-list max-h-64 overflow-y-auto space-y-3 pr-1">
+
+        ${p.comments.map(c => `
+            <div class="flex gap-3 items-start border-b border-orange-100 pb-3">
+                
+                <img src="uploads/photo/${c.profile_photo}" 
+                     class="w-9 h-9 rounded-full border border-orange-300">
+
+                <div class="bg-white px-4 py-2 rounded-xl shadow-sm w-full">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-orange-700 text-sm">${c.name}</span>
+                        <span class="text-[10px] text-gray-400">${c.date}</span>
+                    </div>
+                    <div class="text-gray-700 text-sm mt-1 leading-tight">
+                        ${c.comment}
+                    </div>
+                </div>
+
+            </div>
+        `).join('')}
+
+    </div>
+
+</div>
+
+      </div>`;
+      container.insertAdjacentHTML("beforeend", postHTML);
+    });
+  }
+
+  // ❤️ Like toggle
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('.like-btn');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    await fetch('like_comment_action.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `action=like&id=${id}`
+    });
+    fetchAll();
+  });
+
+  // 💬 Toggle comment section
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.comment-toggle');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    document.querySelector(`#comments-${id}`).classList.toggle('hidden');
+  });
+
+  // ✏️ Post comment
+  document.addEventListener('submit', async e => {
+    if (!e.target.classList.contains('comment-form')) return;
+
+    e.preventDefault();
+
+    const form = e.target;
+    const id = form.dataset.id;
+
+    // CHANGED: textarea ❌ → input[type=text] ✔
+    const input = form.querySelector("input[name='comment']");
+    const text = input.value.trim();
+
+    if (text === "") return;
+
+    await fetch('like_comment_action.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `action=comment&id=${id}&comment=${encodeURIComponent(text)}`
+    });
+
+    input.value = ""; // clear input after posting
+    fetchAll();        // reload posts
+  });
+
+
+  // 🧡 Modal
+  document.getElementById('moreBtn').onclick = () => document.getElementById('profileModal').classList.remove('hidden');
+  document.getElementById('closeModal').onclick = () => document.getElementById('profileModal').classList.add('hidden');
+
+  fetchAll();
+  fetchCounts();
+</script>
+<script>
+// disable right click
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+// disable drag
+document.addEventListener("dragstart", e => e.preventDefault());
+
+// disable ctrl keys
+document.addEventListener("keydown", function(e){
+
+    // Ctrl + S / U / P / C / X / A
+    if (
+        e.ctrlKey &&
+        ['s','u','p','c','x','a'].includes(e.key.toLowerCase())
+    ) {
+        e.preventDefault();
+    }
+
+    // Print Screen
+    if (e.key === "PrintScreen") {
+        document.body.style.filter = "blur(10px)";
+        setTimeout(() => {
+            document.body.style.filter = "none";
+        }, 2000);
+    }
+
+    // F12
+    if (e.keyCode === 123) {
+        e.preventDefault();
+    }
+});
+
+// mobile screenshot detection (best possible)
+document.addEventListener("visibilitychange", function(){
+    if(document.hidden){
+        document.body.style.filter = "blur(15px)";
+    } else {
+        document.body.style.filter = "none";
+    }
+});
+
+// disable text selection
+document.onselectstart = () => false;
+</script>

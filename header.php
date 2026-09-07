@@ -1,0 +1,936 @@
+<?php
+ob_start();
+
+// 🔥 Better session persistence
+if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 2592000, // 30 Days
+        'path' => '/',
+        'samesite' => 'Lax'
+    ]);
+    @session_start();
+}
+include("connection.php");
+include("auto_delete_stories.php");
+
+// -------------------------------------
+// 🔥 AUTO-LOGIN FROM COOKIE
+// -------------------------------------
+if(!isset($_SESSION['sadhu_user_id']) || empty($_SESSION['sadhu_user_id'])){
+    if(isset($_COOKIE['sadhu_user_id']) && !empty($_COOKIE['sadhu_user_id'])){
+        // Cookie exists -> Restore Session
+        $_SESSION['sadhu_user_id'] = $_COOKIE['sadhu_user_id'];
+        $_SESSION['sadhu_user_name'] = $_COOKIE['sadhu_user_name'] ?? 'Guest';
+    } else {
+        // No session and no cookie -> Check current page before redirecting
+        $current_page = basename($_SERVER['PHP_SELF'], '.php');
+        $auth_pages = ['login', 'registration', 'login_verify_otp', 'registration_code'];
+        
+        if(!in_array($current_page, $auth_pages)){
+            echo "<script>window.location.href='login';</script>";
+            exit;
+        }
+    }
+}
+
+// -------------------------------------
+// 🔥  CHECK USER BLOCK STATUS EVERY TIME
+
+// -------------------------------------
+// 🔥  CHECK USER BLOCK STATUS EVERY TIME
+
+$uid = $_SESSION['sadhu_user_id'];
+
+$stmt = $con->prepare("SELECT id, status, name, mobile, email FROM tbl_members WHERE mobile=? LIMIT 1");
+$stmt->bind_param("s", $uid);
+$stmt->execute();
+$res = $stmt->get_result();
+
+if($res->num_rows == 1){
+    $row = $res->fetch_assoc();
+    $my_member_id = $row['id']; 
+
+    if($row['status'] == "Blocked"){
+        // Destroy Session + Cookies
+        session_unset();
+        session_destroy();
+
+        setcookie("sadhu_user_id", "", time() - 3600, "/");
+        setcookie("sadhu_user_name", "", time() - 3600, "/");
+
+        echo "<script>alert('Your account has been blocked.'); window.location.href = 'login';</script>";
+        exit;
+    }
+
+    // Check for incomplete profile (New User)
+    $showProfilePopup = false;
+    $current_page = basename($_SERVER['PHP_SELF'], '.php'); 
+    
+    // Normalize check for both with/without extension
+    if($current_page != 'edit_profile' && $current_page != 'edit_profile.php' && $current_page != 'login' && $current_page != 'logout'){
+        if($row['name'] == 'New Member'){
+            $showProfilePopup = true;
+        }
+    }
+}
+// -------------------------------------
+// users online activity store 
+if(isset($_SESSION['sadhu_user_id'])){
+    $mobile_id = $_SESSION['sadhu_user_id'];
+    $con->query("UPDATE tbl_members SET last_active = NOW() WHERE mobile='$mobile_id'");
+}
+
+// Get user info from session
+$user_name = isset($_SESSION['sadhu_user_name']) ? $_SESSION['sadhu_user_name'] : 'Guest';
+$user_id   = $_SESSION['sadhu_user_id']; // This is MOBILE now
+
+$profile_photo = '';
+
+// Fetch user profile image from DB
+if($user_id){
+    $stmt = "SELECT profile_photo FROM tbl_members WHERE mobile='$user_id' LIMIT 1";
+    $res = mysqli_query($con,$stmt);
+    if($res && $res->num_rows){
+        $row = $res->fetch_assoc();
+        if(!empty($row['profile_photo'])){
+            $file_path = 'uploads/photo/'.$row['profile_photo'];
+            if(file_exists($file_path)){ // check if file exists
+                $profile_photo = $file_path;
+            }
+        }
+    }
+}
+
+
+// Assume $user_name is already set from session
+$first_letters = '';
+
+// Split name by space
+$name_parts = explode(' ', trim($user_name));
+
+// Take first letter of first word
+if(isset($name_parts[0])){
+    $first_letters .= strtoupper(substr($name_parts[0],0,1));
+}
+
+// Take first letter of second word if exists
+if(isset($name_parts[1])){
+    $first_letters .= strtoupper(substr($name_parts[1],0,1));
+}
+
+// Now $first_letters has 1 or 2 letters max
+?>
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- <title>Sadhu Vandana - Home</title> -->
+
+  <!-- SEO Meta Tags -->
+  <meta name="description"
+    content="Sadhu Vandana Samaj Dashboard — Your digital home for news, stories, events, marriage profiles, and community updates. Connect, celebrate, and stay informed with verified news and real-time alerts.">
+  <meta name="keywords"
+    content="Samaj Dashboard, Sadhu Vandana, Community News, Marriage Profiles, Religious Events, Local News, Blood Donation, Announcements, Celebration, Support, Indian Community, Orange Theme, Social Bonds">
+  <meta name="author" content="Sadhu Vandana Community">
+  <meta name="robots" content="index, follow">
+  <meta name="language" content="English">
+  <meta name="revisit-after" content="7 days">
+  <meta property="og:title" content="Samaj Dashboard — News, Events, and Community">
+  <meta property="og:description"
+    content="Get latest verified news, updates, and stories from Sadhu Vandana Samaj. Find marriage profiles, discover events, and grow your social bonds.">
+  <meta property="og:image" content="https://yourdomain.com/assets/sadhu-vandana-share.jpg">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://yourdomain.com">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Samaj Dashboard — News & Events">
+  <meta name="twitter:description"
+    content="Sadhu Vandana's digital dashboard for news, stories, and vibrant community updates.">
+  <meta name="twitter:image" content="https://yourdomain.com/assets/sadhu-vandana-share.jpg">
+  <?php
+    // Use per-page title if provided, otherwise infer from script name
+    if(!empty($page_title)){
+      $full_title = htmlspecialchars($page_title) . ' — Sadhu Vandana';
+    } else {
+      $script = basename($_SERVER['PHP_SELF'], '.php');
+      $inferred = ucwords(str_replace(['_','-'], ' ', $script));
+      $full_title = $inferred . ' — Sadhu Vandana';
+    }
+  ?>
+  <title>
+    <?php echo $full_title; ?>
+  </title>
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- Font Awesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- Google Fonts: Roboto -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <!-- language script start -->
+
+ <!-- faw icon link -->
+  <link rel="icon" href="images/logo.png">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+    }
+
+    /* Hide scrollbar but allow scrolling */
+    aside::-webkit-scrollbar {
+      display: none;
+      /* Chrome, Safari, Opera */
+    }
+
+    aside {
+      -ms-overflow-style: none;
+      /* IE and Edge */
+      scrollbar-width: none;
+      /* Firefox */
+    }
+
+    /* Hide horizontal scrollbar */
+    .mob-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mob-scroll {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .goog-te-banner-frame.skiptranslate {
+      display: none !important;
+    }
+
+    body {
+      top: 0px !important;
+    }
+
+    .skiptranslate {
+      display: none !important;
+    }
+
+    .goog-te-banner-frame.skiptranslate {
+      display: none !important;
+    }
+
+    body {
+      top: 0px !important;
+    }
+
+    .skiptranslate {
+      display: none !important;
+    }
+  </style>
+
+</head>
+
+<body class="bg-white min-h-screen flex flex-col ">
+  
+<!-- Top Navbar start -->
+<nav
+  class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-3 py-1 bg-white shadow-sm border-b border-orange-300">
+
+  <!-- LOGO + CLOCK -->
+  <div class="flex items-center gap-3">
+    <img src="images/logo.png" class="w-10" alt="">
+
+    <!-- ✅ CLOCK + DATE (NOW VISIBLE ON MOBILE TOO) -->
+    <div class="flex flex-col leading-tight cursor-pointer" onclick="openCalendar()">
+      <div id="liveClock"
+        class="text-xs sm:text-sm font-bold text-orange-700 flex items-center gap-1">
+        <i class="fa-regular fa-clock"></i>  --:--
+      </div>
+
+      <div id="liveDate"
+        class="text-[11px] sm:text-[12px] text-gray-500 flex items-center left-1 gap-1">
+        <i class="fa-regular fa-calendar"></i>  -- ---
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-4 relative">
+
+    <!-- MESSAGES -->
+    <a href="conversations.php" class="relative group">
+       <i class="fa-solid fa-comment-dots text-orange-600 text-xl sm:text-2xl transition-transform group-hover:scale-110"></i>
+       <span id="msgNotifCount" class="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full hidden"></span>
+    </a>
+
+
+    <!-- NOTIFICATION -->
+    <button onclick="openNotificationModal()" class="relative">
+      <i class="fa-solid fa-bell text-orange-600 text-xl sm:text-2xl"></i>
+      <span id="notifCount"
+        class="absolute -top-2 -right-2 bg-red-600 text-white text-xs 
+        font-bold px-1.5 py-0.5 rounded-full hidden"></span>
+    </button>
+
+    <!-- PROFILE -->
+    <div class="relative">
+      <button id="profileBtn"
+        class="w-9 h-9 rounded-full overflow-hidden border-2 border-orange-400 flex items-center justify-center bg-orange-200 text-white font-bold">
+        <?php if($profile_photo){ ?>
+          <img src="<?php echo $profile_photo ?>" class="w-full h-full object-cover" />
+        <?php } else { ?>
+          <?php echo $first_letters ?>
+        <?php } ?>
+      </button>
+
+      <div id="profileDropdown"
+        class="hidden absolute right-0 mt-2 w-60 bg-white border border-orange-200 rounded-lg shadow-lg z-50">
+        <!-- <a href="change_password" class="block px-4 py-2 text-orange-700 hover:bg-orange-100">
+          Change Password
+        </a> -->
+        <a href="logout" class="block px-4 py-2 text-orange-700 hover:bg-orange-100">
+          Logout
+        </a>
+      </div>
+    </div>
+
+  </div>
+</nav>
+
+<!-- ✅ HIDDEN CALENDAR INPUT -->
+<input type="date" id="hiddenCalendar" class="hidden" />
+
+
+
+  <!-- Main Layout -->
+ <div class="flex flex-1 pt-4" id="pageContent">
+
+  <!-- side navbar start -->
+  <aside
+  class="hidden md:flex flex-col justify-center w-20 fixed top-0 left-0 h-[100vh] py-30 items-center gap-4 border-r-2 border-orange-200 z-[100]">
+
+
+    <!-- ✅ TOP CENTER ICONS (SAME AS BEFORE) -->
+    <div class="flex flex-col items-center gap-4">
+
+      <a href="index" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+        <i class="fa-solid fa-house text-2xl mb-1"></i>
+        <span class="text-xs">Home</span>
+      </a>
+
+      <a href="profile" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+        <i class="fa-solid fa-user text-2xl mb-1"></i>
+        <span class="text-xs">Profile</span>
+      </a>
+
+
+      <a href="news" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+        <i class="fa-solid fa-newspaper text-2xl mb-1"></i>
+        <span class="text-xs">News</span>
+      </a>
+
+      <a href="marraige" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+        <i class="fa-solid fa-ring text-2xl mb-1"></i>
+        <span class="text-xs">Marriage</span>
+      </a>
+
+    </div>
+
+    <!-- ✅ GRID + DROPDOWN (BOTTOM CENTER, SAME POSITION FEEL) -->
+    <div class="relative flex flex-col items-center">
+
+
+      <!-- GRID ICON -->
+      <button id="menuToggle"
+        class="flex flex-col items-center text-orange-500 hover:text-orange-600 focus:outline-none">
+        <i class="fa-solid fa-grip text-2xl mb-1"></i>
+        <span class="text-xs">More</span>
+      </button>
+
+      <!-- ✅ DROPDOWN: ONLY  ITEMS -->
+      <div id="menuBox"
+  class="hidden absolute left-full top-1/2 -translate-y-1/2 ml-7
+         bg-white border border-orange-200 rounded-xl shadow-lg
+         grid grid-cols-3 gap-5
+         px-5 py-5 z-50
+         w-[260px] max-h-[90vh] overflow-y-auto">
+
+        <a href="gallery" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-images text-xl"></i>
+          <span class="text-[11px]">Gallery</span>
+        </a>
+        <a href="temple" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-gopuram text-xl"></i>
+          <span class="text-[11px]">Temple</span>
+        </a>
+
+        <a href="branch" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-sitemap text-xl"></i>
+          <span class="text-[11px]">Branch</span>
+        </a>
+
+        <a href="shok_sanvedana" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-hands-praying text-xl"></i>
+          <span class="text-[11px]"> Shok Sandesh</span>
+        </a>
+        <a href="festival" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+         <i class="fa-solid fa-wand-sparkles text-xl"></i>
+          <span class="text-[11px]"> Festival Poster</span>
+        </a>
+        <a href="jobs_education"
+  class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+  <i class="fa-solid fa-briefcase text-xl"></i>
+  <span class="text-[11px]">Jobs & Education</span>
+</a>
+<a href="policy" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-file-contract text-xl"></i>
+          <span class="text-[11px]">Privacy Policy</span>
+        </a>
+<a href="child_safety" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-file-contract text-xl"></i>
+          <span class="text-[11px]">Child Safety</span>
+        </a>
+
+
+        <a href="about" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-circle-info text-xl"></i>
+          <span class="text-[11px]">About Us</span>
+        </a>
+
+      </div>
+    </div>
+
+  </aside>
+  <!-- side navbar end -->
+
+</div>
+<!-- ✅ Mobile Navbar -->
+<nav class="fixed bottom-0 left-0 w-full md:hidden bg-orange-500 shadow-lg z-[100]">
+
+  <div class="grid grid-cols-5 text-center items-center">
+
+    <a href="index" class="py-2 flex flex-col items-center text-white hover:bg-orange-600">
+      <i class="fa-solid fa-house text-lg"></i>
+      <span class="text-[11px] leading-none mt-1">Home</span>
+    </a>
+
+    <a href="profile" class="py-2 flex flex-col items-center text-white hover:bg-orange-600">
+      <i class="fa-solid fa-user text-lg"></i>
+      <span class="text-[11px] leading-none mt-1">Profile</span>
+    </a>
+
+
+    <a href="news" class="py-2 flex flex-col items-center text-white hover:bg-orange-600">
+      <i class="fa-solid fa-newspaper text-lg"></i>
+      <span class="text-[11px] leading-none mt-1">News</span>
+    </a>
+
+    <a href="marraige" class="py-2 flex flex-col items-center text-white hover:bg-orange-600">
+      <i class="fa-solid fa-ring text-lg"></i>
+      <span class="text-[11px] leading-none mt-1">Marriage</span>
+    </a>
+
+    <!-- ✅ GRID ICON -->
+    <button id="mobileMenuToggle"
+      class="py-2 flex flex-col items-center text-white hover:bg-orange-600 focus:outline-none">
+      <i class="fa-solid fa-grip text-lg"></i>
+      <span class="text-[11px] leading-none mt-1">More</span>
+    </button>
+
+  </div>
+
+  <!-- ✅ MOBILE DROPDOWN (GRID LAYOUT: 4 per row) -->
+  <div id="mobileMenuBox"
+  class="hidden absolute bottom-14 left-2 right-2 mx-auto
+         bg-white border border-orange-300 rounded-xl shadow-lg
+         grid grid-cols-4 gap-y-6 gap-x-2 px-4 py-5 z-50">
+
+    <a href="gallery" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+      <i class="fa-solid fa-images text-xl"></i>
+      <span class="text-[11px] mt-1">Gallery</span>
+    </a>
+    <a href="temple" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+      <i class="fa-solid fa-gopuram text-xl"></i>
+      <span class="text-[11px] mt-1">Temple</span>
+    </a>
+
+    <a href="branch" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+      <i class="fa-solid fa-sitemap text-xl"></i>
+      <span class="text-[11px] mt-1">Branch</span>
+    </a>
+
+    <a href="shok_sanvedana" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+      <i class="fa-solid fa-hands-praying text-xl"></i>
+      <span class="text-[11px] mt-1">Shok Sandesh</span>
+    </a>
+    <a href="festival" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+      <i class="fa-solid fa-wand-sparkles text-xl"></i>
+      <span class="text-[11px] mt-1">Festival Poster</span>
+    </a>
+    <a href="jobs_education"
+  class="flex flex-col items-center text-orange-500">
+  <i class="fa-solid fa-briefcase text-xl"></i>
+  <span class="text-[11px] mt-1 text-center">Jobs</span>
+</a>
+<a href="policy" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-file-contract text-xl"></i>
+          <span class="text-[11px] mt-1 text-center">Privacy Profile</span>
+        </a>
+<a href="child_safety" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+          <i class="fa-solid fa-file-contract text-xl"></i>
+          <span class="text-[11px] mt-1 text-center">Child Safety</span>
+        </a>
+
+    <a href="about" class="flex flex-col items-center text-orange-500 hover:text-orange-600">
+      <i class="fa-solid fa-circle-info text-xl"></i>
+      <span class="text-[11px] mt-1 text-center">About Us</span>
+    </a>
+
+  </div>
+</nav>
+
+
+<script>
+const mobileToggle = document.getElementById("mobileMenuToggle");
+const mobileBox = document.getElementById("mobileMenuBox");
+
+mobileToggle.addEventListener("click", function (e) {
+  e.stopPropagation();
+  mobileBox.classList.toggle("hidden");
+});
+
+document.addEventListener("click", function () {
+  mobileBox.classList.add("hidden");
+});
+</script>
+
+
+
+<script>
+  const menuToggle = document.getElementById("menuToggle");
+  const menuBox = document.getElementById("menuBox");
+
+  menuToggle.addEventListener("click", function (e) {
+    e.stopPropagation();
+    menuBox.classList.toggle("hidden");
+  });
+
+  document.addEventListener("click", function () {
+    menuBox.classList.add("hidden");
+  });
+</script>
+
+
+
+
+
+    <script>
+      // Profile dropdown toggle
+      const p_btn = document.getElementById('profileBtn');
+      const p_drop = document.getElementById('profileDropdown');
+      if(p_btn && p_drop) {
+          p_btn.onclick = (e) => { e.stopPropagation(); p_drop.classList.toggle('hidden'); };
+          document.addEventListener('click', function (e) {
+            if (!p_btn.contains(e.target) && !p_drop.contains(e.target)) {
+              p_drop.classList.add('hidden');
+            }
+          });
+      }
+    </script>
+
+
+    <!-- NOTIFICATION MODAL -->
+    <div id="notifModal" class="fixed inset-0 bg-black/60 hidden flex justify-center items-start pt-20 z-50">
+
+      <div class="bg-white w-96 max-h-[80vh] rounded-xl shadow-xl p-4 overflow-y-auto">
+
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-lg font-bold text-gray-800">Notifications</h2>
+          <button onclick="closeNotificationModal()">
+            <i class="fa-solid fa-xmark text-xl text-gray-600"></i>
+          </button>
+        </div>
+
+        <div id="notifList" class="space-y-3">
+          <!-- Loaded notifications -->
+        </div>
+
+      </div>
+    </div>
+
+
+
+    <script>
+      function openNotificationModal() {
+        document.getElementById("notifModal").classList.remove("hidden");
+        loadNotifications();
+      }
+
+      function closeNotificationModal() {
+        document.getElementById("notifModal").classList.add("hidden");
+      }
+
+      // 🔥 Load Notification List
+      function loadNotifications() {
+        fetch("get_notification.php")
+          .then(res => res.json())
+          .then(data => {
+
+            let html = "";
+
+            data.forEach(n => {
+              let action = "";
+              let badgeText = "";
+              let iconClass = "text-blue-600";
+              
+              if(n.type === 'message'){
+                  action = `openMessage(${n.sender_id}, '${n.platform}')`;
+                  badgeText = `${n.unread_count} message(s)`;
+                  iconClass = "text-blue-600";
+              } else if(n.type === 'proposal'){
+                  action = `window.location.href='view_request.php'`;
+                  badgeText = `Marriage Proposal`;
+                  iconClass = "text-red-600";
+              } else if(n.type === 'follow'){
+                  action = `window.location.href='profile.php'`;
+                  badgeText = `Friend Request`;
+                  iconClass = "text-green-600";
+              }
+
+              html += `
+                <div onclick="${action}"
+                    class="flex items-center gap-3 p-2 rounded-lg border cursor-pointer hover:bg-orange-50 mb-2">
+
+                    <img src="${n.profile}" 
+                         class="w-10 h-10 rounded-full object-cover border shadow">
+
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-800 text-sm">${n.name}</p>
+                        <p class="text-xs text-gray-500 line-clamp-1">${n.message}</p>
+
+                        <span class="text-[10px] ${iconClass} font-bold uppercase tracking-wide">
+                            ${badgeText}
+                        </span>
+                    </div>
+
+                    <span class="text-[9px] text-gray-400 whitespace-nowrap">${n.date}</span>
+                </div>`;
+
+            });
+
+            document.getElementById("notifList").innerHTML = html || "<div class='text-center p-5 text-gray-400 italic text-sm'>No new notifications</div>";
+          });
+      }
+
+
+
+      // 🔥 Redirect to chat
+      function openMessage(sender_id, platform) {
+        window.location.href = `message.php?receiver_id=${sender_id}&platform=${platform}`;
+      }
+
+
+
+      // PeerJS Global Setup (Shared variables)
+      var myMemberId = <?php echo json_encode($my_member_id ?? 0); ?>;
+      var myMemberName = <?php echo json_encode($user_name); ?>;
+      var myMemberPhoto = <?php echo json_encode($profile_photo); ?>;
+      
+      function initPeer() {
+          if(myMemberId > 0 && typeof Peer !== 'undefined'){
+              if(window.peer && !window.peer.destroyed) return; // already exists
+              
+              const config = {
+                  'iceServers': [
+                      { 'urls': 'stun:stun.l.google.com:19302' },
+                      { 'urls': 'stun:stun1.l.google.com:19302' },
+                      { 'urls': 'stun:stun2.l.google.com:19302' }
+                  ]
+              };
+              window.peer = new Peer('sadhu_user_' + myMemberId, { config: config });
+              
+              window.peer.on('open', (id) => {
+                  console.log('Global Peer ID:', id);
+              });
+
+              window.peer.on('error', (err) => {
+                  console.error('Global PeerJS Error:', err.type, err);
+                  if(err.type === 'id-taken' || err.type === 'unavailable-id') {
+                      console.warn("Peer ID taken. Retrying in 5s...");
+                      if(window.peer) { try { window.peer.destroy(); } catch(e){} window.peer = null; }
+                      setTimeout(initPeer, 5000);
+                  }
+                  if(err.type === 'peer-unavailable') {
+                      // Handled by retry logic in initiateCall
+                  }
+              });
+
+
+          // Reconnect logic if disconnected from server
+          window.peer.on('disconnected', () => {
+              console.log('Peer disconnected from server. Attempting to reconnect...');
+              if(window.peer && !window.peer.destroyed) {
+                  try { window.peer.reconnect(); } catch(e) { console.warn('Reconnect failed:', e); }
+              }
+          });
+          
+          window.peer.on('call', (call) => {
+              console.log('Incoming Peer Call...');
+              const metadata = call.metadata || {};
+              
+              call.on('close', () => {
+                  console.log("Peer Call Canceled by Sender");
+                  const modal = document.getElementById('globalIncomingCallModal');
+                  if(modal && modal.dataset.callId == (metadata.call_id || 0)){
+                      rejectGlobalCall(); 
+                  }
+              });
+
+              if(typeof handleIncomingPeerCall === 'function'){
+                  handleIncomingPeerCall(call);
+              } else {
+                  showGlobalIncomingCall({
+                      call_id: metadata.call_id || 0,
+                      caller_id: metadata.caller_id || 0,
+                      caller_name: metadata.caller_name || 'Someone',
+                      caller_photo: metadata.caller_photo || 'images/logo.png',
+                      type: metadata.type || 'video',
+                      platform: metadata.platform || 'marriage',
+                      peerCall: call 
+                  });
+              }
+          });
+
+          // Heartbeat to keep connection alive
+          setInterval(() => {
+              if (window.peer && !window.peer.destroyed && window.peer.disconnected) {
+                  console.log('Heartbeat: Peer disconnected, reconnecting...');
+                  try { window.peer.reconnect(); } catch(e) { console.warn('Heartbeat reconnect failed:', e); }
+              }
+          }, 8000);
+      }
+      }
+      
+      // Auto-init peer
+      initPeer();
+      // Retry init peer every 2 seconds if not ready (handles slow script load)
+      const peerRetryInterval = setInterval(() => {
+          if(window.peer && !window.peer.destroyed) {
+              clearInterval(peerRetryInterval);
+          } else {
+              initPeer();
+          }
+      }, 2000);
+
+      // Flag to skip global call handling if page provides its own
+      const isChatPage = window.location.href.includes('message.php') || window.location.href.includes('community_chat.php');
+
+      // 🔥 Update global status (Unread messages + Incoming Calls)
+      function updateGlobalStatus() {
+        fetch("get_global_status.php")
+          .then(res => res.json())
+          .then(data => {
+            updateBadge(data);
+            
+            // CALL SYNC / STOP RINGING
+            const gModal = document.getElementById('globalIncomingCallModal');
+            const gRing = document.getElementById('globalRingtone');
+
+            if (data.incoming_call) {
+                // Only act globally if not on chat page OR wrong user
+                let handleGlobally = !isChatPage;
+                if(isChatPage){
+                    const pId = (typeof receiverChatProfileId !== 'undefined') ? receiverChatProfileId : 0;
+                    const pPlat = (typeof chatPlatform !== 'undefined') ? chatPlatform : '';
+                    if(data.incoming_call.caller_id != pId || data.incoming_call.platform != pPlat){
+                        handleGlobally = true;
+                    }
+                }
+                
+                if(handleGlobally) {
+                     if(!window.isRedirectingToCall) {
+                         window.isRedirectingToCall = true;
+                         if(window.peer) {
+                             console.log("Destroying peer before redirect...");
+                             try { window.peer.destroy(); } catch(e){}
+                         }
+                         window.location.href = `message.php?receiver_id=${data.incoming_call.caller_id}&platform=${data.incoming_call.platform || 'marriage'}&type=${data.incoming_call.type||'video'}`;
+                     }
+                }
+            } else {
+                // If DB says no ringing call, hide global modal and stop ringtone
+                if (gModal && !gModal.classList.contains('hidden')) {
+                    console.log("Stopping global ringtone: Call ended");
+                    gModal.classList.add('hidden');
+                    if (gRing) { gRing.pause(); gRing.currentTime = 0; }
+                }
+            }
+          })
+          .catch(e => console.error("Global status error:", e));
+      }
+
+      function updateBadge(counts) {
+        let badge = document.getElementById("notifCount");
+        let msgBadge = document.getElementById("msgNotifCount");
+        const cNotif = parseInt(counts.unread_count) || 0;
+        const cMsg = parseInt(counts.msg_count) || 0;
+        
+        // General Notification Badge
+        if (cNotif > 0) {
+          if(badge){ badge.innerText = cNotif; badge.classList.remove("hidden"); }
+        } else {
+          if(badge) badge.classList.add("hidden");
+        }
+
+        // Community Message Badge
+        if (cMsg > 0) {
+          if(msgBadge){ msgBadge.innerText = cMsg; msgBadge.classList.remove("hidden"); }
+        } else {
+          if(msgBadge) msgBadge.classList.add("hidden");
+        }
+      }
+
+      let globalPendingCall = null;
+      // Global Incoming Call is now an instant redirect per user request
+      function showGlobalIncomingCall(data) {
+          if(!window.isRedirectingToCall) {
+              window.isRedirectingToCall = true;
+              console.log("Incoming call detected globally, redirecting instantly to message.php...");
+              if(window.peer) {
+                  try { window.peer.destroy(); } catch(e){}
+              }
+              window.location.href = `message.php?receiver_id=${data.caller_id}&platform=${data.platform || 'marriage'}&type=${data.type||'video'}`;
+          }
+      }
+
+      function acceptGlobalCall() {
+        const modal = document.getElementById('globalIncomingCallModal');
+        const callId = modal.dataset.callId;
+        const callerId = modal.dataset.callerId;
+        const platform = modal.dataset.platform;
+        const type = modal.dataset.type || 'video';
+        
+        const page = (platform === 'community') ? 'community_chat.php' : 'message.php';
+        if(window.peer) {
+            console.log("Destroying peer before redirect...");
+            window.peer.destroy();
+        }
+        window.location.href = `${page}?receiver_id=${callerId}&accept_call_id=${callId}&platform=${platform}&type=${type}`;
+      }
+
+      async function rejectGlobalCall() {
+        const modal = document.getElementById('globalIncomingCallModal');
+        const callId = modal.dataset.callId;
+        
+        if(globalPendingCall) {
+            globalPendingCall.close();
+            globalPendingCall = null;
+        }
+
+        if(callId && callId != "0"){
+            const fd = new FormData();
+            fd.append('call_id', callId);
+            fd.append('status', 'rejected');
+            await fetch('update_call_status.php', { method:'POST', body:fd });
+        }
+        
+        modal.classList.add('hidden');
+        modal.dataset.isPeerCall = '';
+        const ring = document.getElementById('globalRingtone');
+        if (ring) { ring.pause(); ring.currentTime = 0; }
+      }
+
+      // Auto refresh every 4 seconds
+      setInterval(updateGlobalStatus, 4000);
+      updateGlobalStatus();
+    </script>
+ 
+<!-- GLOBAL CALL MODAL -->
+<div id="globalIncomingCallModal" class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 hidden backdrop-blur-sm">
+    <div class="bg-white rounded-2xl p-6 text-center shadow-2xl w-80 animate-bounce-slow">
+        <div class="mb-4 relative inline-block">
+            <img id="g_incCallImg" src="" class="w-24 h-24 rounded-full border-4 border-orange-500 object-cover mx-auto">
+            <div class="absolute inset-0 rounded-full border-4 border-orange-400 animate-ping opacity-75"></div>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800" id="g_incCallName">Name</h3>
+        <p class="text-gray-500 mb-6" id="g_incCallType">Incoming Call...</p>
+        <div class="flex justify-center gap-6">
+            <button onclick="rejectGlobalCall()" class="w-14 h-14 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 shadow-lg transition">
+                <i class="fa-solid fa-phone-slash fa-xl"></i>
+            </button>
+            <button onclick="acceptGlobalCall()" class="w-14 h-14 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 shadow-lg transition">
+                <i class="fa-solid fa-phone fa-xl"></i>
+            </button>
+        </div>
+    </div>
+</div>
+<audio id="globalRingtone" loop src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+
+<!-- clock and calender script  -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+function updateClock() {
+
+  const clock = document.getElementById("liveClock");
+  const date = document.getElementById("liveDate");
+
+  if(!clock || !date) return; // safety
+
+  const now = new Date();
+
+  let hours = now.getHours();
+  let minutes = now.getMinutes();
+  let ampm = hours >= 12 ? 'PM' : 'AM';
+
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  minutes = minutes < 10 ? '0' + minutes : minutes;
+
+  const timeString = hours + ":" + minutes + " " + ampm;
+
+  const options = { day: '2-digit', month: 'short', year: 'numeric' };
+  const dateString = now.toLocaleDateString('en-IN', options);
+
+  clock.innerHTML = '<i class="fa-regular fa-clock"></i> ' + timeString;
+  date.innerHTML = '<i class="fa-regular fa-calendar"></i> ' + dateString;
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+
+window.openCalendar = function(){
+  document.getElementById("hiddenCalendar")?.showPicker();
+}
+
+});
+</script>
+ 
+
+
+<!-- PROFILE COMPLETION POPUP -->
+<?php if(isset($showProfilePopup) && $showProfilePopup): ?>
+<div id="profileCompletePopup" class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl p-6 md:p-8 text-center shadow-2xl w-full max-w-sm border-2 border-orange-500 relative transform transition-all scale-100">
+        
+        <!-- Close Button -->
+        <button onclick="document.getElementById('profileCompletePopup').remove()" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors bg-gray-100 hover:bg-red-50 rounded-full w-8 h-8 flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+
+        <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-200">
+            <i class="fa-solid fa-user-pen text-3xl text-orange-600"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-800 mb-2">Complete Your Profile</h3>
+        <p class="text-gray-600 mb-6 text-sm">Welcome! Please update your name and details to get the best experience.</p>
+        
+        <div class="flex flex-col gap-3">
+            <a href="edit_profile" class="block w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-95 flex justify-center items-center gap-2">
+                <span>Update Now</span> <i class="fa-solid fa-arrow-right"></i>
+            </a>
+            
+            <button onclick="document.getElementById('profileCompletePopup').remove()" class="text-gray-500 text-sm hover:text-gray-800 font-medium underline decoration-gray-300 underline-offset-4 hover:decoration-gray-500">
+                I'll do it later
+            </button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
