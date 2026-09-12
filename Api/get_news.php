@@ -14,7 +14,19 @@ if ($check_column && $check_column->num_rows == 0) {
     $con->query("ALTER TABLE tbl_news ADD COLUMN category VARCHAR(100) DEFAULT 'ताज़ा खबर'");
 }
 
-$query = "SELECT * FROM tbl_news ORDER BY id DESC";
+// Auto-migration: Ensure user_id column exists in tbl_news
+$check_uid = $con->query("SHOW COLUMNS FROM tbl_news LIKE 'user_id'");
+if ($check_uid && $check_uid->num_rows == 0) {
+    $con->query("ALTER TABLE tbl_news ADD COLUMN user_id INT(11) DEFAULT 0");
+}
+
+$where = '';
+if (isset($_REQUEST['user_id']) && intval($_REQUEST['user_id']) > 0) {
+    $uid = intval($_REQUEST['user_id']);
+    $where = "WHERE user_id = $uid";
+}
+
+$query = "SELECT * FROM tbl_news $where ORDER BY id DESC";
 $result = $con->query($query);
 
 $news = [];

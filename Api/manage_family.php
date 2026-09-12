@@ -2,7 +2,38 @@
 include 'headers.php';
 include 'connection.php';
 
-$action = $_POST['action'] ?? $_GET['action'] ?? '';
+// Auto-migration: ensure all new columns exist in tbl_family_members
+$cols = [
+    'height'         => "VARCHAR(20) DEFAULT ''",
+    'weight'         => "VARCHAR(20) DEFAULT ''",
+    'education'      => "VARCHAR(100) DEFAULT ''",
+    'income'         => "VARCHAR(50) DEFAULT ''",
+    'caste'          => "VARCHAR(100) DEFAULT ''",
+    'kuldevi'        => "VARCHAR(100) DEFAULT ''",
+    'marital_status' => "VARCHAR(50) DEFAULT ''",
+    'dob'            => "VARCHAR(20) DEFAULT ''",
+];
+foreach ($cols as $col => $definition) {
+    $chk = $con->query("SHOW COLUMNS FROM tbl_family_members LIKE '$col'");
+    if ($chk && $chk->num_rows == 0) {
+        $con->query("ALTER TABLE tbl_family_members ADD COLUMN $col $definition");
+    }
+}
+
+// Helper: convert any date format to YYYY-MM-DD for MySQL
+function formatDate($date) {
+    if (!$date) return '';
+    // DD/MM/YYYY
+    if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', trim($date), $m))
+        return $m[3] . '-' . str_pad($m[2], 2, '0', STR_PAD_LEFT) . '-' . str_pad($m[1], 2, '0', STR_PAD_LEFT);
+    // DD-MM-YYYY
+    if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', trim($date), $m))
+        return $m[3] . '-' . str_pad($m[2], 2, '0', STR_PAD_LEFT) . '-' . str_pad($m[1], 2, '0', STR_PAD_LEFT);
+    // Already YYYY-MM-DD or empty
+    return trim($date);
+}
+
+$action  = $_POST['action'] ?? $_GET['action'] ?? '';
 $user_id = $_POST['user_id'] ?? $_GET['user_id'] ?? '';
 
 if(!$user_id && $action != 'delete'){ // Delete might pass id and user_id via POST or GET, need consistency.
@@ -27,7 +58,7 @@ if ($action == 'fetch') {
     $relation = $_POST['relation'] ?? '';
     $gender = $_POST['gender'] ?? '';
     $occupation = $_POST['occupation'] ?? '';
-    $dob = $_POST['dob'] ?? '';
+    $dob = formatDate($_POST['dob'] ?? '');
     $marital_status = $_POST['marital_status'] ?? '';
     
     $height = $_POST['height'] ?? '';
@@ -57,7 +88,7 @@ if ($action == 'fetch') {
     if($stmt->execute()){
          echo json_encode(["status" => "success", "message" => "Member added"]);
     } else {
-         echo json_encode(["status" => "error", "message" => "Failed to add member"]);
+         echo json_encode(["status" => "error", "message" => "Failed to save member. Please check your inputs and try again."]);
     }
 
 
@@ -69,7 +100,7 @@ if ($action == 'fetch') {
     $relation = $_POST['relation'] ?? '';
     $gender = $_POST['gender'] ?? '';
     $occupation = $_POST['occupation'] ?? '';
-    $dob = $_POST['dob'] ?? '';
+    $dob = formatDate($_POST['dob'] ?? '');
     $marital_status = $_POST['marital_status'] ?? '';
 
     $height = $_POST['height'] ?? '';

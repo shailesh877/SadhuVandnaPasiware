@@ -10,7 +10,7 @@ if(!$user_id){
 }
 
 // 1. Basic User Info (including business flags)
-$stmt = $con->prepare("SELECT id, name, email, mobile, dob, city, cast, gender, profile_photo, cover_photo, about, address, maritial_status, hobbi, education, occupation, is_business, parent_userid, category FROM tbl_members WHERE id=?");
+$stmt = $con->prepare("SELECT id, name, email, mobile, dob, city, cast, gender, profile_photo, cover_photo, about, address, maritial_status, hobbi, education, occupation, state, is_business, parent_userid, category FROM tbl_members WHERE id=?");
 $stmt->bind_param("s", $user_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();

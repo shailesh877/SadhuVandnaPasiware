@@ -17,7 +17,7 @@ if(!$user_id){
     exit;
 }
 
-$stmt = $con->prepare("SELECT id, name, email, mobile, city, dob, cast, gender, profile_photo, status FROM tbl_members WHERE id=? LIMIT 1");
+$stmt = $con->prepare("SELECT id, name, email, mobile, city, dob, cast, gender, profile_photo, cover_photo, status FROM tbl_members WHERE id=? LIMIT 1");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();

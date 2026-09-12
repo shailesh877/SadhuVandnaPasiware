@@ -81,6 +81,41 @@ if ($action === 'like') {
 }
 
 /* ============================
+   🔖 SAVE / BOOKMARK TOGGLE
+============================ */
+if ($action === 'save' || $action === 'toggle_save') {
+    $pid = intval($data['id'] ?? $_POST['id'] ?? $_REQUEST['id'] ?? 0);
+    if ($pid <= 0) {
+        echo json_encode(["status" => "error", "message" => "Invalid post id"]);
+        exit;
+    }
+
+    $con->query("CREATE TABLE IF NOT EXISTS tbl_saved_posts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        post_id INT NOT NULL,
+        date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY user_post (user_id, post_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $check = $con->query("SELECT id FROM tbl_saved_posts WHERE post_id=$pid AND user_id=$user_id");
+
+    if ($check && $check->num_rows == 0) {
+        $stmt = $con->prepare("INSERT INTO tbl_saved_posts (post_id, user_id, date) VALUES (?, ?, NOW())");
+        $stmt->bind_param("ii", $pid, $user_id);
+        if ($stmt->execute()) {
+            echo json_encode(["ok" => true, "status" => "saved", "is_saved" => true]);
+        } else {
+            echo json_encode(["ok" => false, "message" => "Db error: " . $con->error]);
+        }
+    } else {
+        $con->query("DELETE FROM tbl_saved_posts WHERE post_id=$pid AND user_id=$user_id");
+        echo json_encode(["ok" => true, "status" => "unsaved", "is_saved" => false]);
+    }
+    exit;
+}
+
+/* ============================
    💬 COMMENT INSERT
 ============================ */
 if ($action === 'comment') {

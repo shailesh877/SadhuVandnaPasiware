@@ -76,36 +76,46 @@ if($action === 'follow'){
 
 if(in_array($action, ['fetch_followers', 'fetch_following', 'fetch_friends', 'fetch_requested', 'fetch_sent', 'fetch_all_members'])){
     $uid = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
+    $search = $con->real_escape_string($_GET['search'] ?? $_POST['search'] ?? $input['search'] ?? '');
+    
+    $searchCond = "";
+    if(!empty($search)){
+        $searchCond = " AND (m.name LIKE '%$search%' OR m.city LIKE '%$search%')";
+    }
     
     if($action === 'fetch_followers'){
         $sql = "SELECT m.id, m.name, m.profile_photo, m.city 
                 FROM tbl_members m 
                 JOIN tbl_followers f ON m.id = f.follower_id 
-                WHERE f.following_id = $uid";
+                WHERE f.following_id = $uid $searchCond";
     } elseif($action === 'fetch_following') {
         $sql = "SELECT m.id, m.name, m.profile_photo, m.city 
                 FROM tbl_members m 
                 JOIN tbl_followers f ON m.id = f.following_id 
-                WHERE f.follower_id = $uid";
+                WHERE f.follower_id = $uid $searchCond";
     } elseif($action === 'fetch_friends') {
         $sql = "SELECT m.id, m.name, m.profile_photo, m.city 
                 FROM tbl_members m 
                 JOIN tbl_followers f ON m.id = f.follower_id 
-                WHERE f.following_id = $uid AND f.status='accepted'";
+                WHERE f.following_id = $uid AND f.status='accepted' $searchCond";
     } elseif($action === 'fetch_requested') {
         $sql = "SELECT m.id, m.name, m.profile_photo, m.city 
                 FROM tbl_members m 
                 JOIN tbl_followers f ON m.id = f.follower_id 
-                WHERE f.following_id = $uid AND f.status='pending'";
+                WHERE f.following_id = $uid AND f.status='pending' $searchCond";
     } elseif($action === 'fetch_sent') {
         $sql = "SELECT m.id, m.name, m.profile_photo, m.city 
                 FROM tbl_members m 
                 JOIN tbl_followers f ON m.id = f.following_id 
-                WHERE f.follower_id = $uid AND f.status='pending'";
+                WHERE f.follower_id = $uid AND f.status='pending' $searchCond";
     } elseif($action === 'fetch_all_members'){
         $limit = intval($_GET['limit'] ?? 20);
         $offset = intval($_GET['offset'] ?? 0);
-        $sql = "SELECT id, name, profile_photo, city FROM tbl_members WHERE id != $follower_id ORDER BY name ASC LIMIT $limit OFFSET $offset";
+        $searchCondAll = "";
+        if(!empty($search)){
+            $searchCondAll = " AND (name LIKE '%$search%' OR city LIKE '%$search%')";
+        }
+        $sql = "SELECT id, name, profile_photo, city FROM tbl_members WHERE id != $follower_id $searchCondAll ORDER BY name ASC LIMIT $limit OFFSET $offset";
     }
     
     $res = $con->query($sql);
