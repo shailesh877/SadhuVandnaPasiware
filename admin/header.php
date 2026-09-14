@@ -201,6 +201,16 @@ if (!isset($_SESSION['admin_id'])) {
             <span class="font-medium text-sm">Festival Frames</span>
         </a>
 
+        <div class="sidebar-section">Locations</div>
+        <a href="create_state.php" class="sidebar-link <?= ($currentPage == 'create_state.php') ? 'active' : '' ?>">
+            <i class="fa-solid fa-map w-5 text-center"></i>
+            <span class="font-medium text-sm">States</span>
+        </a>
+        <a href="create_district.php" class="sidebar-link <?= ($currentPage == 'create_district.php') ? 'active' : '' ?>">
+            <i class="fa-solid fa-map-pin w-5 text-center"></i>
+            <span class="font-medium text-sm">Districts</span>
+        </a>
+
         <div class="sidebar-section">System</div>
         <a href="admin_setting.php" class="sidebar-link <?= ($currentPage == 'admin_setting.php') ? 'active' : '' ?>">
             <i class="fa-solid fa-gear w-5 text-center"></i>
