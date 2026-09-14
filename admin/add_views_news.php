@@ -91,6 +91,27 @@ if(isset($_GET["delete"])){
 }
 
 /* -----------------------------
+   UPDATE BREAKING NEWS
+------------------------------ */
+if(isset($_POST['submit_breaking_news'])){
+    $breaking_text = mysqli_real_escape_string($con, trim($_POST['breaking_news_text']));
+    $chk = mysqli_query($con, "SELECT id FROM tbl_settings WHERE `key`='breaking_news'");
+    if(mysqli_num_rows($chk) > 0){
+        mysqli_query($con, "UPDATE tbl_settings SET `value`='$breaking_text' WHERE `key`='breaking_news'");
+    } else {
+        mysqli_query($con, "INSERT INTO tbl_settings (`key`, `value`) VALUES ('breaking_news', '$breaking_text')");
+    }
+    $message = "<p class='text-green-600 font-semibold'>Breaking News Updated!</p>";
+}
+
+// Fetch current breaking news
+$breaking_news = "";
+$bn_q = mysqli_query($con, "SELECT `value` FROM tbl_settings WHERE `key`='breaking_news' LIMIT 1");
+if($bn_q && mysqli_num_rows($bn_q) > 0){
+    $breaking_news = mysqli_fetch_assoc($bn_q)['value'];
+}
+
+/* -----------------------------
    FETCH ALL NEWS
 ------------------------------ */
 $fetch_news = mysqli_query($con, "SELECT * FROM tbl_news ORDER BY id DESC");
@@ -139,6 +160,18 @@ $fetch_news = mysqli_query($con, "SELECT * FROM tbl_news ORDER BY id DESC");
 
     </form>
   </div>
+
+  <!-- BREAKING NEWS FORM -->
+  <div class="bg-white rounded-xl shadow-lg p-6 mb-4 border-l-4 border-red-500">
+    <h2 class="text-xl font-bold text-red-600 mb-4"><i class="fa-solid fa-bullhorn mr-2"></i>Breaking News Ticker</h2>
+    <form method="POST">
+      <input type="text" name="breaking_news_text" value="<?= htmlspecialchars($breaking_news) ?>" placeholder="Enter breaking news title..." class="w-full px-4 py-2.5 border border-gray-300 rounded-lg mb-4"/>
+      <button name="submit_breaking_news" type="submit" class="w-full px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow font-semibold">
+        Update Breaking News
+      </button>
+    </form>
+  </div>
+
 </div>
 
 <!-- LEFT: NEWS LIST -->
