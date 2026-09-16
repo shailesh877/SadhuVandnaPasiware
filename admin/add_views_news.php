@@ -29,6 +29,17 @@ if (!isset($_SESSION['admin_id'])) {
 
 date_default_timezone_set("Asia/Kolkata");
 
+// Auto-create breaking news table if it doesn't exist for live deployment
+mysqli_query($con, "CREATE TABLE IF NOT EXISTS `tbl_breaking_news` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` text NOT NULL,
+  `posted_by` varchar(50) DEFAULT 'Admin',
+  `poster_id` int(11) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
 $message = "";
 
 /* -----------------------------
@@ -65,7 +76,8 @@ if(isset($_POST["submit_news"])){
             VALUES ('$title', '$description', '$images', '$date')";
 
     if(mysqli_query($con, $sql)){
-        $message = "<p class='text-green-600 font-semibold'>News Added Successfully!</p>";
+        echo "<script>alert('News Added Successfully!'); window.location='add_views_news.php';</script>";
+        exit;
     } else {
         $message = "<p class='text-red-600 font-semibold'>ERROR!</p>";
     }
@@ -91,25 +103,59 @@ if(isset($_GET["delete"])){
 }
 
 /* -----------------------------
-   UPDATE BREAKING NEWS
+   ADD / UPDATE BREAKING NEWS
 ------------------------------ */
 if(isset($_POST['submit_breaking_news'])){
     $breaking_text = mysqli_real_escape_string($con, trim($_POST['breaking_news_text']));
-    $chk = mysqli_query($con, "SELECT id FROM tbl_settings WHERE `key`='breaking_news'");
-    if(mysqli_num_rows($chk) > 0){
-        mysqli_query($con, "UPDATE tbl_settings SET `value`='$breaking_text' WHERE `key`='breaking_news'");
-    } else {
-        mysqli_query($con, "INSERT INTO tbl_settings (`key`, `value`) VALUES ('breaking_news', '$breaking_text')");
+    $date = date("Y-m-d H:i:s");
+    
+    if(!empty($breaking_text)) {
+        if(isset($_POST['edit_breaking_id']) && !empty($_POST['edit_breaking_id'])){
+            $edit_id = intval($_POST['edit_breaking_id']);
+            mysqli_query($con, "UPDATE tbl_breaking_news SET title='$breaking_text' WHERE id='$edit_id'");
+            echo "<script>alert('Breaking News Updated!'); window.location='add_views_news.php#breaking_news_hub';</script>";
+        } else {
+            mysqli_query($con, "INSERT INTO tbl_breaking_news (`title`, `posted_by`, `created_at`) VALUES ('$breaking_text', 'Admin', '$date')");
+            echo "<script>alert('Breaking News Added!'); window.location='add_views_news.php#breaking_news_hub';</script>";
+        }
+        exit;
     }
-    $message = "<p class='text-green-600 font-semibold'>Breaking News Updated!</p>";
 }
 
-// Fetch current breaking news
-$breaking_news = "";
-$bn_q = mysqli_query($con, "SELECT `value` FROM tbl_settings WHERE `key`='breaking_news' LIMIT 1");
-if($bn_q && mysqli_num_rows($bn_q) > 0){
-    $breaking_news = mysqli_fetch_assoc($bn_q)['value'];
+// Check for edit request
+$edit_mode_br = false;
+$edit_title_br = "";
+$edit_id_br = "";
+if(isset($_GET['edit_breaking'])){
+    $edit_mode_br = true;
+    $edit_id_br = intval($_GET['edit_breaking']);
+    $q_br = mysqli_query($con, "SELECT title FROM tbl_breaking_news WHERE id='$edit_id_br'");
+    if(mysqli_num_rows($q_br) > 0){
+        $edit_title_br = mysqli_fetch_assoc($q_br)['title'];
+    }
 }
+
+/* -----------------------------
+   DELETE BREAKING NEWS
+------------------------------ */
+if(isset($_GET['delete_breaking'])){
+    $id = intval($_GET['delete_breaking']);
+    mysqli_query($con, "DELETE FROM tbl_breaking_news WHERE id='$id'");
+    echo "<script>window.location='add_views_news.php';</script>";
+}
+
+/* -----------------------------
+   TOGGLE BREAKING NEWS STATUS
+------------------------------ */
+if(isset($_GET['toggle_breaking'])){
+    $id = intval($_GET['toggle_breaking']);
+    $status = intval($_GET['status']);
+    mysqli_query($con, "UPDATE tbl_breaking_news SET is_active='$status' WHERE id='$id'");
+    echo "<script>window.location='add_views_news.php';</script>";
+}
+
+// Fetch breaking news list
+$fetch_breaking = mysqli_query($con, "SELECT * FROM tbl_breaking_news ORDER BY id DESC");
 
 /* -----------------------------
    FETCH ALL NEWS
@@ -161,21 +207,16 @@ $fetch_news = mysqli_query($con, "SELECT * FROM tbl_news ORDER BY id DESC");
     </form>
   </div>
 
-  <!-- BREAKING NEWS FORM -->
-  <div class="bg-white rounded-xl shadow-lg p-6 mb-4 border-l-4 border-red-500">
-    <h2 class="text-xl font-bold text-red-600 mb-4"><i class="fa-solid fa-bullhorn mr-2"></i>Breaking News Ticker</h2>
-    <form method="POST">
-      <input type="text" name="breaking_news_text" value="<?= htmlspecialchars($breaking_news) ?>" placeholder="Enter breaking news title..." class="w-full px-4 py-2.5 border border-gray-300 rounded-lg mb-4"/>
-      <button name="submit_breaking_news" type="submit" class="w-full px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow font-semibold">
-        Update Breaking News
-      </button>
-    </form>
-  </div>
+
+
+
 
 </div>
 
 <!-- LEFT: NEWS LIST -->
-<div class="w-full md:w-2/3 md:order-1">
+<div class="w-full md:w-2/3 md:order-1 flex flex-col gap-6">
+
+
   <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
 
   <div class="p-2 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50">
@@ -271,6 +312,92 @@ $fetch_news = mysqli_query($con, "SELECT * FROM tbl_news ORDER BY id DESC");
   </div>
 </div>
 </main>
+
+<!-- BREAKING NEWS SECTION -->
+<section id="breaking_news_hub" class="max-w-8xl mx-auto px-4 py-8 mb-12 mt-4 border-t-2 border-red-100">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-2xl shadow-sm">
+      <i class="fa-solid fa-bolt"></i>
+    </div>
+    <h2 class="text-3xl font-extrabold text-gray-800">Breaking News Hub</h2>
+  </div>
+
+  <div class="flex flex-col md:flex-row gap-8">
+    
+    <!-- RIGHT: ADD / EDIT BREAKING NEWS -->
+    <div class="w-full md:max-w-md md:w-1/3 md:order-2">
+      <div class="bg-white rounded-xl shadow-lg p-6 mb-4 border-l-4 border-red-500">
+        <h2 class="text-xl font-bold text-red-600 mb-4">
+            <i class="fa-solid fa-bullhorn mr-2"></i><?= $edit_mode_br ? 'Edit Breaking News' : 'Add Breaking News' ?>
+        </h2>
+        <form method="POST">
+          <?php if($edit_mode_br){ ?>
+              <input type="hidden" name="edit_breaking_id" value="<?= $edit_id_br ?>">
+          <?php } ?>
+          <input type="text" name="breaking_news_text" value="<?= htmlspecialchars($edit_title_br) ?>" placeholder="Enter breaking news title..." class="w-full px-4 py-2.5 border border-gray-300 rounded-lg mb-4" required/>
+          <button name="submit_breaking_news" type="submit" class="w-full px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow font-semibold">
+            <?= $edit_mode_br ? 'Update Breaking News' : 'Add Breaking News' ?>
+          </button>
+          <?php if($edit_mode_br){ ?>
+              <a href="add_views_news.php#breaking_news_hub" class="block text-center mt-3 text-sm text-gray-500 hover:text-gray-700 underline">Cancel Edit</a>
+          <?php } ?>
+        </form>
+      </div>
+    </div>
+
+    <!-- LEFT: BREAKING NEWS LIST -->
+    <div class="w-full md:w-2/3 md:order-1">
+      <div class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden border-t-4 border-t-red-500">
+        <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-red-50">
+          <h2 class="text-lg font-bold text-red-600 flex items-center gap-2">
+            <i class="fa-solid fa-list"></i> Manage Breaking News
+          </h2>
+        </div>
+        <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-red-500 text-white sticky top-0">
+                    <tr>
+                        <th class="px-4 py-3">Title</th>
+                        <th class="px-4 py-3">Posted By</th>
+                        <th class="px-4 py-3 text-center">Status</th>
+                        <th class="px-4 py-3 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if(mysqli_num_rows($fetch_breaking) > 0) {
+                          mysqli_data_seek($fetch_breaking, 0); 
+                          while($br = mysqli_fetch_assoc($fetch_breaking)){ ?>
+                    <tr class="border-b hover:bg-red-50 transition">
+                        <td class="px-4 py-3 max-w-sm truncate font-medium" title="<?= htmlspecialchars($br['title']) ?>"><?= htmlspecialchars($br['title']) ?></td>
+                        <td class="px-4 py-3 text-gray-700"><?= htmlspecialchars($br['posted_by']) ?></td>
+                        <td class="px-4 py-3 text-center">
+                            <?php if($br['is_active'] == 1){ ?>
+                                <a href="?toggle_breaking=<?= $br['id'] ?>&status=0" onclick="return confirm('Turn OFF this breaking news?');" class="px-3 py-1 bg-green-100 text-green-700 font-bold rounded-lg hover:bg-green-200 transition shadow-sm inline-block min-w-[60px]">ON</a>
+                            <?php } else { ?>
+                                <a href="?toggle_breaking=<?= $br['id'] ?>&status=1" onclick="return confirm('Turn ON this breaking news?');" class="px-3 py-1 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300 transition shadow-sm inline-block min-w-[60px]">OFF</a>
+                            <?php } ?>
+                        </td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            <a href="?edit_breaking=<?= $br['id'] ?>#breaking_news_hub" class="w-8 h-8 inline-flex items-center justify-center bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg shadow-sm mr-2">
+                                <i class="fa-solid fa-edit"></i>
+                            </a>
+                            <a href="?delete_breaking=<?= $br['id'] ?>#breaking_news_hub" onclick="return confirm('Delete this breaking news?');" class="w-8 h-8 inline-flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-600 rounded-lg shadow-sm">
+                                <i class="fa-solid fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <?php } } else { ?>
+                    <tr>
+                        <td colspan="4" class="text-center py-6 text-gray-500 font-medium">No breaking news found.</td>
+                    </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- IMAGE PREVIEW MODAL -->
 <div id="imagePreviewModal" class="fixed inset-0 z-[100] bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
