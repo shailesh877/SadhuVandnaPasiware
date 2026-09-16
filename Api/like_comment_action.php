@@ -84,7 +84,7 @@ if ($action === 'like') {
    🔖 SAVE / BOOKMARK TOGGLE
 ============================ */
 if ($action === 'save' || $action === 'toggle_save') {
-    $pid = intval($data['id'] ?? $_POST['id'] ?? $_REQUEST['id'] ?? 0);
+    $pid = intval($data['id'] ?? $data['post_id'] ?? $_POST['id'] ?? $_POST['post_id'] ?? $_REQUEST['id'] ?? $_REQUEST['post_id'] ?? 0);
     if ($pid <= 0) {
         echo json_encode(["status" => "error", "message" => "Invalid post id"]);
         exit;

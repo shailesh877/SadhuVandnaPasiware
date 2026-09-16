@@ -42,7 +42,18 @@ if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ER
 if (!$my || !$receiver || ($msg === '' && !$attachment)) {
     echo json_encode(["status" => "error", "message" => "Invalid data"]);
     exit;
+}
 
+// Server-side block check
+$chk_blk = $con->prepare("SELECT id FROM tbl_blocked_users WHERE ((blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)) AND chat_platform=?");
+if ($chk_blk) {
+    $chk_blk->bind_param("iiiis", $my, $receiver, $receiver, $my, $platform);
+    $chk_blk->execute();
+    $chk_blk->store_result();
+    if ($chk_blk->num_rows > 0) {
+        echo json_encode(["status" => "error", "message" => "Messaging is blocked between these users."]);
+        exit;
+    }
 }
 
 $stmt = $con->prepare("INSERT INTO tbl_messages (sender_id, receiver_id, message, file, file_type, chat_platform, seen, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, NOW())");

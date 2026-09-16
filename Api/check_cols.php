@@ -1,0 +1,1 @@
+﻿<?php include "connection.php"; $res = $con->query("SHOW COLUMNS FROM tbl_states"); while($row = $res->fetch_assoc()){ echo $row["Field"] . " "; } echo "\n"; $res2 = $con->query("SHOW COLUMNS FROM tbl_districts"); while($row = $res2->fetch_assoc()){ echo $row["Field"] . " "; } ?>

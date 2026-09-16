@@ -28,3 +28,26 @@ My Profile ID: 0
 My Profile ID: 0
 2026-09-08 04:37:38 - Action: fetch_my_requests, User: 1765
 My Profile ID: 0
+2026-09-12 11:41:13 - Action: fetch_my_requests, User: 1754
+My Profile ID: 348
+Found 0 Matches
+2026-09-12 11:41:13 - Action: fetch_my_requests, User: 1754
+My Profile ID: 348
+Found 0 Matches
+2026-09-12 11:41:15 - Action: accept_request, User: 1754
+My Profile ID: 348
+2026-09-12 11:41:16 - Action: fetch_my_requests, User: 1754
+My Profile ID: 348
+Found 1 Matches
+2026-09-12 11:45:12 - Action: fetch_my_requests, User: 1754
+My Profile ID: 348
+Found 1 Matches
+2026-09-12 11:45:13 - Action: fetch_my_requests, User: 1754
+My Profile ID: 348
+Found 1 Matches
+2026-09-12 11:45:22 - Action: fetch_my_requests, User: 1754
+My Profile ID: 348
+Found 1 Matches
+2026-09-12 11:45:31 - Action: fetch_my_requests, User: 1754
+My Profile ID: 348
+Found 1 Matches

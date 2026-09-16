@@ -3,10 +3,10 @@ include 'headers.php';
 include 'connection.php';
 
 $json = file_get_contents('php://input');
-$data = json_decode($json, true);
+$data = json_decode($json, true) ?? [];
 
-$group_id = intval($data['group_id'] ?? 0);
-$user_id = intval($data['user_id'] ?? 0);
+$group_id = intval($_REQUEST['group_id'] ?? $data['group_id'] ?? 0);
+$user_id = intval($_REQUEST['user_id'] ?? $data['user_id'] ?? 0);
 
 if (!$group_id || !$user_id) {
     echo json_encode(["status" => "error", "message" => "Group ID and User ID are required"]);

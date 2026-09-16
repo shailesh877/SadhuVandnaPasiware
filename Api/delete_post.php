@@ -6,13 +6,16 @@ include 'connection.php';
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
-$post_id = $data['post_id'] ?? $_POST['post_id'] ?? '';
-$user_id = $data['user_id'] ?? $_POST['user_id'] ?? '';
+$post_id = $data['post_id'] ?? $data['id'] ?? $_POST['post_id'] ?? $_POST['id'] ?? $_REQUEST['post_id'] ?? $_REQUEST['id'] ?? '';
+$user_id = $data['user_id'] ?? $_POST['user_id'] ?? $_REQUEST['user_id'] ?? '';
 
 if (!$post_id || !$user_id) {
     echo json_encode(["status" => "error", "message" => "Invalid parameters: post_id and user_id required"]);
     exit;
 }
+
+$post_id = $con->real_escape_string($post_id);
+$user_id = $con->real_escape_string($user_id);
 
 // Verify ownership
 $check = $con->query("SELECT media FROM tbl_posts WHERE id='$post_id' AND user_id='$user_id'");

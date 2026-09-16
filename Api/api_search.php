@@ -2,8 +2,9 @@
 include("connection.php");
 header('Content-Type: application/json');
 
-$query = $_REQUEST['query'] ?? '';
-$user_id = intval($_REQUEST['user_id'] ?? 0);
+$query          = $_REQUEST['query']          ?? '';
+$user_id        = intval($_REQUEST['user_id'] ?? 0);
+$connected_only = ($_REQUEST['connected_only'] ?? 'false') === 'true';
 
 if (!$query) {
     echo json_encode(["ok" => true, "users" => [], "posts" => []]);
@@ -14,11 +15,28 @@ $safe_query = mysqli_real_escape_string($con, $query);
 
 // 1. Search Users
 $users = [];
-$user_sql = "SELECT id, name, profile_photo, city 
-             FROM tbl_members 
-             WHERE (name LIKE '%$safe_query%' OR city LIKE '%$safe_query%') 
-             AND status != 'Blocked' 
-             LIMIT 20";
+
+if ($connected_only && $user_id > 0) {
+    // Only mutually connected users (both sides accepted in tbl_followers)
+    $user_sql = "
+        SELECT DISTINCT m.id, m.name, m.profile_photo, m.city
+        FROM tbl_members m
+        INNER JOIN tbl_followers f1
+            ON f1.follower_id = $user_id AND f1.following_id = m.id AND f1.status = 'accepted'
+        INNER JOIN tbl_followers f2
+            ON f2.follower_id = m.id AND f2.following_id = $user_id AND f2.status = 'accepted'
+        WHERE m.id != $user_id
+          AND m.status != 'Blocked'
+          AND (m.name LIKE '%$safe_query%' OR m.city LIKE '%$safe_query%')
+        LIMIT 30
+    ";
+} else {
+    $user_sql = "SELECT id, name, profile_photo, city 
+                 FROM tbl_members 
+                 WHERE (name LIKE '%$safe_query%' OR city LIKE '%$safe_query%') 
+                 AND status != 'Blocked' 
+                 LIMIT 20";
+}
 $user_res = $con->query($user_sql);
 
 while($row = $user_res->fetch_assoc()){
