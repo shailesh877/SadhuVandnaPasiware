@@ -30,7 +30,7 @@ $date = date("Y-m-d H:i:s");
 $posted_by = 'Anchor';
 
 try {
-    $u_stmt = $con->query("SELECT name FROM tbl_users WHERE id = $user_id");
+    $u_stmt = $con->query("SELECT name FROM tbl_members WHERE id = $user_id");
     if ($u_stmt && $u_stmt->num_rows > 0) {
         $u_row = $u_stmt->fetch_assoc();
         $posted_by = $u_row['name'];
