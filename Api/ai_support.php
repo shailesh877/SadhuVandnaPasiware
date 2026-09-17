@@ -2,8 +2,12 @@
 include 'headers.php';
 include 'connection.php';
 
+if (file_exists('env.php')) {
+    include 'env.php';
+}
+
 // Define your Gemini API Key here (or retrieve it from environment variables / settings database)
-define('GEMINI_API_KEY', getenv('GEMINI_API_KEY') ?: 'AIzaSyC8-GlqTdHfXhNEoTfhsyi3v4FDu7ZFnkQ');
+define('GEMINI_API_KEY', getenv('GEMINI_API_KEY') ?: '');
 
 // Read JSON input
 $json = file_get_contents('php://input');
