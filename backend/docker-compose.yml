@@ -72,7 +72,7 @@ services:
       context: .
       dockerfile: Dockerfile.node
     ports:
-      - "3000:3000"
+      - "9000:3000"
     environment:
       - API_URL=http://api-server
     volumes:
