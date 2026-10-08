@@ -26,6 +26,7 @@ services:
       - DB_PORT=${DB_PORT:-3306}
     volumes:
       - uploads-volume:/var/www/html/Api/uploads
+      - uploads-volume:/var/www/html/uploads
     networks:
       - coolify
     depends_on:
@@ -91,3 +92,4 @@ networks:
 volumes:
   uploads-volume:
     name: ugoko000c444w0kwwk84coc0-uploads-volume
+    external: true
