@@ -10,7 +10,7 @@ services:
   # 2. Main PHP API (Replaces: php -S 0.0.0.0:8000 -t Api)
   api-server:
     build: 
-      context: .
+      context: ./backend
       dockerfile: Dockerfile.php
     ports:
       - "8000:80"
@@ -23,14 +23,14 @@ services:
       - DB_NAME=${DB_NAME:-u941015828_sadhuvandna}
       - DB_PORT=${DB_PORT:-3307}
     volumes:
-      - ./Api:/var/www/html
+      - ./backend/Api:/var/www/html
     depends_on:
       - redis
 
   # 3. Queue Worker (Replaces: php Api/worker.php)
   php-worker:
     build: 
-      context: .
+      context: ./backend
       dockerfile: Dockerfile.php
     command: php /var/www/html/worker.php
     environment:
@@ -42,14 +42,14 @@ services:
       - DB_NAME=${DB_NAME:-u941015828_sadhuvandna}
       - DB_PORT=${DB_PORT:-3307}
     volumes:
-      - ./Api:/var/www/html
+      - ./backend/Api:/var/www/html
     depends_on:
       - redis
 
   # 4. Notification Worker (Replaces: php Api/notification_worker.php)
   php-notification-worker:
     build: 
-      context: .
+      context: ./backend
       dockerfile: Dockerfile.php
     command: php /var/www/html/notification_worker.php
     environment:
@@ -62,21 +62,21 @@ services:
       - DB_NAME=${DB_NAME:-u941015828_sadhuvandna}
       - DB_PORT=${DB_PORT:-3307}
     volumes:
-      - ./Api:/var/www/html
+      - ./backend/Api:/var/www/html
     depends_on:
       - redis
 
   # 5. Socket Server (Replaces: node server/index.js)
   socket-server:
     build: 
-      context: .
+      context: ./backend
       dockerfile: Dockerfile.node
     ports:
       - "9000:3000"
     environment:
       - API_URL=http://api-server
     volumes:
-      - ./server:/app
+      - ./backend/server:/app
       - /app/node_modules
     depends_on:
       - redis
