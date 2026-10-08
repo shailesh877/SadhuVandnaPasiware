@@ -25,7 +25,7 @@ services:
       - DB_NAME=${DB_NAME:-u941015828_sadhuvandna}
       - DB_PORT=${DB_PORT:-3306}
     volumes:
-      - sadhu_uploads:/var/www/html/Api/uploads
+      - uploads-volume:/var/www/html/Api/uploads
     networks:
       - coolify
     depends_on:
@@ -89,5 +89,5 @@ networks:
     external: true
 
 volumes:
-  sadhu_uploads:
-    name: sadhu_uploads_volume
+  uploads-volume:
+    name: ugoko000c444w0kwwk84coc0-uploads-volume
