@@ -34,10 +34,12 @@ WORKDIR /var/www/html
 # Copy application files (This will copy the 'Api' folder into /var/www/html/Api)
 COPY . /var/www/html/
 
-# Ensure proper permissions for files and upload directories
+# Ensure proper permissions and create symlink for /uploads to work
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
-    && if [ -d "/var/www/html/Api/uploads" ]; then chmod -R 777 /var/www/html/Api/uploads; fi
+    && mkdir -p /var/www/html/Api/uploads \
+    && chmod -R 777 /var/www/html/Api/uploads \
+    && ln -s /var/www/html/Api/uploads /var/www/html/uploads
 
 # Expose port 80 for Coolify
 EXPOSE 80
