@@ -1,82 +1,15 @@
-version: '3.8'
+FROM php:8.2-apache
 
-services:
-  # 1. Redis Server
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
+# Install PHP extensions required for the app
+RUN apt-get update && apt-get install -y \
+    libzip-dev \
+    zip \
+  && docker-php-ext-install mysqli \
+  && pecl install redis \
+  && docker-php-ext-enable redis
 
-  # 2. Main PHP API (Replaces: php -S 0.0.0.0:8000 -t Api)
-  api-server:
-    build: 
-      context: .
-      dockerfile: Dockerfile.php
-    ports:
-      - "8000:80"
-    environment:
-      - APP_ENV=${APP_ENV:-production}
-      - REDIS_HOST=redis
-      - DB_HOST=${DB_HOST:-e4skgkwwk0s0gkso48oc40kg}
-      - DB_USER=${DB_USER:-u941015828_sadhuvandna}
-      - DB_PASS=${DB_PASS:-Sadhuvandna7832%^}
-      - DB_NAME=${DB_NAME:-u941015828_sadhuvandna}
-      - DB_PORT=${DB_PORT:-3307}
-    volumes:
-      - ./Api:/var/www/html
-    depends_on:
-      - redis
+# Enable Apache mod_rewrite (useful for API routing)
+RUN a2enmod rewrite
 
-  # 3. Queue Worker (Replaces: php Api/worker.php)
-  php-worker:
-    build: 
-      context: .
-      dockerfile: Dockerfile.php
-    command: php /var/www/html/worker.php
-    environment:
-      - APP_ENV=${APP_ENV:-production}
-      - REDIS_HOST=redis
-      - DB_HOST=${DB_HOST:-e4skgkwwk0s0gkso48oc40kg}
-      - DB_USER=${DB_USER:-u941015828_sadhuvandna}
-      - DB_PASS=${DB_PASS:-Sadhuvandna7832%^}
-      - DB_NAME=${DB_NAME:-u941015828_sadhuvandna}
-      - DB_PORT=${DB_PORT:-3307}
-    volumes:
-      - ./Api:/var/www/html
-    depends_on:
-      - redis
-
-  # 4. Notification Worker (Replaces: php Api/notification_worker.php)
-  php-notification-worker:
-    build: 
-      context: .
-      dockerfile: Dockerfile.php
-    command: php /var/www/html/notification_worker.php
-    environment:
-      - APP_ENV=${APP_ENV:-production}
-      - REDIS_HOST=redis
-      - SOCKET_URL=http://socket-server:3000
-      - DB_HOST=${DB_HOST:-e4skgkwwk0s0gkso48oc40kg}
-      - DB_USER=${DB_USER:-u941015828_sadhuvandna}
-      - DB_PASS=${DB_PASS:-Sadhuvandna7832%^}
-      - DB_NAME=${DB_NAME:-u941015828_sadhuvandna}
-      - DB_PORT=${DB_PORT:-3307}
-    volumes:
-      - ./Api:/var/www/html
-    depends_on:
-      - redis
-
-  # 5. Socket Server (Replaces: node server/index.js)
-  socket-server:
-    build: 
-      context: .
-      dockerfile: Dockerfile.node
-    ports:
-      - "9000:3000"
-    environment:
-      - API_URL=http://api-server
-    volumes:
-      - ./server:/app
-      - /app/node_modules
-    depends_on:
-      - redis
+# Copy API files into the container so it works in production without volume mounts
+COPY Api/ /var/www/html/
