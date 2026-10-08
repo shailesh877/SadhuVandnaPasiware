@@ -3,7 +3,7 @@ $host = getenv('DB_HOST') ?: "e4skgkwwk0s0gkso48oc40kg";
 $user = getenv('DB_USER') ?: "u941015828_sadhuvandna";
 $pass = getenv('DB_PASS') ?: "Sadhuvandna7832%^";
 $name = getenv('DB_NAME') ?: "u941015828_sadhuvandna";
-$port = getenv('DB_PORT') ?: 3307;
+$port = getenv('DB_PORT') ?: 3306;
 
 $con = mysqli_connect($host, $user, $pass, $name, $port);
 if (mysqli_connect_errno()) {
