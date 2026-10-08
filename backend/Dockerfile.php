@@ -10,3 +10,6 @@ RUN apt-get update && apt-get install -y \
 
 # Enable Apache mod_rewrite (useful for API routing)
 RUN a2enmod rewrite
+
+# Copy API files into the container so it works in production without volume mounts
+COPY Api/ /var/www/html/
