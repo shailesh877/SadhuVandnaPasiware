@@ -13,7 +13,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.php
     ports:
-      - "8080:80"
+      - "8078:80"
     environment:
       - APP_ENV=${APP_ENV:-production}
       - REDIS_HOST=redis
