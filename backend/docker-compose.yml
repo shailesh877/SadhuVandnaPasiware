@@ -62,7 +62,7 @@ services:
       - DB_USER=${DB_USER:-u941015828_sadhuvandna}
       - DB_PASS=${DB_PASS:-Sadhuvandna7832%^}
       - DB_NAME=${DB_NAME:-u941015828_sadhuvandna}
-      - DB_PORT=${DB_PORT:-3307}
+      - DB_PORT=${DB_PORT:-3306}
     networks:
       - coolify
     depends_on:
