@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { navigationRef, navigateWithRetry } from '../navigation/navigationRef';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import api, { WEBSITE_URL } from '../services/api';
 
 const GlobalCallListener = () => {
-    const navigation = useNavigation<any>();
     const [incomingCall, setIncomingCall] = useState<any>(null);
     const [myUserId, setMyUserId] = useState<string | null>(null);
     const soundRef = useRef<Audio.Sound | null>(null);
+    const isProcessing = useRef(false);
 
     useEffect(() => {
         // Load user ID
@@ -22,43 +22,56 @@ const GlobalCallListener = () => {
         if (!myUserId) return;
 
         const checkStatus = async () => {
+            if (isProcessing.current) return;
+            
+            // If already in a call, don't show another popup
+            if (navigationRef.isReady()) {
+                const currentRoute = navigationRef.getCurrentRoute()?.name;
+                if (currentRoute === 'AgoraCall') {
+                    if (incomingCall) setIncomingCall(null);
+                    return;
+                }
+            }
             try {
-                const fd = new FormData();
-                fd.append('user_id', myUserId);
-                const res = await api.post('/get_global_status.php', fd);
+                const payload = { user_id: myUserId };
+                const res = await api.post('get_global_status.php', payload);
 
                 if (res.data.status && res.data.incoming_call) {
                     const call = res.data.incoming_call;
-                    // Attach my_profile_id to the call object for later use
                     call.my_profile_id_ref = res.data.my_profile_id;
 
-                    console.log("Incoming Call Payload:", JSON.stringify(call)); // LOGGING
-
-                    // Check if we are already handling this call or in a call
                     setIncomingCall((prev: any) => {
                         if (prev && prev.call_id === call.call_id) return prev;
                         return call;
                     });
                 } else {
-                    setIncomingCall(null);
+                    if (!isProcessing.current) {
+                        setIncomingCall(null);
+                    }
                 }
             } catch (e) { }
         };
 
-        const interval = setInterval(checkStatus, 3000);
+        const interval = setInterval(checkStatus, 5000); // Check every 5 seconds
         return () => clearInterval(interval);
     }, [myUserId]);
 
     // Handle Ringtone
     useEffect(() => {
-        if (incomingCall) {
+        const currentRoute = navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : null;
+        if (incomingCall && !isProcessing.current && currentRoute !== 'AgoraCall') {
             playRingtone();
         } else {
             stopRingtone();
         }
+        
+        return () => {
+            stopRingtone();
+        };
     }, [incomingCall]);
 
     const playRingtone = async () => {
+        if (soundRef.current) return;
         try {
             const { sound } = await Audio.Sound.createAsync(
                 { uri: 'https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3' },
@@ -70,69 +83,69 @@ const GlobalCallListener = () => {
 
     const stopRingtone = async () => {
         try {
-            await soundRef.current?.stopAsync();
-            await soundRef.current?.unloadAsync();
-            soundRef.current = null;
+            if (soundRef.current) {
+                await soundRef.current.stopAsync();
+                await soundRef.current.unloadAsync();
+                soundRef.current = null;
+            }
         } catch (e) { }
     };
 
     const handleAccept = async () => {
-        if (!incomingCall) return;
+        if (!incomingCall || isProcessing.current) return;
+        isProcessing.current = true;
+        
+        const currentCall = incomingCall;
+        setIncomingCall(null);
         await stopRingtone();
 
         // Notify server
         try {
-            const fd = new FormData();
-            fd.append('call_id', incomingCall.call_id);
-            fd.append('status', 'accepted');
-            await api.post('/update_call_status.php', fd);
+            const payload = {
+                call_id: currentCall.call_id,
+                status: 'accepted'
+            };
+            await api.post('update_call_status.php', payload);
         } catch (e) { }
 
-        // Use peer_id from server OR construct using correct Profile ID
-        let channelId = incomingCall.peer_id;
+        let channelId = currentCall.peer_id;
 
-        if (!channelId) {
-            console.warn("Missing peer_id, constructing from IDs...");
-            // Use the profile_id returned by get_global_status, NOT AsyncStorage user_id
-            // incomingCall.caller_id is the Caller's Profile ID
-            // incomingCall.receiver_profile_id (we need to ensure we have this or use the one from state)
-
-            // We stored the profile_id in state when we fetched status? 
-            // Actually get_global_status returns 'my_profile_id' now. 
-            // Let's grab it from the response directly if possible, but we don't have it here easily unless we stored it.
-            // We can pass it in navigation or store in state.
-
-            // Let's assume we can get it from the incomingCall logic if we save it.
-            // Better: we saved it in state `myProfileId`? No we didn't.
-        }
-
-        navigation.navigate('AgoraCall', {
-            channelId: channelId, // If this is still null, AgoraCallScreen handles it
-            isVideo: (incomingCall.type === 'video'),
+        navigateWithRetry('AgoraCall', {
+            channelId: channelId, 
+            isVideo: (currentCall.type === 'video'),
             isCaller: false,
-            otherUserId: incomingCall.caller_id,
-            // Pass the fallback info just in case
-            myProfileIdFallback: incomingCall.my_profile_id_ref
+            otherUserId: currentCall.caller_id,
+            myProfileIdFallback: currentCall.my_profile_id_ref
         });
 
-        setIncomingCall(null);
+        setTimeout(() => {
+            isProcessing.current = false;
+        }, 3000);
     };
 
     const handleReject = async () => {
-        if (!incomingCall) return;
+        if (!incomingCall || isProcessing.current) return;
+        isProcessing.current = true;
+
+        const currentCall = incomingCall;
+        setIncomingCall(null);
         await stopRingtone();
 
         try {
-            const fd = new FormData();
-            fd.append('call_id', incomingCall.call_id);
-            fd.append('status', 'rejected');
-            await api.post('/update_call_status.php', fd);
+            const payload = {
+                call_id: currentCall.call_id,
+                status: 'rejected'
+            };
+            await api.post('update_call_status.php', payload);
         } catch (e) { }
 
-        setIncomingCall(null);
+        setTimeout(() => {
+            isProcessing.current = false;
+        }, 3000);
     };
 
-    if (!incomingCall) return null;
+    const currentRoute = navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : null;
+    if (!incomingCall || currentRoute === 'AgoraCall') return null;
 
     return (
         <View style={styles.container}>

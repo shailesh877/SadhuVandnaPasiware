@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Linking, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Linking, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import api from '../../services/api';
+import api, { API_BASE_URL } from '../../services/api';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+
+const BASE_URL_ROOT = API_BASE_URL.replace('/Api', '');
 
 const JobScreen = ({ navigation }: any) => {
     const [jobs, setJobs] = useState<any[]>([]);
@@ -27,7 +28,7 @@ const JobScreen = ({ navigation }: any) => {
     };
 
     const renderItem = ({ item }: { item: any }) => (
-        <JobCard item={item} />
+        <JobCard item={item} navigation={navigation} />
     );
 
     if (loading) {
@@ -58,14 +59,54 @@ const JobScreen = ({ navigation }: any) => {
     );
 };
 
-const JobCard = ({ item }: { item: any }) => {
-    const navigation = useNavigation<any>();
+const JobCard = ({ item, navigation }: { item: any, navigation: any }) => {
     const [expanded, setExpanded] = useState(false);
     const description = item.description || '';
     const isLong = description.length > 150;
 
     const handleApply = () => {
         navigation.navigate('ApplyJob', { jobId: item.id, jobTitle: item.title });
+    };
+
+    const handleLink = () => {
+        if (item.link) {
+            Linking.openURL(item.link).catch(err => console.error("Couldn't load page", err));
+        }
+    };
+
+    const getImageUrl = (imagePath: string) => {
+        if (!imagePath) return null;
+        if (imagePath.startsWith('http')) return imagePath;
+        // Strip leading slash if present
+        const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+        // If the path already has 'uploads/', just append it to root, else assume uploads/jobs/
+        if (cleanPath.includes('uploads/')) {
+            return `${BASE_URL_ROOT}/${cleanPath}`;
+        }
+        return `${BASE_URL_ROOT}/uploads/jobs/${cleanPath}`;
+    };
+
+    const imageUrl = getImageUrl(item.image);
+
+    const renderDescription = (text: string) => {
+        if (!text) return null;
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const parts = text.split(urlRegex);
+        
+        return parts.map((part, index) => {
+            if (part.match(urlRegex)) {
+                return (
+                    <Text 
+                        key={index} 
+                        className="text-blue-600 underline"
+                        onPress={() => Linking.openURL(part).catch(err => console.error("Error opening URL", err))}
+                    >
+                        {part}
+                    </Text>
+                );
+            }
+            return <Text key={index}>{part}</Text>;
+        });
     };
 
     return (
@@ -81,7 +122,7 @@ const JobCard = ({ item }: { item: any }) => {
             </View>
 
             <Text className="text-gray-600 text-sm leading-5 mb-2">
-                {expanded ? description : description.substring(0, 150) + (isLong ? '...' : '')}
+                {expanded ? renderDescription(description) : renderDescription(description.substring(0, 150) + (isLong ? '...' : ''))}
             </Text>
 
             {isLong && (
@@ -90,14 +131,34 @@ const JobCard = ({ item }: { item: any }) => {
                 </TouchableOpacity>
             )}
 
-            {item.type === 'job' && (
-                <TouchableOpacity
-                    className="bg-orange-600 py-2.5 px-4 rounded-lg self-start flex-row items-center space-x-2 mt-2"
-                    onPress={handleApply}
-                >
-                    <Text className="text-white font-bold text-sm">Apply Now</Text>
-                </TouchableOpacity>
+            {imageUrl && (
+                <View className="mb-4 w-full h-48 rounded-lg overflow-hidden bg-gray-100">
+                    <Image source={{ uri: imageUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                </View>
             )}
+
+
+
+            <View className="flex-row gap-3 mt-2 flex-wrap">
+                {item.type === 'job' && (
+                    <TouchableOpacity
+                        className="bg-orange-600 py-2.5 px-4 rounded-lg flex-row items-center"
+                        onPress={handleApply}
+                    >
+                        <Text className="text-white font-bold text-sm">Apply Now</Text>
+                    </TouchableOpacity>
+                )}
+
+                {!!item.link && (
+                    <TouchableOpacity
+                        className="bg-blue-600 py-2.5 px-4 rounded-lg flex-row items-center space-x-2"
+                        onPress={handleLink}
+                    >
+                        <Ionicons name="link" size={16} color="white" />
+                        <Text className="text-white font-bold text-sm ml-1">Visit Link</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
         </View>
     );
 };

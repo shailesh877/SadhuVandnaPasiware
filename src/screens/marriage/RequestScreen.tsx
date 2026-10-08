@@ -3,17 +3,14 @@ import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, Alert
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api, { API_BASE_URL } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 
 const BASE_URL_ROOT = API_BASE_URL.replace('/Api', '');
 const PHOTO_URL = `${BASE_URL_ROOT}/uploads/photo/`;
 
-const RequestScreen = () => {
+const RequestScreen = ({ navigation }: any) => {
     const layout = useWindowDimensions();
-    const navigation = useNavigation<any>();
-    const isFocused = useIsFocused();
 
     const [index, setIndex] = useState(0);
     const [routes] = useState([
@@ -29,10 +26,12 @@ const RequestScreen = () => {
     const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
-        if (isFocused) {
+        const unsubscribe = navigation.addListener('focus', () => {
             fetchData();
-        }
-    }, [isFocused]);
+        });
+        fetchData(); // Initial load
+        return unsubscribe;
+    }, [navigation]);
 
     const fetchData = async () => {
         try {
@@ -41,11 +40,10 @@ const RequestScreen = () => {
                 const parsedUser = JSON.parse(u);
                 setUser(parsedUser);
 
-                const formData = new FormData();
-                formData.append('action', 'fetch_my_requests');
-                formData.append('user_id', parsedUser.id);
-
-                const res = await api.post('/api_matrimony.php', formData);
+                const res = await api.post('api_connect.php', {
+                    action: 'fetch_my_requests',
+                    user_id: parsedUser.id
+                });
 
                 if (res.data.status === 'success') {
                     setPendingRequests(res.data.received);
@@ -102,86 +100,17 @@ const RequestScreen = () => {
 
         if (!item) return;
 
-        // Determine params
-        const form = new FormData();
-        form.append('user_id', user.id);
-
-        if (action === 'accept') {
-            form.append('action', 'accept_request');
-            form.append('sender_id', item.sender_profile_id || item.sender_id); // In pending list, sender_id is the sender's profile id.
-        } else if (action === 'reject') {
-            form.append('action', 'reject_request');
-            form.append('sender_id', item.sender_profile_id || item.sender_id);
-        } else if (action === 'remove') {
-            form.append('action', 'remove_connection');
-            // For connected, we need the OTHER profile id.
-            // If I am sender, other is receiver. If I am receiver, other is sender.
-            // Connected list has `user_id` of the OTHER person effectively? 
-            // Previous code: item.user_id was passed to Chat.
-            // But we need PROFILE ID.
-            // In API `fetch_my_requests`:
-            // Connected query: `p.*, mp.full_name...`
-            // `mp` is the OTHER person's profile. `mp.id` is OTHER PROFILE ID.
-            // In `fetch_my_requests` (Api/api_matrimony.php), the SELECT includes `id` from `tbl_proposals` usually?
-            // Wait, standard SQL `SELECT *` might clash.
-            // But usually we join.
-            // Let's blindly use `item.user_id` if logic fails, but better to use `item.sender_id` or `item.receiver_id`.
-            // ACTUALLY: In `api_connect.php`, `remove_connection` takes `other_id`.
-            // The connected list items come from `tbl_marriage_profiles` of the friend.
-            // `mp.id` is the Friend's Profile ID.
-            // But `fetch_my_requests` SELECTs `p.*`? It might overlap.
-            // Ideally `mp.id` should be aliased.
-            // Let's assume `item.sender_profile_id` or similar exists if I aliased it,
-            // OR checks: `user_id` in item is User ID.
-            // We need Profile ID.
-            // Let's pass `item.id`? No `item.id` might be proposal ID.
-
-            // Re-reading `fetch_my_requests` in `api_matrimony.php`:
-            // `SELECT p.*, mp.full_name ...`
-            // If `mp` is the friend's profile table, then `mp.id` is friend's profile ID.
-            // But `p.id` is proposal ID.
-            // Conflict on `id`.
-            // Usually `mysqli_fetch_assoc` overwrites if duplicate keys.
-            // `mp.id` usually comes AFTER `p.id` in join if `mp` is second?
-            // `SELECT p.*, mp.full_name ...` -> `mp.id` is NOT selected unless `mp.*` or specific.
-            // `fetch_my_requests` does NOT select `mp.id`.
-            // It selects `mp.user_id`. (Line 183/187 of `api_matrimony.php`).
-            // So we have Friend's User ID.
-            // `api_connect.php` expects Profile IDs for accept/reject.
-            // But for `remove`, can we modify `api_connect.php` to accept User ID? 
-            // No, `getProfileId` is for ME.
-            // Wait, for `remove`, I can look up profile ID from User ID?
-            // Yes.
-
-            // Let's use `item.user_id` (Friend's User ID) and update `api_connect.php` to handle it?
-            // OR update `RequestScreen` to pass `item.sender_id` / `item.receiver_id` carefully.
-
-            // Simplify: `api_connect.php` `remove_connection` can take `other_profile_id`.
-            // In connected list, `item.sender_id` and `item.receiver_id` are available (from p.*).
-            // One of them is ME. One is Friend.
-            // `user.id` is MY User ID. My Profile ID is `myProfileId` (which I don't have in RequestScreen state directly, but can infer).
-
-            // Heuristic: Pass both `item.sender_id` and `item.receiver_id` to `api_connect`.
-            // The API can check which one is NOT me.
-            // Too complex.
-
-            // Let's just use `item.sender_profile_id` if available.
-            // `api_matrimony.php` line 176: `mp.id as sender_profile_id` (Received).
-            // For Connected loop (183/187), it does NOT alias `mp.id`.
-            // Warning: `connected` items might not have the Friend's Profile ID easily accessible if `id` is overwritten.
-
-            // However, we have `item.user_id` (Friend's User ID).
-            // I will update `api_connect.php` to support `other_user_id` for "remove".
-            // Implementation detail for next step.
-
-            // For now, I'll pass reference `action` and `id` (proposal id) to `delete_proposal` in `api_matrimony` which was working?
-            // User asked to "api bnao". I should use the new one.
-            // I'll update `api_connect.php` to support `other_user_id` for remove.
-            form.append('other_user_id', item.user_id); // Friend's User ID
-        }
+        const payload = {
+            user_id: user.id,
+            action: action === 'accept' ? 'accept_request' : (action === 'reject' ? 'reject_request' : 'remove_connection'),
+            sender_id: item.sender_profile_id || item.sender_id,
+            receiver_id: item.receiver_profile_id || item.receiver_id,
+            proposal_id: item.proposal_id || item.id,
+            other_user_id: item.user_id
+        };
 
         try {
-            await api.post('/api_connect.php', form);
+            await api.post('api_connect.php', payload);
             Alert.alert("Success", "Action Completed");
             fetchData();
         } catch (error) {
@@ -195,12 +124,11 @@ const RequestScreen = () => {
             {
                 text: "Yes, Cancel", style: "destructive", onPress: async () => {
                     try {
-                        const formData = new FormData();
-                        formData.append('action', 'cancel_request'); // Updated action name
-                        formData.append('user_id', user.id); // Need User ID for Auth
-                        formData.append('receiver_id', receiverId); // Profile ID
-
-                        await api.post('/api_connect.php', formData); // Use new API
+                        await api.post('api_connect.php', {
+                            action: 'cancel_request',
+                            user_id: user.id,
+                            receiver_id: receiverId
+                        });
                         fetchData();
                         Alert.alert("Success", "Request Cancelled");
                     } catch (error) {
@@ -254,11 +182,12 @@ const RequestScreen = () => {
                         className="bg-blue-600 px-4 py-1.5 rounded-lg flex-1 items-center flex-row justify-center space-x-1"
                         onPress={() => navigation.navigate('Chat', {
                             receiver: {
-                                id: item.friend_profile_id, // Use the profile ID from API
+                                id: item.friend_profile_id,
                                 full_name: item.full_name,
                                 photo: item.photo,
                                 user_id: item.user_id
-                            }
+                            },
+                            platform: 'marriage'
                         })}
                     >
                         <Ionicons name="chatbubble-ellipses" size={16} color="white" />

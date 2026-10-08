@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, TextInput, RefreshControl, Alert, Linking } from 'react-native';
+import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import api, { API_BASE_URL } from '../../services/api';
+import api, { API_BASE_URL, getFullPaymentUrl } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
-const BASE_URL_ROOT = API_BASE_URL.replace('/Api', '');
+const BASE_URL_ROOT = API_BASE_URL.replace('/Api/', '');
 const PHOTO_URL = `${BASE_URL_ROOT}/uploads/photo/`;
 
 const ConnectedScreen = ({ navigation }: any) => {
@@ -13,6 +13,10 @@ const ConnectedScreen = ({ navigation }: any) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
+
+    const [page, setPage] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadMoreLoading, setIsLoadMoreLoading] = useState(false);
 
     useEffect(() => {
         AsyncStorage.getItem('user').then(u => {
@@ -28,19 +32,35 @@ const ConnectedScreen = ({ navigation }: any) => {
         }
     }, [userId]);
 
-    const fetchConnectedProfiles = async () => {
-        setLoading(true);
+    const fetchConnectedProfiles = async (isMore = false) => {
+        if (isMore && (isLoadMoreLoading || !hasMore)) return;
+
+        if (isMore) setIsLoadMoreLoading(true);
+        else {
+            setLoading(true);
+            setPage(0);
+        }
+
         try {
-            const res = await api.get(`/get_matrimony_profiles.php?user_id=${userId}&type=connected`);
+            const currentOffset = isMore ? (page + 1) * 20 : 0;
+            const res = await api.get(`get_matrimony_profiles.php?user_id=${userId}&type=connected&limit=20&offset=${currentOffset}`);
             if (res.data.status === 'success') {
-                const connected = res.data.data.filter((p: any) => p.proposal_status === 'friend' || p.proposal_status === 'accepted');
-                setProfiles(connected);
+                const newData = res.data.data || [];
+                if (isMore) {
+                    setProfiles(prev => [...prev, ...newData]);
+                    setPage(prev => prev + 1);
+                } else {
+                    setProfiles(newData);
+                    setPage(0);
+                }
+                setHasMore(newData.length === 20);
             }
         } catch (error) {
             console.error(error);
         } finally {
             setLoading(false);
             setRefreshing(false);
+            setIsLoadMoreLoading(false);
         }
     };
 
@@ -48,23 +68,21 @@ const ConnectedScreen = ({ navigation }: any) => {
         if (!userId) return;
 
         try {
-            // Show loading or some indication?
-            const fd = new FormData();
-            fd.append('user_id', userId);
-            fd.append('receiver_id', receiverItem.id);
-
-            const res = await api.post('/check_chat_payment.php', fd);
+            const res = await api.post('check_chat_payment.php', {
+                user_id: userId,
+                receiver_id: receiverItem.friend_profile_id || receiverItem.id,
+                platform: 'marriage'
+            });
 
             if (res.data.status === 'success') {
                 if (res.data.paid) {
-                    // Payment exists -> Go to Chat
-                    navigation.navigate('Chat', { receiver: receiverItem });
+                    const chatReceiver = {
+                        ...receiverItem,
+                        id: receiverItem.friend_profile_id || receiverItem.id
+                    };
+                    navigation.navigate('Chat', { receiver: chatReceiver, platform: 'marriage' });
                 } else {
-                    // Payment required -> Open Payment Page
-                    // API returns absolute URL now
-                    const paymentUrl = res.data.payment_url;
-
-                    // Alert user
+                    const paymentUrl = getFullPaymentUrl(res.data.payment_url);
                     Alert.alert(
                         "Payment Required",
                         "You need to pay to chat with this profile.",
@@ -103,7 +121,6 @@ const ConnectedScreen = ({ navigation }: any) => {
             <View className="flex-1 ml-4 justify-center">
                 <View className="flex-row justify-between items-center mb-1">
                     <Text className="text-lg font-bold text-gray-800" numberOfLines={1}>{item.full_name}</Text>
-                    <Text className="text-[10px] text-gray-400">Now</Text>
                 </View>
                 <Text className="text-gray-500 text-xs" numberOfLines={1}>{item.city} • {item.age} yrs</Text>
                 <Text className="text-orange-600/80 text-xs font-medium mt-1">Tap to chat</Text>
@@ -117,7 +134,6 @@ const ConnectedScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            {/* Header */}
             <View className="px-4 py-4 bg-white border-b border-gray-100 shadow-sm z-10 flex-row items-center justify-between">
                 <View className="flex-row items-center">
                     <TouchableOpacity onPress={() => navigation.goBack()} className="mr-3 bg-gray-50 p-2 rounded-full">
@@ -125,9 +141,6 @@ const ConnectedScreen = ({ navigation }: any) => {
                     </TouchableOpacity>
                     <Text className="text-2xl font-bold text-gray-800 tracking-tight">Messages</Text>
                 </View>
-                <TouchableOpacity className="bg-orange-50 p-2 rounded-full">
-                    <Ionicons name="search" size={20} color="#ea580c" />
-                </TouchableOpacity>
             </View>
 
             {loading && !refreshing ? (
@@ -139,9 +152,12 @@ const ConnectedScreen = ({ navigation }: any) => {
                 <FlatList
                     data={profiles}
                     renderItem={renderProfile}
-                    keyExtractor={item => item.id?.toString()}
+                    keyExtractor={item => item.proposal_id?.toString() || item.id?.toString()}
                     contentContainerStyle={{ paddingVertical: 16 }}
+                    onEndReached={() => fetchConnectedProfiles(true)}
+                    onEndReachedThreshold={0.5}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchConnectedProfiles(); }} colors={['#ea580c']} />}
+                    ListFooterComponent={isLoadMoreLoading ? <ActivityIndicator color="#ea580c" style={{ margin: 10 }} /> : null}
                     ListEmptyComponent={
                         <View className="items-center justify-center py-20 px-10">
                             <View className="w-32 h-32 bg-orange-50 rounded-full items-center justify-center mb-6">
@@ -151,9 +167,6 @@ const ConnectedScreen = ({ navigation }: any) => {
                             <Text className="text-gray-500 text-center leading-5 mb-8">
                                 Connect with profiles in the Matrimony section to start chatting.
                             </Text>
-                            <TouchableOpacity onPress={() => navigation.navigate('Matrimony')} className="bg-orange-600 px-8 py-3 rounded-full shadow-lg shadow-orange-200">
-                                <Text className="text-white font-bold">Find Matches</Text>
-                            </TouchableOpacity>
                         </View>
                     }
                 />

@@ -87,13 +87,13 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.app.sadhuvandna'
+    namespace 'com.sadhuvandna.app'
     defaultConfig {
-        applicationId 'com.app.sadhuvandna'
+        applicationId 'com.sadhuvandna.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 15
-        versionName "1.15"
+        versionCode 45
+        versionName "1.45.0"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -104,11 +104,6 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-    }
-    buildTypes {
-        debug {
-            signingConfig signingConfigs.debug
-        }
         release {
             if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
                 storeFile file(MYAPP_UPLOAD_STORE_FILE)
@@ -116,7 +111,15 @@ android {
                 keyAlias MYAPP_UPLOAD_KEY_ALIAS
                 keyPassword MYAPP_UPLOAD_KEY_PASSWORD
             }
+        }
+    }
+    buildTypes {
+        debug {
             signingConfig signingConfigs.debug
+        }
+        release {
+            // Updated to use the release signing config
+            signingConfig signingConfigs.release
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

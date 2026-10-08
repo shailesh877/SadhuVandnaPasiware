@@ -21,11 +21,11 @@ import {
 } from 'react-native-agora';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../navigation/RootNavigator';
+import { RootStackParamList } from '../../navigation/types';
 import { getAgoraToken } from '../../services/AgoraService';
 // You might need to add this to your types or just use 'any' for now if strictly typed
 // import { RootStackParamList } from '../../navigation/types'; 
-import { API_BASE_URL } from '../../services/api';
+import api, { API_BASE_URL } from '../../services/api';
 
 // Replace with your App ID from the server .env or a config file
 // ideally fetched from API or constant
@@ -82,7 +82,7 @@ const AgoraCallScreen = ({ navigation, route }: any) => {
                 const fetchedToken = await getAgoraToken(channelId, myUid);
                 if (isCancelled) return;
 
-                if (!fetchedToken) {
+                if (fetchedToken === null || fetchedToken === undefined) {
                     Alert.alert("Connection Error", "Could not fetch call token. Check server connection.");
                     navigation.goBack();
                     return;
@@ -181,18 +181,21 @@ const AgoraCallScreen = ({ navigation, route }: any) => {
 
         runSetup();
 
+        // If receiver, mark as accepted immediately on join
+        if (!isCaller && channelId) {
+            api.post('update_call_status.php', {
+                channel_id: channelId,
+                status: 'accepted'
+            }).catch(e => console.log("Status update failed", e));
+        }
+
         // Check call status periodically (handled by caller mostly, but good for both)
         const statusInterval = setInterval(async () => {
             try {
-
-                const fd = new FormData();
-                fd.append('channel_id', channelId);
-                // Use the configured API URL
-                const res = await fetch(`${API_BASE_URL}/check_call_status.php`, {
-                    method: 'POST',
-                    body: fd
+                const res = await api.post('check_call_status.php', {
+                    channel_id: channelId
                 });
-                const data = await res.json();
+                const data = res.data;
 
                 if (data.status === 'success') {
                     if (data.call_status === 'rejected') {
@@ -209,7 +212,16 @@ const AgoraCallScreen = ({ navigation, route }: any) => {
         return () => {
             clearInterval(statusInterval);
             isCancelled = true;
-            // Cleanup
+            
+            // Mark as ended on the server when we leave
+            if (channelId) {
+                api.post('update_call_status.php', {
+                    channel_id: channelId,
+                    status: 'ended'
+                }).catch(e => { });
+            }
+
+            // Cleanup Agora
             if (agoraEngineRef.current) {
                 agoraEngineRef.current.leaveChannel();
                 agoraEngineRef.current.release();

@@ -1,12 +1,11 @@
 <?php
-include("connection.php");
 include("header.php");
 
-$user_email = $_SESSION['sadhu_user_id'] ?? '';
-if(!$user_email) die("Unauthorized");
-$user = $con->query("SELECT id FROM tbl_members WHERE email='$user_email'")->fetch_assoc();
+$user_mobile = $_SESSION['sadhu_user_id'] ?? '';
+if(!$user_mobile) die("Unauthorized");
+$user = $con->query("SELECT id FROM tbl_members WHERE mobile='$user_mobile'")->fetch_assoc();
 $logged_id = $user['id'];
-
+// echo $logged_id;
 $query="SELECT id from tbl_marriage_profiles WHERE user_id='$logged_id'";
 $profileExists = $con->query($query)->num_rows > 0;
 $receiver_id = $profileExists ? $con->query($query)->fetch_assoc()['id'] : 0;
@@ -81,7 +80,7 @@ $requestCount = $requestCountQuery->fetch_assoc()['total'];
                 <!-- 🔥 Notification Badge -->
                 <?php if($requestCount > 0) { ?>
                     <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
-                        <?= $requestCount ?>
+                        <?php echo $requestCount ?>
                     </span>
                 <?php } ?>
 
@@ -110,7 +109,8 @@ $requestCount = $requestCountQuery->fetch_assoc()['total'];
 
   <!-- Profiles Grid -->
   <section id="profilesContainer" class="max-w-8xl mt-15 mx-auto pb-12">
-    <div class="text-center text-gray-500">Loading profiles...</div>
+    <div id="profilesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+    <div id="loader" class="text-center text-gray-500 mt-4 hidden">Loading more...</div>
   </section>
   
 </main>
@@ -129,25 +129,76 @@ filterBtn.addEventListener('click', () => {
   }
 });
 
-// ✅ Load profiles dynamically
-function loadProfiles() {
+// ✅ Load profiles dynamically with Infinite Scroll
+let offset = 0;
+const limit = 8;
+let isLoading = false;
+let hasMore = true;
+let searchTimer;
+
+function loadProfiles(isInitial = false) {
+  if (isLoading || (!hasMore && !isInitial)) return;
+  isLoading = true;
+  document.getElementById('loader').classList.remove('hidden');
+
+  if (isInitial) {
+    offset = 0;
+    hasMore = true;
+    document.getElementById('profilesGrid').innerHTML = '';
+  }
+
   const formData = new FormData(document.getElementById('filterForm'));
+  formData.append('limit', limit);
+  formData.append('offset', offset);
+
   fetch('fetch_profiles.php', {
     method: 'POST',
     body: formData
   })
     .then(res => res.text())
     .then(html => {
-      document.getElementById('profilesContainer').innerHTML = html;
+      const trimmedHTML = html.trim();
+      if (trimmedHTML === "") {
+        hasMore = false;
+        if(isInitial) document.getElementById('profilesGrid').innerHTML = `<div class='text-center text-gray-500 w-full col-span-full mt-10'>No profiles found.</div>`;
+      } else {
+         // Check if the returned HTML is the specific "No profiles found" message for offset 0
+         if (isInitial && trimmedHTML.includes('No profiles found')) {
+              document.getElementById('profilesGrid').innerHTML = trimmedHTML;
+              hasMore = false;
+         } else {
+             document.getElementById('profilesGrid').insertAdjacentHTML('beforeend', trimmedHTML);
+             offset += limit;
+         }
+      }
     })
     .catch(err => {
-      document.getElementById('profilesContainer').innerHTML = `<div class='text-center text-red-500'>Error: ${err}</div>`;
+        console.error(err);
+      if(isInitial) document.getElementById('profilesGrid').innerHTML = `<div class='text-center text-red-500 w-full'>Error loading profiles.</div>`;
+    })
+    .finally(() => {
+        isLoading = false;
+        document.getElementById('loader').classList.add('hidden');
     });
 }
 
+// Live Search with Debounce
+filterForm.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => loadProfiles(true), 500);
+});
+filterForm.addEventListener('change', () => loadProfiles(true));
+
 document.getElementById('filterForm').addEventListener('submit', e => {
   e.preventDefault();
-  loadProfiles();
+  loadProfiles(true);
+});
+
+// Infinite Scroll
+window.addEventListener('scroll', () => {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+        loadProfiles();
+    }
 });
 
 // Load on page start
@@ -156,6 +207,53 @@ window.addEventListener('load', () => {
   if (window.innerWidth >= 768) {
     filterForm.style.display = 'flex';
   }
-  loadProfiles();
+  loadProfiles(true);
 });
+</script>
+
+<script>
+/*
+// disable right click
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+// disable drag
+document.addEventListener("dragstart", e => e.preventDefault());
+
+// disable ctrl keys
+document.addEventListener("keydown", function(e){
+
+    // Ctrl + S / U / P / C / X / A
+    if (
+        e.ctrlKey &&
+        ['s','u','p','c','x','a'].includes(e.key.toLowerCase())
+    ) {
+        e.preventDefault();
+    }
+
+    // Print Screen
+    if (e.key === "PrintScreen") {
+        document.body.style.filter = "blur(10px)";
+        setTimeout(() => {
+            document.body.style.filter = "none";
+        }, 2000);
+    }
+
+    // F12
+    if (e.keyCode === 123) {
+        e.preventDefault();
+    }
+});
+
+// mobile screenshot detection (best possible)
+document.addEventListener("visibilitychange", function(){
+    if(document.hidden){
+        document.body.style.filter = "blur(15px)";
+    } else {
+        document.body.style.filter = "none";
+    }
+});
+*/
+
+// disable text selection
+// document.onselectstart = () => false;
 </script>

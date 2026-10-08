@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const ytdl = require('@distube/ytdl-core');
 const { RtcTokenBuilder, RtcRole } = require('agora-access-token');
 
 dotenv.config();
@@ -79,6 +80,42 @@ const generateAccessToken = (req, resp) => {
 };
 
 app.get('/rtc-token', nocache, generateAccessToken);
+
+app.get('/stream/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const url = `https://www.youtube.com/watch?v=${id}`;
+        
+        console.log(`[Stream Request] ID: ${id}`);
+        
+        const info = await ytdl.getInfo(url);
+        console.error(`[Stream Debug] Total formats: ${info.formats ? info.formats.length : 'UNDEFINED'}`);
+        
+        // Find best audio
+        let format = null;
+        try {
+            format = ytdl.chooseFormat(info.formats || [], { quality: 'highestaudio', filter: 'audioonly' });
+        } catch (e) {
+            console.error("[Audio Debug] highestaudio + audioonly failed, trying fallback...");
+        }
+
+        if (!format) {
+            format = (info.formats || []).find(f => f.hasAudio && f.url);
+        }
+
+        if (!format || !format.url) {
+            const count = info.formats ? info.formats.length : 0;
+            console.error(`[Audio Error] No playable formats for ${id}. Count: ${count}`);
+            throw new Error(`Failed to find any playable formats. (Total: ${count})`);
+        }
+
+        console.log(`[Audio Success] ID: ${id} -> itag: ${format.itag}`);
+        res.json({ url: format.url });
+    } catch (error) {
+        console.error('[Audio Route Error]', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Listening on port: ${PORT}`);

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Image, View, ActivityIndicator, Dimensions, Text } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { Image, View, ActivityIndicator, Dimensions, Text, Animated } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 
 interface PostImageProps {
@@ -12,6 +12,7 @@ const PostImage: React.FC<PostImageProps> = ({ uri }) => {
     const [aspectRatio, setAspectRatio] = useState<number>(4 / 3); // Default
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
+    const imageOpacity = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (!uri) {
@@ -42,9 +43,17 @@ const PostImage: React.FC<PostImageProps> = ({ uri }) => {
         );
     }, [uri]);
 
+    const handleLoad = () => {
+        Animated.timing(imageOpacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+    };
+
     if (error) {
         return (
-            <View className="w-full h-64 bg-gray-200 rounded-lg justify-center items-center">
+            <View className="w-full h-64 bg-gray-200 rounded-xl justify-center items-center">
                 <Text className="text-gray-500 text-xs">Image not available</Text>
             </View>
         );
@@ -55,7 +64,7 @@ const PostImage: React.FC<PostImageProps> = ({ uri }) => {
 
     if (isVideo) {
         return (
-            <View className="w-full bg-black rounded-lg overflow-hidden relative" style={{ aspectRatio: 4 / 3 }}>
+            <View className="w-full bg-black rounded-xl overflow-hidden relative" style={{ aspectRatio: 4 / 3 }}>
                 <Video
                     source={{ uri }}
                     rate={1.0}
@@ -73,15 +82,16 @@ const PostImage: React.FC<PostImageProps> = ({ uri }) => {
     }
 
     return (
-        <View className="w-full bg-gray-100 rounded-lg overflow-hidden relative">
-            <Image
+        <View className="w-full bg-gray-50 rounded-xl overflow-hidden relative">
+            <Animated.Image
                 source={{ uri }}
-                style={{ width: '100%', aspectRatio }}
-                resizeMode="contain"
+                style={{ width: '100%', aspectRatio, opacity: imageOpacity }}
+                resizeMode="cover"
+                onLoad={handleLoad}
                 onError={() => setError(true)}
             />
             {loading && (
-                <View className="absolute inset-0 justify-center items-center bg-gray-200">
+                <View className="absolute inset-0 justify-center items-center bg-gray-100">
                     <ActivityIndicator color="#ea580c" />
                 </View>
             )}

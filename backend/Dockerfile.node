@@ -1,0 +1,6 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Run the socket server
+CMD ["node", "index.js"]

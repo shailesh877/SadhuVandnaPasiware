@@ -1,30 +1,60 @@
 import React from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, Dimensions, Share } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, Dimensions, Share, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { API_BASE_URL, WEBSITE_URL } from '../../services/api';
+import api, { API_BASE_URL, WEBSITE_URL } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 const BASE_URL_ROOT = API_BASE_URL.replace('/Api', '');
 const NEWS_URL = `${BASE_URL_ROOT}/uploads/news/`;
 
 const NewsDetailScreen = ({ route, navigation }: any) => {
-    // Params passed from navigation (news object from API)
-    const { news } = route.params || {};
+    // Params passed from navigation (news object from API or newsId from linking)
+    const { news, newsId } = route.params || {};
+    const [currentNews, setCurrentNews] = React.useState<any>(news || null);
+    const [loading, setLoading] = React.useState(!news && !!newsId);
 
-    if (!news) return <View className="flex-1 bg-white items-center justify-center"><Text>News not found</Text></View>;
+    React.useEffect(() => {
+        if (!currentNews && newsId) {
+            fetchSingleNews(newsId);
+        }
+    }, [newsId]);
 
-    const images = news.images || (news.image ? news.image.split(',') : []);
+    const fetchSingleNews = async (id: string) => {
+        try {
+            setLoading(true);
+            const res = await api.get(`get_news.php?id=${id}`);
+            // Check if response is array or success object
+            const data = Array.isArray(res.data) ? res.data : (res.data.data || []);
+            if (data.length > 0) {
+                setCurrentNews(data[0]);
+            } else {
+                Alert.alert("Error", "News not found");
+                navigation.goBack();
+            }
+        } catch (e) {
+            Alert.alert("Error", "Failed to load news");
+            navigation.goBack();
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleShare = async () => {
         try {
-            const newsUrl = `${WEBSITE_URL}/view_news.php?id=${news.id}`;
-            const message = `${news.title}\n\n${news.description?.substring(0, 100)}...\n\nRead Full News: ${newsUrl}\n\nDownload App: ${WEBSITE_URL}`;
+            if (!currentNews) return;
+            const newsUrl = `${WEBSITE_URL}/view_news.php?id=${currentNews.id}`;
+            const message = `${currentNews.title}\n\n${currentNews.description?.substring(0, 100)}...\n\nOpen in App: ${newsUrl}`;
             await Share.share({ message, url: newsUrl });
         } catch (error: any) {
             // console.error(error);
         }
     };
+
+    if (loading) return <View className="flex-1 bg-white items-center justify-center"><ActivityIndicator size="large" color="#ea580c" /></View>;
+    if (!currentNews) return <View className="flex-1 bg-white items-center justify-center"><Text>News not found</Text></View>;
+
+    const images = currentNews.images || (currentNews.image ? currentNews.image.split(',') : []);
 
     return (
         <SafeAreaView className="flex-1 bg-white" edges={['top']}>

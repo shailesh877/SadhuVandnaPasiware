@@ -5,13 +5,33 @@ import api, { API_BASE_URL } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import PostImage from '../../components/PostImage';
+import PostCard from '../../components/PostCard';
 
 const BASE_URL_ROOT = API_BASE_URL.replace('/Api', '');
+const PHOTO_URL = `${BASE_URL_ROOT}/uploads/photo/`;
 const POST_IMAGE_URL = `${BASE_URL_ROOT}/uploads/posts/`;
+
+const getImageUrl = (photo: string | null, baseUrl: string) => {
+    if (!photo) return '';
+    return photo.startsWith('http') ? photo : `${baseUrl}${photo}`;
+};
 
 const MyPostsScreen = ({ navigation }: any) => {
     const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [activePostId, setActivePostId] = useState<string | null>(null);
+
+    const onViewableItemsChanged = React.useRef(({ viewableItems }: any) => {
+        if (viewableItems && viewableItems.length > 0) {
+            setActivePostId(viewableItems[0].key);
+        } else {
+            setActivePostId(null);
+        }
+    }).current;
+
+    const viewabilityConfig = React.useRef({
+        itemVisiblePercentThreshold: 70,
+    }).current;
 
     useEffect(() => {
         fetchMyPosts();
@@ -22,7 +42,7 @@ const MyPostsScreen = ({ navigation }: any) => {
             const u = await AsyncStorage.getItem('user');
             if (u) {
                 const user = JSON.parse(u);
-                const res = await api.get(`/get_posts.php?filter_user_id=${user.id}&user_id=${user.id}`);
+                const res = await api.get(`get_posts.php?filter_user_id=${user.id}&user_id=${user.id}`);
                 if (res.data.status === 'success') {
                     setPosts(res.data.data);
                 }
@@ -35,62 +55,51 @@ const MyPostsScreen = ({ navigation }: any) => {
     };
 
     const handleDelete = async (postId: string) => {
-        Alert.alert(
-            "Delete Post",
-            "Are you sure you want to delete this post?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            const u = await AsyncStorage.getItem('user');
-                            if (!u) return;
-                            const user = JSON.parse(u);
+        try {
+            const u = await AsyncStorage.getItem('user');
+            if (!u) return;
+            const user = JSON.parse(u);
 
-                            const formData = new FormData();
-                            formData.append('user_id', user.id);
-                            formData.append('post_id', postId);
+            const formData = new FormData();
+            formData.append('post_id', postId);
+            formData.append('user_id', user.id);
 
-                            const res = await api.post('/delete_post.php', formData);
-                            if (res.data.status === 'success') {
-                                setPosts(prev => prev.filter(p => p.id !== postId));
-                                Alert.alert("Success", "Post deleted");
-                            } else {
-                                Alert.alert("Error", res.data.message || "Failed to delete");
-                            }
-                        } catch (error) {
-                            Alert.alert("Error", "Network request failed");
-                        }
-                    }
-                }
-            ]
-        );
+            const res = await api.post('remove_post.php', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            if (res.data.status === 'success') {
+                setPosts(prev => prev.filter(p => p.id !== postId));
+                Alert.alert("Success", "Post deleted");
+            } else {
+                Alert.alert("Error", res.data.message || "Failed to delete");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Network request failed");
+        }
     };
 
     const renderPostItem = ({ item }: { item: any }) => (
-        <View className="bg-white mb-4 p-4 border-b border-gray-100">
-            <View className="flex-row items-center mb-3 justify-between">
-                <View className="flex-row items-center">
-                    <View>
-                        <Text className="font-bold text-gray-900 text-base">{item.name}</Text>
-                        <Text className="text-gray-500 text-xs">{item.date}</Text>
-                    </View>
-                </View>
-                <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-2">
-                    <Ionicons name="trash-outline" size={20} color="red" />
-                </TouchableOpacity>
-            </View>
-
-            <Text className="text-gray-800 text-base leading-6 mb-3">{item.description}</Text>
-
-            {item.image && (
-                <View className="mb-3">
-                    <PostImage uri={`${POST_IMAGE_URL}${item.image}`} />
-                </View>
-            )}
-        </View>
+        <PostCard
+            post={{
+                id: item.id,
+                user: {
+                    id: item.user_id,
+                    name: item.name,
+                    avatar: getImageUrl(item.profile_photo, PHOTO_URL),
+                },
+                content: item.description,
+                media: item.media,
+                image: item.image,
+                likes: parseInt(item.likes) || 0,
+                comments: item.comments?.length || 0,
+                timeAgo: item.date,
+                isLiked: item.user_liked,
+                link: item.link
+            }}
+            currentUserId={String(posts[0]?.user_id || '')}
+            onDeletePress={() => handleDelete(String(item.id))}
+            shouldPlay={activePostId === item.id}
+        />
     );
 
     if (loading) {
@@ -109,7 +118,9 @@ const MyPostsScreen = ({ navigation }: any) => {
             <FlatList
                 data={posts}
                 renderItem={renderPostItem}
-                keyExtractor={item => item.id.toString()}
+                keyExtractor={item => item.id?.toString() || Math.random().toString()}
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={viewabilityConfig}
                 contentContainerStyle={{ paddingBottom: 20 }}
                 ListEmptyComponent={
                     <View className="items-center mt-20 p-4">

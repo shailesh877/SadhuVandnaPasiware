@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 
-const ChangePasswordScreen = () => {
-    const navigation = useNavigation();
+const ChangePasswordScreen = ({ navigation }: any) => {
     const [current, setCurrent] = useState('');
     const [newPass, setNewPass] = useState('');
     const [confirm, setConfirm] = useState('');

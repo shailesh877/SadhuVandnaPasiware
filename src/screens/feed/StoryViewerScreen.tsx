@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Image, TouchableOpacity, Dimensions, Modal, Animated, StyleSheet, StatusBar, ScrollView } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Dimensions, Modal, Animated, StyleSheet, StatusBar, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Video, ResizeMode } from 'expo-av';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { Video, ResizeMode, Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import api, { API_BASE_URL } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -11,9 +10,7 @@ const { width, height } = Dimensions.get('window');
 const BASE_URL_ROOT = API_BASE_URL.replace('/Api', ''); // Ensure correct root for uploads
 const PHOTO_URL = `${BASE_URL_ROOT}/uploads/photo/`;
 
-const StoryViewerScreen = () => {
-    const route = useRoute<any>();
-    const navigation = useNavigation();
+const StoryViewerScreen = ({ navigation, route }: any) => {
     const { stories: initialStories, initialIndex = 0, userId: storyOwnerId, userName, userPhoto } = route.params;
 
     const [stories, setStories] = useState(initialStories || []);
@@ -21,8 +18,9 @@ const StoryViewerScreen = () => {
     const [loading, setLoading] = useState(true);
     const [progress] = useState(new Animated.Value(0));
     const [paused, setPaused] = useState(false);
-    const [videoLoaded, setVideoLoaded] = useState(false);
     const [viewerId, setViewerId] = useState<string | null>(null);
+    const soundRef = useRef<Audio.Sound | null>(null);
+    const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
     const videoRef = useRef<Video>(null);
     const timerRef = useRef<any>(null);
@@ -32,7 +30,59 @@ const StoryViewerScreen = () => {
             if (u) setViewerId(JSON.parse(u).id);
         });
         setLoading(false);
+
+        return () => {
+            console.log("[StoryViewer] Cleaning up sound on unmount");
+            if (soundRef.current) {
+                const s = soundRef.current;
+                soundRef.current = null;
+                s.stopAsync()
+                    .then(() => s.unloadAsync())
+                    .catch(() => {});
+            }
+        };
     }, []);
+
+    useEffect(() => {
+        const story = stories[currentIndex];
+        console.log(`[StoryViewer] Story ${currentIndex} music_url:`, story?.music_url);
+        if (story?.music_url) {
+            loadAndPlayMusic(story.music_url);
+        } else {
+            stopMusic();
+        }
+    }, [currentIndex]);
+
+    const loadAndPlayMusic = async (url: string) => {
+        try {
+            if (soundRef.current) {
+                await soundRef.current.unloadAsync();
+                soundRef.current = null;
+            }
+            const { sound: newSound, status } = await Audio.Sound.createAsync(
+                { uri: url },
+                { shouldPlay: !paused, isLooping: true }
+            );
+            console.log(`[StoryViewer] Music loaded. Status:`, status.isLoaded);
+            soundRef.current = newSound;
+            setIsMusicPlaying(true);
+        } catch (e: any) {
+            console.error("Error loading music:", e);
+            Alert.alert("Music Error", "Failed to load: " + e.message);
+        }
+    };
+
+    const stopMusic = async () => {
+        if (soundRef.current) {
+            const s = soundRef.current;
+            soundRef.current = null;
+            setIsMusicPlaying(false);
+            try {
+                await s.stopAsync();
+                await s.unloadAsync();
+            } catch (e) {}
+        }
+    };
 
     useEffect(() => {
         if (!stories[currentIndex]) {
@@ -40,23 +90,27 @@ const StoryViewerScreen = () => {
             return;
         }
         startProgress();
-        markAsViewed(stories[currentIndex].id);
     }, [currentIndex]);
 
     const markAsViewed = async (storyId: number) => {
         if (!viewerId) return;
         try {
-            const fd = new FormData();
-            fd.append('user_id', viewerId);
-            fd.append('story_id', String(storyId));
-            await api.post('/story_view.php', fd);
+            const formData = new FormData();
+            formData.append('user_id', viewerId!);
+            formData.append('story_id', String(storyId));
+            
+            await api.post('story_view.php', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
         } catch (e) { console.error(e); }
     };
 
-    const startProgress = (duration = 10000) => {
+    const startProgress = (fixedDuration?: number) => {
         // If it's a video, we don't use the timer-based progress unless it fails to load or something
-        // But for now, let's keep it for images.
         if (stories[currentIndex]?.type === 'video') return;
+
+        const storyDuration = stories[currentIndex]?.duration ? parseInt(stories[currentIndex].duration) * 1000 : 10000;
+        const duration = fixedDuration || storyDuration;
 
         progress.setValue(0);
         Animated.timing(progress, {
@@ -97,10 +151,15 @@ const StoryViewerScreen = () => {
     const deleteStory = async () => {
         const story = stories[currentIndex];
         try {
-            const fd = new FormData();
-            fd.append('user_id', viewerId!);
-            fd.append('story_id', story.id);
-            const res = await api.post('/delete_story.php', fd);
+            const formData = new FormData();
+            formData.append('user_id', viewerId!);
+            formData.append('story_id', String(story.id));
+
+            const res = await api.post('delete_story.php', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            console.log("[DELETE STORY RESPONSE]", res.data);
+            
             if (res.data.status === 'success') {
                 const newStories = stories.filter((s: any) => s.id !== story.id);
                 if (newStories.length > 0) {
@@ -109,9 +168,16 @@ const StoryViewerScreen = () => {
                 } else {
                     navigation.goBack();
                 }
+            } else {
+                import('react-native').then(({ Alert }) => {
+                    Alert.alert("Delete Failed", res.data.message || "Could not delete story");
+                });
             }
         } catch (e) {
             console.error(e);
+            import('react-native').then(({ Alert }) => {
+                Alert.alert("Error", "Network error while deleting");
+            });
         }
     };
 
@@ -126,18 +192,52 @@ const StoryViewerScreen = () => {
     const [showViewers, setShowViewers] = useState(false);
 
     useEffect(() => {
-        if (String(storyOwnerId) === String(viewerId) && stories[currentIndex]) {
-            fetchViewers(stories[currentIndex].id);
+        if (soundRef.current) {
+            if (paused || showViewers) {
+                soundRef.current.pauseAsync();
+            } else {
+                soundRef.current.playAsync();
+            }
+        }
+    }, [paused, showViewers]);
+
+    useEffect(() => {
+        if (viewerId && stories[currentIndex]) {
+            if (String(storyOwnerId) !== String(viewerId)) {
+                markAsViewed(stories[currentIndex].id);
+            } else {
+                fetchViewers(stories[currentIndex].id);
+            }
         }
     }, [currentIndex, viewerId]);
 
     const fetchViewers = async (storyId: string) => {
         try {
-            const res = await api.get(`/fetch_story_viewers.php?story_id=${storyId}`);
+            const res = await api.get(`fetch_story_viewers.php?story_id=${storyId}`);
             if (res.data.status === 'success') {
                 setViewers(res.data.data);
             }
         } catch (e) { console.error(e); }
+    };
+
+    const formatViewerTime = (dateString: string) => {
+        if (!dateString) return '';
+        try {
+            // Simple split for MySQL datetime "YYYY-MM-DD HH:mm:ss"
+            const parts = dateString.split(' ');
+            if (parts.length === 2) {
+                const timeParts = parts[1].split(':');
+                let hours = parseInt(timeParts[0], 10);
+                const minutes = timeParts[1];
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12; // the hour '0' should be '12'
+                return `${hours}:${minutes} ${ampm}`;
+            }
+            return dateString;
+        } catch {
+            return dateString;
+        }
     };
 
     const renderViewersModal = () => (
@@ -171,7 +271,7 @@ const StoryViewerScreen = () => {
                                 />
                                 <View style={{ marginLeft: 12 }}>
                                     <Text style={styles.viewerName}>{item.name}</Text>
-                                    <Text style={styles.viewerTime}>{new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                                    <Text style={styles.viewerTime}>{formatViewerTime(item.date)}</Text>
                                 </View>
                             </TouchableOpacity>
                         ))}
@@ -220,6 +320,15 @@ const StoryViewerScreen = () => {
                     <Text style={styles.userName}>{userName || 'Story'}</Text>
                     <Text style={styles.time}>{new Date(currentStory.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                 </TouchableOpacity>
+
+                {currentStory.music_title && (
+                    <View style={styles.musicLabel}>
+                        <Ionicons name="musical-notes" size={14} color="white" />
+                        <Text style={styles.musicLabelText} numberOfLines={1}>
+                            {currentStory.music_title} - {currentStory.music_artist}
+                        </Text>
+                    </View>
+                )}
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     {String(storyOwnerId) === String(viewerId) && (
                         <TouchableOpacity onPress={deleteStory} style={{ padding: 8 }}>
@@ -245,7 +354,16 @@ const StoryViewerScreen = () => {
                         shouldPlay={!paused && !showViewers}
                         style={styles.media}
                         onPlaybackStatusUpdate={status => {
-                            if (status.isLoaded && status.didJustFinish) nextStory();
+                            if (status.isLoaded) {
+                                if (status.durationMillis && status.positionMillis) {
+                                    // Update progress animated value directly
+                                    progress.setValue(status.positionMillis / status.durationMillis);
+                                }
+                                if (status.didJustFinish) nextStory();
+                            }
+                        }}
+                        onError={(e) => {
+                            console.error("[StoryViewer Video] Error:", e, "URI:", mediaUrl);
                         }}
                     />
                 ) : (
@@ -283,6 +401,20 @@ const styles = StyleSheet.create({
     avatar: { width: 32, height: 32, borderRadius: 16, marginRight: 10 },
     userName: { color: 'white', fontWeight: 'bold', marginRight: 10 },
     time: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
+    musicLabel: {
+        position: 'absolute',
+        top: 100,
+        left: 20,
+        right: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+        alignSelf: 'flex-start'
+    },
+    musicLabelText: { color: 'white', fontSize: 12, marginLeft: 6, fontWeight: '500' },
     mediaContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     media: { width: width, height: height * 0.8 },
     footer: { position: 'absolute', bottom: 40, left: 0, right: 0, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },

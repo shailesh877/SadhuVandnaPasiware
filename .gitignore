@@ -32,10 +32,30 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+env.php
+Api/env.php
 
 # typescript
 *.tsbuildinfo
 
-# generated native folders
-/ios
+# local logs and reports
+*.log
+signing_report*.txt
+logo_*.txt
+
+# temporary test files
+aastha*.html
+yt_debug.html
+test_api.js
+scratch_yt.js
+test_msg91.php
+
+# JDK / backups
+jdk17/
+jdk17.zip
+android_backup/
+.vscode/
+
+# End of .gitignore
 

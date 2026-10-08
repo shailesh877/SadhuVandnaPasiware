@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../../services/api';
+import api, { API_BASE_URL, getFullPaymentUrl } from '../../services/api';
 
-const CreateMarriageProfileScreen = ({ navigation }: any) => {
+const CreateMarriageProfileScreen = ({ navigation, route }: any) => {
+    const { profile: routeProfile } = route.params || {};
     const [formData, setFormData] = useState({
         full_name: '',
         gender: '',
@@ -53,9 +54,8 @@ const CreateMarriageProfileScreen = ({ navigation }: any) => {
 
     useEffect(() => {
         // Pre-fill if editing
-        const routeParams = (navigation as any).getState().routes.find((r: any) => r.name === 'CreateMarriageProfile')?.params;
-        if (routeParams?.profile) {
-            const { profile } = routeParams;
+        if (routeProfile) {
+            const profile = routeProfile;
             setFormData({
                 full_name: profile.full_name || '',
                 gender: profile.gender || '',
@@ -104,7 +104,7 @@ const CreateMarriageProfileScreen = ({ navigation }: any) => {
                 const user = JSON.parse(u);
                 setUserId(user.id);
                 // Auto-fill from main profile if not edit
-                if (!isEdit && !routeParams?.profile) {
+                if (!isEdit && !routeProfile) {
                     setFormData(prev => ({
                         ...prev,
                         full_name: user.name,
@@ -146,6 +146,30 @@ const CreateMarriageProfileScreen = ({ navigation }: any) => {
 
         setLoading(true);
         try {
+            // Check payment if it's a new profile creation (not editing)
+            if (!isEdit) {
+                const payCheckRes = await api.get(`/check_matrimony_payment.php?user_id=${userId}`);
+                if (payCheckRes.data.status === 'success') {
+                    if (!payCheckRes.data.paid) {
+                        setLoading(false);
+                        const paymentUrl = getFullPaymentUrl(payCheckRes.data.payment_url);
+                        Alert.alert(
+                            "Payment Required",
+                            `Creating a matrimony profile requires a one-time fee of ₹${payCheckRes.data.fee}. Would you like to pay now?`,
+                            [
+                                { text: "Cancel", style: "cancel" },
+                                { text: "Pay Now", onPress: () => Linking.openURL(paymentUrl) }
+                            ]
+                        );
+                        return;
+                    }
+                } else {
+                    Alert.alert("Error", payCheckRes.data.message || "Failed to check payment status.");
+                    setLoading(false);
+                    return;
+                }
+            }
+
             const data = new FormData();
             data.append('user_id', userId || '');
             Object.keys(formData).forEach(key => {

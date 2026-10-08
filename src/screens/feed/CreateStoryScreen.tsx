@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator, Alert, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ActivityIndicator, Alert, Dimensions, StyleSheet, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode, Audio } from 'expo-av';
 import api from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import ViewShot, { captureRef } from 'react-native-view-shot';
+import { FlatList, Modal, TextInput } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -18,6 +19,13 @@ const CreateStoryScreen = ({ navigation }: any) => {
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover'); // Default to fill/cover
+    const [duration, setDuration] = useState(10);
+    const [showMusicPicker, setShowMusicPicker] = useState(false);
+    const [musicList, setMusicList] = useState<any[]>([]);
+    const [selectedMusic, setSelectedMusic] = useState<any>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [musicLoading, setMusicLoading] = useState(false);
+    const [sound, setSound] = useState<Audio.Sound | null>(null);
 
     const viewShotRef = useRef<ViewShot>(null);
 
@@ -34,11 +42,53 @@ const CreateStoryScreen = ({ navigation }: any) => {
             if (u) setUser(JSON.parse(u));
         });
         pickImage();
+
+        return () => {
+            if (sound) {
+                sound.unloadAsync();
+            }
+        };
     }, []);
+
+    const fetchMusic = async (query = '') => {
+        setMusicLoading(true);
+        try {
+            const res = await api.get(`get_music.php?search=${query}`);
+            if (res.data.status === 'success') {
+                setMusicList(res.data.data);
+            }
+        } catch (e) {
+            console.error("Fetch Music Error:", e);
+        } finally {
+            setMusicLoading(false);
+        }
+    };
+
+    const playPreview = async (music: any) => {
+        try {
+            if (sound) {
+                await sound.unloadAsync();
+            }
+            const { sound: newSound } = await Audio.Sound.createAsync(
+                { uri: music.file_url },
+                { shouldPlay: true, isLooping: true }
+            );
+            setSound(newSound);
+            setSelectedMusic(music);
+        } catch (e) {
+            console.error("Play Preview Error:", e);
+        }
+    };
+
+    const stopPreview = async () => {
+        if (sound) {
+            await sound.stopAsync();
+        }
+    };
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.All,
+            mediaTypes: ['images', 'videos'],
             allowsEditing: false, // We handle editing
             quality: 1,
         });
@@ -134,14 +184,29 @@ const CreateStoryScreen = ({ navigation }: any) => {
             }
 
             const formData = new FormData();
-            formData.append('user_id', user.id);
+            formData.append('user_id', String(user.id));
+            formData.append('duration', String(duration));
+            
+            let finalUri = uploadUri;
+            if (Platform.OS === 'android' && !finalUri.startsWith('file://') && !finalUri.startsWith('content://')) {
+                finalUri = 'file://' + finalUri;
+            }
+
             formData.append('story', {
-                uri: uploadUri,
+                uri: finalUri,
                 name: filename,
                 type: type
             } as any);
 
-            const res = await api.post('/story_upload.php', formData);
+            if (selectedMusic) {
+                formData.append('music_id', selectedMusic.id);
+            }
+
+            console.log("[STORY UPLOAD] Sending to server:", { finalUri, filename, type, userId: user.id });
+
+            const res = await api.post('story_upload.php', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
             if (res.data.status === 'success') {
                 Alert.alert("Success", "Story uploaded successfully");
                 navigation.goBack();
@@ -164,14 +229,38 @@ const CreateStoryScreen = ({ navigation }: any) => {
                     <Ionicons name="close" size={28} color="white" />
                 </TouchableOpacity>
                 <View style={{ flexDirection: 'row', gap: 15 }}>
+                    <TouchableOpacity onPress={() => { setShowMusicPicker(true); fetchMusic(); }} style={styles.iconBtn}>
+                        <Ionicons name="musical-notes-outline" size={24} color={selectedMusic ? "#ea580c" : "white"} />
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={toggleFitMode} style={styles.iconBtn}>
                         <Ionicons name={fitMode === 'cover' ? "resize" : "expand"} size={24} color="white" />
                     </TouchableOpacity>
+                    {/* Duration Selector */}
+                    {!isVideo && (
+                        <View style={styles.headerDurationContainer}>
+                            {[5, 10, 15].map(d => (
+                                <TouchableOpacity key={d} onPress={() => setDuration(d)} style={[styles.durationItem, duration === d && styles.activeDurationItem]}>
+                                    <Text style={[styles.durationText, duration === d && styles.activeDurationText]}>{d}s</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
                     <TouchableOpacity onPress={pickImage} style={styles.iconBtn}>
                         <Ionicons name="image-outline" size={24} color="white" />
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {/* Selected Music Badge */}
+            {selectedMusic && (
+                <View style={styles.musicBadge}>
+                    <Ionicons name="musical-notes" size={16} color="white" />
+                    <Text style={styles.musicBadgeText}>{selectedMusic.title} - {selectedMusic.artist}</Text>
+                    <TouchableOpacity onPress={() => { setSelectedMusic(null); sound?.unloadAsync(); }}>
+                        <Ionicons name="close-circle" size={18} color="white" />
+                    </TouchableOpacity>
+                </View>
+            )}
 
             {/* Editor Area */}
             <View style={styles.editorContainer}>
@@ -221,6 +310,61 @@ const CreateStoryScreen = ({ navigation }: any) => {
                     )}
                 </TouchableOpacity>
             </View>
+
+            {/* Music Picker Modal */}
+            <Modal visible={showMusicPicker} animationType="slide" transparent={true}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Choose Music</Text>
+                            <TouchableOpacity onPress={() => { setShowMusicPicker(false); stopPreview(); }}>
+                                <Ionicons name="close" size={28} color="black" />
+                            </TouchableOpacity>
+                        </View>
+                        
+                        <View style={styles.searchContainer}>
+                            <Ionicons name="search" size={20} color="#666" />
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Search songs, artists..."
+                                value={searchQuery}
+                                onChangeText={(txt) => { setSearchQuery(txt); fetchMusic(txt); }}
+                            />
+                        </View>
+
+                        {musicLoading ? <ActivityIndicator style={{ marginTop: 20 }} color="#ea580c" /> : (
+                            <FlatList
+                                data={musicList}
+                                keyExtractor={(item) => item.id.toString()}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity 
+                                        style={[styles.musicItem, selectedMusic?.id === item.id && styles.selectedMusicItem]}
+                                        onPress={() => playPreview(item)}
+                                    >
+                                        <View style={styles.musicIconCircle}>
+                                            <Ionicons name="musical-note" size={20} color="#ea580c" />
+                                        </View>
+                                        <View style={{ flex: 1, marginLeft: 12 }}>
+                                            <Text style={styles.musicTitle}>{item.title}</Text>
+                                            <Text style={styles.musicArtist}>{item.artist}</Text>
+                                        </View>
+                                        {selectedMusic?.id === item.id && <Ionicons name="checkmark-circle" size={24} color="#ea580c" />}
+                                    </TouchableOpacity>
+                                )}
+                                ListEmptyComponent={<Text style={styles.emptyText}>No music found</Text>}
+                                contentContainerStyle={{ paddingBottom: 20 }}
+                            />
+                        )}
+
+                        <TouchableOpacity 
+                            style={styles.doneBtn} 
+                            onPress={() => { setShowMusicPicker(false); stopPreview(); }}
+                        >
+                            <Text style={styles.doneBtnText}>Done</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -242,6 +386,23 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center'
     },
+    headerDurationContainer: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        borderRadius: 20,
+        padding: 2,
+        alignItems: 'center'
+    },
+    durationItem: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 15,
+    },
+    activeDurationItem: {
+        backgroundColor: '#ea580c',
+    },
+    durationText: { color: 'white', fontSize: 11, fontWeight: 'bold' },
+    activeDurationText: { color: 'white' },
     editorContainer: {
         flex: 1,
         marginTop: 10,
@@ -277,7 +438,35 @@ const styles = StyleSheet.create({
         color: 'black',
         fontWeight: 'bold',
         fontSize: 16
-    }
+    },
+    musicBadge: {
+        position: 'absolute',
+        top: 120,
+        alignSelf: 'center',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        gap: 8,
+        zIndex: 60
+    },
+    musicBadgeText: { color: 'white', fontSize: 13, fontWeight: 'bold' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: 'white', borderTopLeftRadius: 25, borderTopRightRadius: 25, height: '70%', padding: 20 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    modalTitle: { fontSize: 20, fontWeight: 'bold' },
+    searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f0f0', borderRadius: 10, paddingHorizontal: 12, marginBottom: 15 },
+    searchInput: { flex: 1, paddingVertical: 10, marginLeft: 8, fontSize: 16 },
+    musicItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+    selectedMusicItem: { backgroundColor: '#fff7ed' },
+    musicIconCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#ffedd5', alignItems: 'center', justifyContent: 'center' },
+    musicTitle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+    musicArtist: { fontSize: 13, color: '#666' },
+    emptyText: { textAlign: 'center', marginTop: 30, color: '#999' },
+    doneBtn: { backgroundColor: '#ea580c', paddingVertical: 15, borderRadius: 15, alignItems: 'center', marginTop: 10 },
+    doneBtnText: { color: 'white', fontWeight: 'bold', fontSize: 16 }
 });
 
 export default CreateStoryScreen;

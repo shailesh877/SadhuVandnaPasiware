@@ -13,3 +13,11 @@ php_value upload_max_filesize 2048M
 php_value post_max_size 2050M
 php_value max_execution_time 3000
 php_value max_input_time 3000
+
+# Explicit Video MIME Types
+AddType video/mp4 .mp4
+AddType video/webm .webm
+AddType video/x-matroska .mkv
+AddType video/quicktime .mov
+AddType video/x-m4v .m4v
+AddType video/3gpp .3gp

@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "235273523422",
-    "project_id": "sadhu-vandna-ab2ff",
-    "storage_bucket": "sadhu-vandna-ab2ff.firebasestorage.app"
+    "project_number": "198057142097",
+    "project_id": "sadhuvandnaappnotification",
+    "storage_bucket": "sadhuvandnaappnotification.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:235273523422:android:3dcb2670565aab7f14f24f",
+        "mobilesdk_app_id": "1:198057142097:android:8365bc483004b491c95570",
         "android_client_info": {
-          "package_name": "com.app.sadhuvandna"
+          "package_name": "com.sadhuvandna.app"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyB_FoepSSpyiGSbFKxAw_i0RsqPIxNdLpM"
+          "current_key": "AIzaSyA9ntWnGaQvwJQFmZ1YTl2pBK29J5UfGBI"
         }
       ],
       "services": {

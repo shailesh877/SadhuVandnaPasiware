@@ -1,9 +1,11 @@
 {
   "expo": {
-    "name": "Sadhu Vandna",
+    "name": "Linkup",
     "slug": "sadhu-vandna",
-    "version": "1.15",
+    "version": "1.45.0",
+    "scheme": "sadhuvandna",
     "orientation": "portrait",
+
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -20,17 +22,78 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "versionCode": 15,
+      "versionCode": 45,
       "edgeToEdgeEnabled": false,
+
       "predictiveBackGestureEnabled": false,
-      "package": "com.app.sadhuvandna",
+      "package": "com.sadhuvandna.app",
       "googleServicesFile": "./google-services.json",
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "com.google.android.gms.permission.AD_ID"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "www.sadhuvandna.co.in",
+              "pathPrefix": "/view_post.php"
+            },
+            {
+              "scheme": "https",
+              "host": "www.sadhuvandna.co.in",
+              "pathPrefix": "/view_news.php"
+            },
+            {
+              "scheme": "https",
+              "host": "sadhuvandna.co.in",
+              "pathPrefix": "/view_post.php"
+            },
+            {
+              "scheme": "https",
+              "host": "sadhuvandna.co.in",
+              "pathPrefix": "/view_news.php"
+            },
+            {
+              "scheme": "https",
+              "host": "sadhuvandna.co.in",
+              "pathPrefix": "/Api/join_group.php"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "sadhuvandna"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3506685647762869~7657403518"
+        }
+      ],
       "expo-secure-store",
       "expo-notifications",
       [
@@ -52,8 +115,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "5ee8422c-a223-4f34-b76c-488624969e93"
+        "projectId": "e0e24b0e-4455-465b-baab-ee520d15958b"
       }
-    }
+    },
+    "owner": "pasiwaresocial"
   }
 }

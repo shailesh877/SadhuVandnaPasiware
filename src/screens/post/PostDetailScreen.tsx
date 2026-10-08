@@ -10,26 +10,66 @@ const BASE_URL_ROOT = API_BASE_URL.replace('/Api', '');
 const PHOTO_URL = `${BASE_URL_ROOT}/uploads/photo/`;
 
 const PostDetailScreen = ({ route, navigation }: any) => {
-    const { post, focusedComment } = route.params; // Expect full post object passed
+    const { post, postId, focusedComment } = route.params;
     const [comments, setComments] = useState<any[]>([]);
     const [newComment, setNewComment] = useState('');
     const [loadingComments, setLoadingComments] = useState(true);
+    const [loadingPost, setLoadingPost] = useState(!post && !!postId);
     const [user, setUser] = useState<any>(null);
-    const [currentPost, setCurrentPost] = useState<PostType>(post); // Local state for post (like count updates)
+    const [currentPost, setCurrentPost] = useState<PostType | null>(post || null);
 
     useEffect(() => {
         loadUser();
-        fetchComments();
-    }, []);
+        if (post) {
+            fetchComments(post.id);
+        } else if (postId) {
+            fetchSinglePost(postId);
+        }
+    }, [postId]);
+
+    const fetchSinglePost = async (id: string) => {
+        try {
+            setLoadingPost(true);
+            const res = await api.get(`get_posts.php?post_id=${id}`);
+            if (res.data.status === 'success' && res.data.data && res.data.data.length > 0) {
+                const item = res.data.data[0];
+                const transformedPost: PostType = {
+                    id: String(item.id),
+                    user: {
+                        id: String(item.user_id),
+                        name: item.name || 'User',
+                        avatar: item.profile_photo ? `${PHOTO_URL}${item.profile_photo}` : 'https://via.placeholder.com/50'
+                    },
+                    content: item.description || item.status || '',
+                    media: item.media || [],
+                    likes: parseInt(item.likes) || 0,
+                    comments: Array.isArray(item.comments) ? item.comments.length : (parseInt(item.comments) || 0),
+                    timeAgo: item.date || '',
+                    isLiked: !!item.user_liked,
+                    link: item.link
+                };
+                setCurrentPost(transformedPost);
+                fetchComments(String(item.id));
+            } else {
+                Alert.alert("Error", "Post not found");
+                navigation.goBack();
+            }
+        } catch (e) {
+            console.error(e);
+            Alert.alert("Error", "Failed to load post");
+        } finally {
+            setLoadingPost(false);
+        }
+    };
 
     const loadUser = async () => {
         const u = await AsyncStorage.getItem('user');
         if (u) setUser(JSON.parse(u));
     };
 
-    const fetchComments = async () => {
+    const fetchComments = async (id: string) => {
         try {
-            const res = await api.get(`/get_posts.php?action=fetch_comments&id=${post.id}`);
+            const res = await api.get(`get_posts.php?action=fetch_comments&id=${id}`);
             if (Array.isArray(res.data)) {
                 setComments(res.data);
             }
@@ -41,22 +81,22 @@ const PostDetailScreen = ({ route, navigation }: any) => {
     };
 
     const handleSendComment = async () => {
-        if (!newComment.trim()) return;
+        if (!newComment.trim() || !currentPost) return;
         if (!user) { Alert.alert("Login Required"); return; }
 
         try {
-            const fd = new FormData();
-            fd.append('id', post.id);
-            fd.append('user_id', user.id);
-            fd.append('action', 'comment');
-            fd.append('comment', newComment);
-
-            await api.post('/like_comment_action.php', fd);
+            const payload = {
+                id: currentPost.id,
+                user_id: user.id,
+                action: 'comment',
+                comment: newComment
+            };
+            await api.post('like_comment_action.php', payload);
             setNewComment('');
-            fetchComments();
+            fetchComments(currentPost.id);
 
             // Optimistically update comment count on post
-            setCurrentPost(prev => ({ ...prev, comments: prev.comments + 1 }));
+            setCurrentPost(prev => prev ? ({ ...prev, comments: prev.comments + 1 }) : null);
         } catch (e) {
             Alert.alert("Error", "Failed to post comment");
         }
@@ -84,33 +124,38 @@ const PostDetailScreen = ({ route, navigation }: any) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
                     <Ionicons name="arrow-back" size={24} color="black" />
                 </TouchableOpacity>
-                <Text className="font-bold text-lg ml-2">{post.user.name}'s Post</Text>
+                <Text className="font-bold text-lg ml-2">{currentPost?.user?.name || 'Post'}'s Post</Text>
             </View>
 
-            <FlatList
-                data={comments}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={renderComment}
-                ListHeaderComponent={
-                    <View className="mb-2">
-                        {/* We reuse PostCard but disable navigation to self to prevent infinite loop */}
-                        <PostCard
-                            post={currentPost}
-                            shouldPlay={true} // Autoplay effectively in detail view
-                            onUserPress={() => navigation.navigate('PublicProfile', { userId: post.user.id })}
-                        />
-                        <Text className="p-3 font-bold text-gray-500 text-sm">Comments</Text>
-                    </View>
-                }
-                ListEmptyComponent={
-                    !loadingComments ? (
-                        <Text className="text-center text-gray-400 py-10">No comments yet. Be the first!</Text>
-                    ) : (
-                        <ActivityIndicator className="py-10" color="orange" />
-                    )
-                }
-                contentContainerStyle={{ paddingBottom: 80 }}
-            />
+            {loadingPost ? (
+                <View className="flex-1 justify-center items-center">
+                    <ActivityIndicator size="large" color="#ea580c" />
+                </View>
+            ) : currentPost ? (
+                <FlatList
+                    data={comments}
+                    keyExtractor={(item, index) => index.toString()}
+                    renderItem={renderComment}
+                    ListHeaderComponent={
+                        <View className="mb-2">
+                            <PostCard
+                                post={currentPost}
+                                shouldPlay={true}
+                                onUserPress={() => navigation.navigate('PublicProfile', { userId: currentPost.user?.id })}
+                            />
+                            <Text className="p-3 font-bold text-gray-500 text-sm">Comments</Text>
+                        </View>
+                    }
+                    ListEmptyComponent={
+                        !loadingComments ? (
+                            <Text className="text-center text-gray-400 py-10">No comments yet. Be the first!</Text>
+                        ) : (
+                            <ActivityIndicator className="py-10" color="orange" />
+                        )
+                    }
+                    contentContainerStyle={{ paddingBottom: 80 }}
+                />
+            ) : null}
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}

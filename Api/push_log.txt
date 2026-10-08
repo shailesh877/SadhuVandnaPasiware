@@ -1,1 +1,0 @@
-2026-09-05 15:41:26 | User: 1765 | Token: ExponentPushToken[vtG51MBYEMKaKhjcoqN65O] | Status: 200 | Error:  | Resp: {"data":{"status":"ok","id":"01a0710d-347c-729f-bde5-abadfc7cd3c7"}}

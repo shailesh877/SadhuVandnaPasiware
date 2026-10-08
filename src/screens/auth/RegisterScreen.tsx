@@ -31,9 +31,8 @@ const RegisterScreen = ({ navigation }: any) => {
         }
         setLoading(true);
         try {
-            const formData = new FormData();
-            formData.append('email', email);
-            const res = await api.post('/api_send_otp.php', formData);
+            const payload = { email: email };
+            const res = await api.post('/api_send_otp.php', payload);
 
             // Backend now returns clean JSON
             if (res.data.status === 'success') {
@@ -56,11 +55,12 @@ const RegisterScreen = ({ navigation }: any) => {
         }
         setLoading(true);
         try {
-            const formData = new FormData();
-            formData.append('email', email);
-            formData.append('otp', otp);
+            const payload = {
+                email: email,
+                otp: otp
+            };
 
-            const res = await api.post('/api_verify_otp.php', formData);
+            const res = await api.post('/api_verify_otp.php', payload);
 
             // Backend now returns clean JSON
             if (res.data.status === 'success') {
@@ -87,19 +87,18 @@ const RegisterScreen = ({ navigation }: any) => {
 
         setLoading(true);
         try {
-            const formData = new FormData();
-            formData.append('name', name);
-            formData.append('email', email);
-            formData.append('mobile', mobile);
-            formData.append('city', city);
-            formData.append('cast', cast);
-            formData.append('dob', dob);
-            formData.append('gender', gender);
-            formData.append('password', password);
+            const payload = {
+                name: name,
+                email: email,
+                mobile: mobile,
+                city: city,
+                cast: cast,
+                dob: dob,
+                gender: gender,
+                password: password
+            };
 
-            const res = await api.post('/register.php', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            const res = await api.post('/register.php', payload);
 
             if (res.data.status === 'success') {
                 Alert.alert("Success", "Registration Successful! Please Login.", [

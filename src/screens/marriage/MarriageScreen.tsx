@@ -1,13 +1,18 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, TextInput, Alert, ScrollView } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, FlatList, Image, TouchableOpacity, ActivityIndicator, TextInput, Alert, ScrollView, LayoutAnimation, Platform, UIManager, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api, { API_BASE_URL } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const BASE_URL_ROOT = API_BASE_URL.replace('/Api', '');
 const PHOTO_URL = `${BASE_URL_ROOT}/uploads/photo/`;
+const QUICK_TAGS = ['All', 'Delhi', 'Mumbai', 'B.Tech', 'MBA', 'Doctor', 'B.Sc', 'MCA'];
 
 const MarriageScreen = ({ navigation }: any) => {
     const [profiles, setProfiles] = useState<any[]>([]);
@@ -17,7 +22,35 @@ const MarriageScreen = ({ navigation }: any) => {
 
     // Filters
     const [search, setSearch] = useState('');
-    const [filterVisible, setFilterVisible] = useState(true);
+    const [filterVisible, setFilterVisible] = useState(false);
+    const filterAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (filterVisible) {
+            filterAnim.setValue(0);
+            Animated.spring(filterAnim, {
+                toValue: 1,
+                tension: 70,
+                friction: 10,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [filterVisible]);
+
+    const toggleFilter = () => {
+        if (filterVisible) {
+            Animated.timing(filterAnim, {
+                toValue: 0,
+                duration: 180,
+                useNativeDriver: true,
+            }).start(() => {
+                setFilterVisible(false);
+            });
+        } else {
+            setFilterVisible(true);
+        }
+    };
+
     const [gender, setGender] = useState('');
     const [ageGroup, setAgeGroup] = useState('');
     const [city, setCity] = useState('');
@@ -25,19 +58,56 @@ const MarriageScreen = ({ navigation }: any) => {
     const [minAge, setMinAge] = useState('');
     const [maxAge, setMaxAge] = useState('');
 
+    // Pagination
+    const [page, setPage] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadMoreLoading, setIsLoadMoreLoading] = useState(false);
+
     const [userId, setUserId] = useState<string | null>(null);
+
+    // Premium states
+    const [activeTag, setActiveTag] = useState('All');
+    const shimmerAnim = useRef(new Animated.Value(0.4)).current;
+
+    useEffect(() => {
+        if (loading) {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(shimmerAnim, {
+                        toValue: 1.0,
+                        duration: 850,
+                        useNativeDriver: true
+                    }),
+                    Animated.timing(shimmerAnim, {
+                        toValue: 0.4,
+                        duration: 850,
+                        useNativeDriver: true
+                    })
+                ])
+            ).start();
+        } else {
+            shimmerAnim.setValue(0.4);
+        }
+    }, [loading]);
 
     useEffect(() => {
         loadUser();
     }, []);
 
-    useFocusEffect(
-        useCallback(() => {
-            if (userId) {
+    useEffect(() => {
+        if (userId && profiles.length === 0) {
+            fetchProfiles();
+        }
+    }, [userId]);
+
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+            if (userId && profiles.length === 0) {
                 fetchProfiles();
             }
-        }, [userId, gender, minAge, maxAge, city, education, search])
-    );
+        });
+        return unsubscribe;
+    }, [navigation, userId]);
 
     const loadUser = async () => {
         const u = await AsyncStorage.getItem('user');
@@ -46,21 +116,47 @@ const MarriageScreen = ({ navigation }: any) => {
         }
     };
 
-    const fetchProfiles = async () => {
-        setLoading(true);
+    const fetchProfiles = async (isMore = false, overrideFilters?: { gender?: string; city?: string; education?: string }) => {
+        if (isMore && (isLoadMoreLoading || !hasMore)) return;
+
+        if (isMore) setIsLoadMoreLoading(true);
+        else setLoading(true);
+
+        const activeGender = overrideFilters?.gender !== undefined ? overrideFilters.gender : gender;
+        const activeCity = overrideFilters?.city !== undefined ? overrideFilters.city : city;
+        const activeEducation = overrideFilters?.education !== undefined ? overrideFilters.education : education;
+
         try {
+            const currentOffset = isMore ? (page + 1) * 20 : 0;
             const params = new URLSearchParams();
             params.append('user_id', userId || '0');
-            if (search) params.append('city', search); // Search box acts as City search on web? Web has separate City input.
-            // Let's us search as city or generic search.
-            if (gender) params.append('gender', gender);
+            params.append('limit', '20');
+            params.append('offset', currentOffset.toString());
+
+            if (search) params.append('city', search);
+            if (activeGender) params.append('gender', activeGender);
             if (minAge && maxAge) params.append('age', `${minAge}-${maxAge}`);
-            if (city) params.append('city', city);
-            if (education) params.append('education', education);
+            if (activeCity) params.append('city', activeCity);
+            if (activeEducation) params.append('education', activeEducation);
 
             const res = await api.get(`/get_matrimony_profiles.php?${params.toString()}`);
             if (res.data.status === 'success') {
-                setProfiles(res.data.data);
+                const newData = res.data.data || [];
+
+                if (newData.length < 20) {
+                    setHasMore(false);
+                } else {
+                    setHasMore(true);
+                }
+
+                if (isMore) {
+                    setProfiles(prev => [...prev, ...newData]);
+                    setPage(prev => prev + 1);
+                } else {
+                    setProfiles(newData);
+                    setPage(0);
+                }
+
                 setMyProfileId(res.data.my_profile_id);
                 setRequestCount(res.data.request_count);
             }
@@ -68,7 +164,62 @@ const MarriageScreen = ({ navigation }: any) => {
             console.error(error);
         } finally {
             setLoading(false);
+            setIsLoadMoreLoading(false);
         }
+    };
+
+    const handleGenderSegmentPress = (selectedGender: string) => {
+        setGender(selectedGender);
+        fetchProfiles(false, { gender: selectedGender, city, education });
+    };
+
+    const handleTagPress = (tag: string) => {
+        setActiveTag(tag);
+        let nextCity = '';
+        let nextEducation = '';
+        
+        if (tag === 'All') {
+            nextCity = '';
+            nextEducation = '';
+            setCity('');
+            setEducation('');
+        } else if (['Delhi', 'Mumbai'].includes(tag)) {
+            nextCity = tag;
+            nextEducation = '';
+            setCity(tag);
+            setEducation('');
+        } else {
+            nextCity = '';
+            nextEducation = tag;
+            setCity('');
+            setEducation(tag);
+        }
+        
+        fetchProfiles(false, { gender, city: nextCity, education: nextEducation });
+    };
+
+    const renderSkeletonCard = () => {
+        return (
+            <Animated.View
+                style={{
+                    flex: 1,
+                    backgroundColor: 'white',
+                    margin: 6,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: '#f3f4f6',
+                    overflow: 'hidden',
+                    opacity: shimmerAnim
+                }}
+            >
+                <View style={{ width: '100%', height: 160, backgroundColor: '#e5e7eb' }} />
+                <View style={{ padding: 12 }}>
+                    <View style={{ width: '70%', height: 14, backgroundColor: '#e5e7eb', borderRadius: 4, marginBottom: 8 }} />
+                    <View style={{ width: '90%', height: 10, backgroundColor: '#e5e7eb', borderRadius: 4 }} />
+                </View>
+                <View style={{ width: '100%', height: 36, backgroundColor: '#f9fafb', borderTopWidth: 1, borderColor: '#f3f4f6' }} />
+            </Animated.View>
+        );
     };
 
     const handleSendRequest = async (receiverId: string) => {
@@ -107,59 +258,80 @@ const MarriageScreen = ({ navigation }: any) => {
         const isSender = item.is_sender;
         const status = item.proposal_status;
 
+        // Generate a deterministic compatibility score based on name & ID
+        const scoreHash = (item.full_name?.charCodeAt(0) || 0) + (parseInt(item.id) || 0);
+        const compatibilityScore = 78 + (scoreHash % 21); // Generates a percentage between 78% and 98%
+
         return (
             <TouchableOpacity
                 activeOpacity={0.9}
                 onPress={() => navigation.navigate('MarriageDetail', { profile: item })}
-                className="flex-1 bg-white m-1.5 rounded-2xl shadow-md border border-gray-100 overflow-hidden"
-                style={{ elevation: 4 }}
+                style={{ 
+                    flex: 1, 
+                    backgroundColor: 'white', 
+                    margin: 6, 
+                    borderRadius: 20, 
+                    borderWidth: 1, 
+                    borderColor: '#f3f4f6', 
+                    shadowColor: '#000', 
+                    shadowOffset: { width: 0, height: 4 }, 
+                    shadowOpacity: 0.03, 
+                    shadowRadius: 10, 
+                    elevation: 2, 
+                    overflow: 'hidden' 
+                }}
             >
-                <View className="relative">
+                <View style={{ position: 'relative' }}>
                     <Image
                         source={{ uri: item.photo ? `${PHOTO_URL}${item.photo}` : 'https://via.placeholder.com/150' }}
-                        className="w-full h-40 object-cover bg-gray-200"
+                        style={{ width: '100%', height: 160, backgroundColor: '#f9fafb' }}
+                        resizeMode="cover"
                     />
-                    <View className="absolute bottom-0 left-0 right-0 bg-black/40 p-2">
-                        <Text className="text-white font-bold text-sm" numberOfLines={1}>{item.full_name}</Text>
-                        <Text className="text-white/90 text-xs">{item.age} yrs, {item.city}</Text>
+                    {/* Flame compatibility score badge */}
+                    <View style={{ position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(255, 255, 255, 0.85)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                        <Text style={{ fontSize: 9, fontWeight: 'extrabold', color: '#ea580c' }}>🔥 {compatibilityScore}%</Text>
                     </View>
-                    <View className="absolute top-2 right-2 bg-white/90 px-2 py-0.5 rounded-full">
-                        <Text className="text-orange-600 text-[10px] font-bold uppercase">{item.status}</Text>
+                    <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(255, 255, 255, 0.85)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}>
+                        <Text style={{ color: '#ea580c', fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 }}>{item.status || 'UNMARRIED'}</Text>
                     </View>
                 </View>
 
-                <View className="p-3 bg-white">
-                    <Text className="text-gray-500 text-xs mb-2" numberOfLines={1}>🎓 {item.education || 'Not specified'}</Text>
+                <View style={{ padding: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#1f2937' }} numberOfLines={1}>
+                        {item.full_name}, {item.age}
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '500', color: '#6b7280', marginTop: 4 }} numberOfLines={1}>
+                        {item.city || 'Location'} • {item.education || 'Not specified'}
+                    </Text>
+                </View>
 
-                    {/* Action Buttons */}
-                    <View className="flex-row gap-2 mt-1">
-                        {(!status || status === 'rejected') && (
-                            <TouchableOpacity
-                                className="flex-1 bg-orange-50 py-2 rounded-xl items-center border border-orange-100"
-                                onPress={() => navigation.navigate('MarriageDetail', { profile: item })}
-                            >
-                                <Text className="text-orange-600 font-bold text-xs uppercase">View</Text>
-                            </TouchableOpacity>
-                        )}
+                {/* Card Footer Action Strip */}
+                <View style={{ marginTop: 'auto' }}>
+                    {(!status || status === 'rejected') && (
+                        <View
+                            style={{ width: '100%', backgroundColor: '#fff7ed', paddingVertical: 10, alignItems: 'center', justifyContent: 'center', borderTopWidth: 1, borderTopColor: '#ffedd5' }}
+                        >
+                            <Text style={{ color: '#ea580c', fontWeight: 'bold', fontSize: 11, letterSpacing: 0.3 }}>View Profile</Text>
+                        </View>
+                    )}
 
-                        {status === 'pending' && (
-                            <TouchableOpacity
-                                disabled={true}
-                                className="flex-1 bg-orange-100 border border-orange-200 py-2 rounded-xl items-center"
-                            >
-                                <Text className="text-orange-600 font-bold text-xs">Requested</Text>
-                            </TouchableOpacity>
-                        )}
+                    {status === 'pending' && (
+                        <View
+                            style={{ width: '100%', backgroundColor: '#f9fafb', paddingVertical: 10, alignItems: 'center', justifyContent: 'center', borderTopWidth: 1, borderTopColor: '#e5e7eb' }}
+                        >
+                            <Text style={{ color: '#9ca3af', fontWeight: 'bold', fontSize: 11, letterSpacing: 0.3 }}>Requested</Text>
+                        </View>
+                    )}
 
-                        {(status === 'accepted' || status === 'friend') && (
-                            <TouchableOpacity
-                                className="flex-1 bg-green-600 py-2 rounded-xl items-center shadow-sm"
-                                onPress={() => navigation.navigate('Chat', { receiver: item })}
-                            >
-                                <Text className="text-white font-bold text-xs">Message</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
+                    {(status === 'accepted' || status === 'friend') && (
+                        <TouchableOpacity
+                            style={{ width: '100%', backgroundColor: '#f0fdf4', paddingVertical: 10, alignItems: 'center', justifyContent: 'center', borderTopWidth: 1, borderTopColor: '#dcfce7' }}
+                            onPress={() => navigation.navigate('Chat', { receiver: item, platform: 'marriage' })}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={{ color: '#16a34a', fontWeight: 'bold', fontSize: 11, letterSpacing: 0.3 }}>Message</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             </TouchableOpacity>
         );
@@ -168,112 +340,280 @@ const MarriageScreen = ({ navigation }: any) => {
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
             <View className="px-4 py-3 bg-white border-b border-gray-100 shadow-sm z-10">
-                <View className="flex-row justify-between items-center mb-4">
+                <View className="flex-row justify-between items-center">
                     <Text className="text-2xl font-extrabold text-gray-800 tracking-tight">Matrimony</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('CreateMarriageProfile', { profile: myProfileId ? { id: myProfileId } : null })} className="bg-orange-50 border border-orange-100 px-3 py-1.5 rounded-full flex-row items-center gap-1 shadow-sm">
-                        <Ionicons name={myProfileId ? "create-outline" : "add-circle-outline"} size={16} color="#ea580c" />
-                        <Text className="text-orange-600 text-xs font-bold">{myProfileId ? 'My Profile' : 'Create Profile'}</Text>
-                    </TouchableOpacity>
-                </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate('Requests')} 
+                            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#fdf2f8', borderWidth: 1, borderColor: '#fce7f3', alignItems: 'center', justifyContent: 'center', marginRight: 6, position: 'relative' }}
+                            activeOpacity={0.7}
+                        >
+                            <Ionicons name="heart" size={16} color="#db2777" />
+                            {requestCount > 0 && (
+                                <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: '#ef4444', minWidth: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2, borderWidth: 1, borderColor: 'white' }}>
+                                    <Text style={{ color: 'white', fontSize: 7, fontWeight: 'extrabold' }}>{requestCount}</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
 
-                {/* Header Actions */}
-                <View className="flex-row justify-between gap-3 mb-4">
-                    {/* Removed Sent Button as requested */}
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate('Connected')} 
+                            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#dcfce7', alignItems: 'center', justifyContent: 'center', marginRight: 6 }}
+                            activeOpacity={0.7}
+                        >
+                            <Ionicons name="people" size={16} color="#16a34a" />
+                        </TouchableOpacity>
 
-                    <TouchableOpacity className="flex-1 items-center bg-white p-2.5 rounded-2xl border border-gray-100 shadow-sm" onPress={() => navigation.navigate('Requests')}>
-                        <View className="bg-pink-50 p-2 rounded-full mb-1 relative">
-                            <Ionicons name="heart" size={18} color="#db2777" />
-                            {requestCount > 0 && <View className="absolute -top-1 -right-1 bg-red-500 w-5 h-5 rounded-full items-center justify-center border-2 border-white"><Text className="text-white text-[9px] font-bold">{requestCount}</Text></View>}
-                        </View>
-                        <Text className="text-xs font-semibold text-gray-600">Requests</Text>
-                    </TouchableOpacity>
+                        <TouchableOpacity 
+                            onPress={toggleFilter} 
+                            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginRight: 8 }}
+                            activeOpacity={0.7}
+                        >
+                            <Ionicons name="options" size={16} color="#ea580c" />
+                        </TouchableOpacity>
 
-                    <TouchableOpacity className="flex-1 items-center bg-white p-2.5 rounded-2xl border border-gray-100 shadow-sm" onPress={() => navigation.navigate('Connected')}>
-                        <View className="bg-green-50 p-2 rounded-full mb-1"><Ionicons name="people" size={18} color="#16a34a" /></View>
-                        <Text className="text-xs font-semibold text-gray-600">Matches</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Filters Toggle */}
-                <TouchableOpacity onPress={() => setFilterVisible(!filterVisible)} className="flex-row justify-between items-center bg-white p-3 mx-4 rounded-xl border border-gray-100 shadow-sm mb-2">
-                    <View className="flex-row items-center gap-2">
-                        <View className="bg-orange-50 p-1.5 rounded-lg"><Ionicons name="options" size={18} color="#ea580c" /></View>
-                        <Text className="text-gray-800 font-bold text-sm">Filter Matches</Text>
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate('CreateMarriageProfile', { profile: myProfileId ? { id: myProfileId } : null })} 
+                            style={{ backgroundColor: '#fff7ed', borderWidth: 1, borderColor: '#ffedd5', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                            activeOpacity={0.7}
+                        >
+                            <Ionicons name={myProfileId ? "create-outline" : "add-circle-outline"} size={14} color="#ea580c" />
+                            <Text style={{ color: '#ea580c', fontSize: 11, fontWeight: 'bold' }}>{myProfileId ? 'Profile' : 'Create'}</Text>
+                        </TouchableOpacity>
                     </View>
-                    <Ionicons name={filterVisible ? "chevron-up" : "chevron-down"} size={20} color="gray" />
-                </TouchableOpacity>
-
-                {/* Filters View */}
-                {filterVisible && (
-                    <View className="mx-4 mb-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                        <Text className="text-xs font-bold text-gray-500 uppercase mb-3 tracking-wider">Gender</Text>
-                        <View className="flex-row gap-3 mb-4">
-                            <TouchableOpacity onPress={() => setGender('Male')} className={`flex-1 py-2.5 rounded-xl border ${gender === 'Male' ? 'bg-orange-600 border-orange-600' : 'bg-gray-50 border-gray-100'}`}>
-                                <Text className={`text-center text-sm font-bold ${gender === 'Male' ? 'text-white' : 'text-gray-500'}`}>Groom (Male)</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setGender('Female')} className={`flex-1 py-2.5 rounded-xl border ${gender === 'Female' ? 'bg-pink-600 border-pink-600' : 'bg-gray-50 border-gray-100'}`}>
-                                <Text className={`text-center text-sm font-bold ${gender === 'Female' ? 'text-white' : 'text-gray-500'}`}>Bride (Female)</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        <Text className="text-xs font-bold text-gray-500 uppercase mb-3 tracking-wider">Age Range</Text>
-                        <View className="flex-row gap-3 mb-4">
-                            <View className="flex-1 bg-gray-50 rounded-xl border border-gray-100 flex-row items-center px-3">
-                                <TextInput placeholder="Min Age" value={minAge} onChangeText={setMinAge} keyboardType="numeric" className="flex-1 py-2.5 px-2 text-gray-700 text-sm" placeholderTextColor="#9ca3af" />
-                            </View>
-                            <View className="flex-1 bg-gray-50 rounded-xl border border-gray-100 flex-row items-center px-3">
-                                <TextInput placeholder="Max Age" value={maxAge} onChangeText={setMaxAge} keyboardType="numeric" className="flex-1 py-2.5 px-2 text-gray-700 text-sm" placeholderTextColor="#9ca3af" />
-                            </View>
-                        </View>
-
-                        <Text className="text-xs font-bold text-gray-500 uppercase mb-3 tracking-wider">Location & Education</Text>
-                        <View className="flex-row gap-3 mb-4">
-                            <View className="flex-1 bg-gray-50 rounded-xl border border-gray-100 flex-row items-center px-3">
-                                <Ionicons name="location-outline" size={16} color="gray" />
-                                <TextInput placeholder="City..." value={city} onChangeText={setCity} className="flex-1 py-2.5 px-2 text-gray-700 text-sm" placeholderTextColor="#9ca3af" />
-                            </View>
-                            <View className="flex-1 bg-gray-50 rounded-xl border border-gray-100 flex-row items-center px-3">
-                                <Ionicons name="school-outline" size={16} color="gray" />
-                                <TextInput placeholder="Degree..." value={education} onChangeText={setEducation} className="flex-1 py-2.5 px-2 text-gray-700 text-sm" placeholderTextColor="#9ca3af" />
-                            </View>
-                        </View>
-
-                        <View className="flex-row justify-between items-center pt-2 border-t border-gray-50">
-                            <TouchableOpacity onPress={() => { setGender(''); setCity(''); setEducation(''); setMinAge(''); setMaxAge(''); }} className="px-3 py-1">
-                                <Text className="text-gray-400 text-xs font-bold">Reset All</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => { setFilterVisible(false); fetchProfiles(); }} className="bg-gray-800 px-6 py-2 rounded-lg">
-                                <Text className="text-white text-xs font-bold">Apply Filters</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                )}
+                </View>
             </View>
 
-            {loading ? (
-                <View className="flex-1 justify-center items-center">
-                    <ActivityIndicator size="large" color="#ea580c" />
-                    <Text className="text-gray-400 text-xs mt-2">Finding matches...</Text>
+            {loading && myProfileId === 0 ? (
+                <View style={{ flex: 1, backgroundColor: '#f9fafb', paddingTop: 16 }}>
+                    <FlatList
+                        data={[1, 2, 3, 4, 5, 6]}
+                        renderItem={renderSkeletonCard}
+                        keyExtractor={(item) => item.toString()}
+                        numColumns={2}
+                        contentContainerStyle={{ paddingHorizontal: 6, paddingVertical: 6 }}
+                    />
+                </View>
+            ) : !myProfileId ? (
+                // Gate: No profile created yet
+                <View className="flex-1 items-center justify-center px-8 bg-gray-50">
+                    <View className="bg-white rounded-3xl p-8 items-center shadow-md border border-gray-100 w-full">
+                        <View className="bg-orange-100 p-5 rounded-full mb-5">
+                            <Ionicons name="heart-circle-outline" size={52} color="#ea580c" />
+                        </View>
+                        <Text className="text-xl font-extrabold text-gray-800 mb-2 text-center">Welcome to Matrimony!</Text>
+                        <Text className="text-gray-500 text-sm text-center leading-5 mb-6">
+                            To browse profiles and send proposals, you first need to create your own marriage profile.
+                        </Text>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('CreateMarriageProfile', { profile: null })}
+                            className="bg-orange-600 w-full py-3.5 rounded-2xl items-center shadow-sm mb-3"
+                        >
+                            <Text className="text-white font-extrabold text-base">Create My Profile</Text>
+                        </TouchableOpacity>
+                        <Text className="text-gray-400 text-xs text-center">
+                            After creating your profile, you can view other profiles and send requests.
+                        </Text>
+                    </View>
                 </View>
             ) : (
-                <FlatList
-                    data={profiles}
-                    renderItem={renderProfile}
-                    keyExtractor={item => item.id?.toString()}
-                    numColumns={2}
-                    contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
-                    className="bg-gray-50"
-                    ListEmptyComponent={
-                        <View className="items-center justify-center py-20">
-                            <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/7486/7486744.png' }} className="w-20 h-20 opacity-30 mb-4" />
-                            <Text className="text-gray-500 font-bold text-lg">No Profiles Found</Text>
-                            <Text className="text-gray-400 text-xs mt-1 text-center w-64">Try changing filters or check back later for new matches.</Text>
-                            <TouchableOpacity onPress={fetchProfiles} className="mt-6 bg-orange-100 px-6 py-2 rounded-full">
-                                <Text className="text-orange-600 font-bold text-xs">Refresh</Text>
-                            </TouchableOpacity>
-                        </View>
-                    }
-                />
+                <View style={{ flex: 1, position: 'relative' }}>
+                    {/* Segment Switcher */}
+                    <View style={{ flexDirection: 'row', backgroundColor: '#f3f4f6', borderRadius: 24, padding: 3, marginHorizontal: 16, marginTop: 12, marginBottom: 8 }}>
+                        <TouchableOpacity
+                            onPress={() => handleGenderSegmentPress('')}
+                            style={{ flex: 1, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: gender === '' ? 'white' : 'transparent', borderRadius: 20, shadowColor: gender === '' ? '#000' : 'transparent', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: gender === '' ? 2 : 0 }}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={{ fontSize: 13, fontWeight: 'bold', color: gender === '' ? '#ea580c' : '#4b5563' }}>All Matches</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => handleGenderSegmentPress('Male')}
+                            style={{ flex: 1, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: gender === 'Male' ? 'white' : 'transparent', borderRadius: 20, shadowColor: gender === 'Male' ? '#000' : 'transparent', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: gender === 'Male' ? 2 : 0 }}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={{ fontSize: 13, fontWeight: 'bold', color: gender === 'Male' ? '#ea580c' : '#4b5563' }}>Grooms</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => handleGenderSegmentPress('Female')}
+                            style={{ flex: 1, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: gender === 'Female' ? 'white' : 'transparent', borderRadius: 20, shadowColor: gender === 'Female' ? '#000' : 'transparent', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: gender === 'Female' ? 2 : 0 }}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={{ fontSize: 13, fontWeight: 'bold', color: gender === 'Female' ? '#ea580c' : '#4b5563' }}>Brides</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Quick Tags Filter Carousel */}
+                    <View style={{ marginBottom: 6 }}>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 6 }}
+                        >
+                            {QUICK_TAGS.map((tag) => (
+                                <TouchableOpacity
+                                    key={tag}
+                                    onPress={() => handleTagPress(tag)}
+                                    style={{
+                                        paddingHorizontal: 16,
+                                        paddingVertical: 8,
+                                        borderRadius: 20,
+                                        backgroundColor: activeTag === tag ? '#ea580c' : 'white',
+                                        borderWidth: 1,
+                                        borderColor: activeTag === tag ? '#ea580c' : '#e5e7eb',
+                                        shadowColor: '#000',
+                                        shadowOffset: { width: 0, height: 1 },
+                                        shadowOpacity: 0.03,
+                                        shadowRadius: 2,
+                                        elevation: 1
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: activeTag === tag ? 'white' : '#6b7280' }}>
+                                        {tag}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+
+                    {loading ? (
+                        <FlatList
+                            data={[1, 2, 3, 4, 5, 6]}
+                            renderItem={renderSkeletonCard}
+                            keyExtractor={(item) => item.toString()}
+                            numColumns={2}
+                            contentContainerStyle={{ paddingHorizontal: 6, paddingVertical: 6 }}
+                        />
+                    ) : (
+                        <FlatList
+                            data={profiles}
+                            renderItem={renderProfile}
+                            keyExtractor={item => item.id?.toString()}
+                            numColumns={2}
+                            onEndReached={() => fetchProfiles(true)}
+                            onEndReachedThreshold={0.5}
+                            ListFooterComponent={
+                                isLoadMoreLoading ? (
+                                    <View className="py-4">
+                                        <ActivityIndicator color="#ea580c" />
+                                    </View>
+                                ) : null
+                            }
+                            contentContainerStyle={{ paddingHorizontal: 6, paddingVertical: 10, paddingBottom: 80 }}
+                            className="bg-gray-50"
+                            ListEmptyComponent={
+                                <View className="items-center justify-center py-20">
+                                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/7486/7486744.png' }} className="w-20 h-20 opacity-30 mb-4" />
+                                    <Text className="text-gray-500 font-bold text-lg">No Profiles Found</Text>
+                                    <Text className="text-gray-400 text-xs mt-1 text-center w-64">Try changing filters or check back later for new matches.</Text>
+                                    <TouchableOpacity onPress={() => fetchProfiles()} className="mt-6 bg-orange-100 px-6 py-2 rounded-full">
+                                        <Text className="text-orange-600 font-bold text-xs">Refresh</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            }
+                        />
+                    )}
+
+                    {filterVisible && (
+                        <>
+                            {/* Backdrop overlay */}
+                            <Animated.View 
+                                style={{ 
+                                    position: 'absolute', 
+                                    top: 0, 
+                                    left: 0, 
+                                    right: 0, 
+                                    bottom: 0, 
+                                    backgroundColor: 'rgba(0,0,0,0.3)', 
+                                    zIndex: 90,
+                                    opacity: filterAnim
+                                }}
+                            >
+                                <TouchableOpacity 
+                                    activeOpacity={1} 
+                                    onPress={toggleFilter}
+                                    style={{ flex: 1 }}
+                                />
+                            </Animated.View>
+
+                            {/* Floating Filter Panel */}
+                            <Animated.View 
+                                style={{ 
+                                    position: 'absolute', 
+                                    top: 8, 
+                                    left: 12, 
+                                    right: 12, 
+                                    backgroundColor: 'white', 
+                                    padding: 20, 
+                                    borderRadius: 24, 
+                                    borderWidth: 1, 
+                                    borderColor: '#f3f4f6', 
+                                    shadowColor: '#000', 
+                                    shadowOffset: { width: 0, height: 10 }, 
+                                    shadowOpacity: 0.15, 
+                                    shadowRadius: 20, 
+                                    elevation: 10, 
+                                    zIndex: 100,
+                                    opacity: filterAnim,
+                                    transform: [
+                                        { translateY: filterAnim.interpolate({ inputRange: [0, 1], outputRange: [-50, 0] }) },
+                                        { scale: filterAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }
+                                    ]
+                                }}
+                            >
+                                <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#9ca3af', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>Gender</Text>
+                                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+                                    <TouchableOpacity 
+                                        onPress={() => setGender('Male')} 
+                                        style={{ flex: 1, borderRadius: 24, borderWidth: 1, borderColor: gender === 'Male' ? '#ea580c' : '#e5e7eb', backgroundColor: gender === 'Male' ? '#ea580c' : '#f9fafb', paddingVertical: 12, alignItems: 'center' }}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Text style={{ fontSize: 13, fontWeight: 'bold', color: gender === 'Male' ? 'white' : '#4b5563' }}>Groom (Male)</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                        onPress={() => setGender('Female')} 
+                                        style={{ flex: 1, borderRadius: 24, borderWidth: 1, borderColor: gender === 'Female' ? '#db2777' : '#e5e7eb', backgroundColor: gender === 'Female' ? '#db2777' : '#f9fafb', paddingVertical: 12, alignItems: 'center' }}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Text style={{ fontSize: 13, fontWeight: 'bold', color: gender === 'Female' ? 'white' : '#4b5563' }}>Bride (Female)</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#9ca3af', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>Age Range</Text>
+                                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+                                    <View style={{ flex: 1, backgroundColor: '#f9fafb', borderRadius: 24, borderWidth: 1, borderColor: '#e5e7eb', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
+                                        <TextInput placeholder="Min Age" value={minAge} onChangeText={setMinAge} keyboardType="numeric" style={{ flex: 1, paddingVertical: 10, fontSize: 13, color: '#111827' }} placeholderTextColor="#9ca3af" />
+                                    </View>
+                                    <View style={{ flex: 1, backgroundColor: '#f9fafb', borderRadius: 24, borderWidth: 1, borderColor: '#e5e7eb', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
+                                        <TextInput placeholder="Max Age" value={maxAge} onChangeText={setMaxAge} keyboardType="numeric" style={{ flex: 1, paddingVertical: 10, fontSize: 13, color: '#111827' }} placeholderTextColor="#9ca3af" />
+                                    </View>
+                                </View>
+
+                                <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#9ca3af', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>Location & Education</Text>
+                                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+                                    <View style={{ flex: 1, backgroundColor: '#f9fafb', borderRadius: 24, borderWidth: 1, borderColor: '#e5e7eb', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
+                                        <Ionicons name="location-outline" size={16} color="#9ca3af" style={{ marginRight: 4 }} />
+                                        <TextInput placeholder="City..." value={city} onChangeText={setCity} style={{ flex: 1, paddingVertical: 10, fontSize: 13, color: '#111827' }} placeholderTextColor="#9ca3af" />
+                                    </View>
+                                    <View style={{ flex: 1, backgroundColor: '#f9fafb', borderRadius: 24, borderWidth: 1, borderColor: '#e5e7eb', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
+                                        <Ionicons name="school-outline" size={16} color="#9ca3af" style={{ marginRight: 4 }} />
+                                        <TextInput placeholder="Degree..." value={education} onChangeText={setEducation} style={{ flex: 1, paddingVertical: 10, fontSize: 13, color: '#111827' }} placeholderTextColor="#9ca3af" />
+                                    </View>
+                                </View>
+
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderColor: '#f3f4f6' }}>
+                                    <TouchableOpacity onPress={() => { setGender(''); setCity(''); setEducation(''); setMinAge(''); setMaxAge(''); }} style={{ paddingHorizontal: 12, paddingVertical: 6 }} activeOpacity={0.7}>
+                                        <Text style={{ color: '#ea580c', fontSize: 13, fontWeight: 'bold' }}>Reset All</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => { toggleFilter(); fetchProfiles(); }} style={{ backgroundColor: '#ea580c', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 24, shadowColor: '#ea580c', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 3 }} activeOpacity={0.8}>
+                                        <Text style={{ color: 'white', fontSize: 13, fontWeight: 'bold' }}>Apply Filters</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </Animated.View>
+                        </>
+                    )}
+                </View>
             )}
         </SafeAreaView>
     );

@@ -19,9 +19,8 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
         }
         setLoading(true);
         try {
-            const formData = new FormData();
-            formData.append('email', email);
-            const res = await api.post('/api_forgot_send_otp.php', formData);
+            const payload = { email: email };
+            const res = await api.post('/api_forgot_send_otp.php', payload);
             if (res.data.status === 'success') {
                 Alert.alert("OTP Sent", "Please check your email for OTP.");
                 setStep(2);
@@ -42,9 +41,8 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
         }
         setLoading(true);
         try {
-            const formData = new FormData();
-            formData.append('otp', otp);
-            const res = await api.post('/api_forgot_verify_otp.php', formData);
+            const payload = { otp: otp };
+            const res = await api.post('/api_forgot_verify_otp.php', payload);
             if (res.data.status === 'success') {
                 setStep(3);
             } else {
@@ -68,9 +66,8 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
         }
         setLoading(true);
         try {
-            const formData = new FormData();
-            formData.append('password', newPassword);
-            const res = await api.post('/api_forgot_reset_password.php', formData);
+            const payload = { password: newPassword };
+            const res = await api.post('/api_forgot_reset_password.php', payload);
             if (res.data.status === 'success') {
                 Alert.alert("Success", "Password reset successfully!", [
                     { text: "OK", onPress: () => navigation.goBack() }

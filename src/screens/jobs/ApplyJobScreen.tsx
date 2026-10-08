@@ -2,14 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import api from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const ApplyJobScreen = () => {
-    const navigation = useNavigation();
-    const route = useRoute<any>();
-    const { jobId, jobTitle } = route.params || {};
+const ApplyJobScreen = ({ navigation, route }: any) => {
+    const { jobId, jobTitle, isAnchorApplication } = route.params || {};
 
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
@@ -48,8 +46,16 @@ const ApplyJobScreen = () => {
 
         setLoading(true);
         try {
+            const uStr = await AsyncStorage.getItem('user');
+            const user = uStr ? JSON.parse(uStr) : null;
+            const userId = user ? user.id : 0;
+
             const formData = new FormData();
-            formData.append('job_id', jobId);
+            if (isAnchorApplication) {
+                formData.append('user_id', String(userId));
+            } else {
+                formData.append('job_id', jobId);
+            }
             formData.append('name', name);
             formData.append('phone', phone);
             formData.append('email', email);
@@ -67,7 +73,8 @@ const ApplyJobScreen = () => {
             appendFile('aadhaar', aadhaar);
             appendFile('resume', resume);
 
-            const res = await api.post('/submit_job_application.php', formData, {
+            const endpoint = isAnchorApplication ? '/submit_anchor_application.php' : '/submit_job_application.php';
+            const res = await api.post(endpoint, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
@@ -92,7 +99,7 @@ const ApplyJobScreen = () => {
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <Ionicons name="arrow-back" size={24} color="black" />
                 </TouchableOpacity>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', marginLeft: 16 }}>Apply for Job</Text>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', marginLeft: 16 }}>{isAnchorApplication ? 'Apply for News Anchor' : 'Apply for Job'}</Text>
             </View>
 
             <ScrollView contentContainerStyle={{ padding: 20 }}>

@@ -1,15 +1,15 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { navigationRef } from '../navigation/navigationRef';
 import api from './api';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
         shouldShowBanner: true,
         shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
     }),
 });
 
@@ -22,6 +22,15 @@ export async function registerForPushNotificationsAsync(userId?: string) {
             importance: Notifications.AndroidImportance.MAX,
             vibrationPattern: [0, 250, 250, 250],
             lightColor: '#FF231F7C',
+        });
+
+        await Notifications.setNotificationChannelAsync('incoming_calls', {
+            name: 'Incoming Calls',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 500, 500, 500],
+            lightColor: '#FF231F7C',
+            sound: 'ringtone',
+            bypassDnd: true,
         });
     }
 
@@ -57,6 +66,19 @@ export async function registerForPushNotificationsAsync(userId?: string) {
 
     return token;
 }
+
+// Handle notification interaction (e.g. clicking the incoming call notification)
+Notifications.addNotificationResponseReceivedListener(response => {
+    const data = response.notification.request.content.data as any;
+    if (data && data.is_call) {
+        navigationRef.navigate('AgoraCall', {
+            channelId: data.channelId || data.peer_id,
+            isVideo: (data.type === 'video'),
+            isCaller: false,
+            otherUserId: String(data.caller_id),
+        });
+    }
+});
 
 const sendTokenToBackend = async (userId: string, token: string) => {
     try {

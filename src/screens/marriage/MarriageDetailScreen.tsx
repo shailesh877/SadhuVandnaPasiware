@@ -1,17 +1,16 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, Alert, Linking, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import api, { API_BASE_URL } from '../../services/api';
+import api, { API_BASE_URL, getFullPaymentUrl } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import * as ScreenCapture from 'expo-screen-capture';
+import { useFocusEffect } from '@react-navigation/native';
 
 const BASE_URL_ROOT = API_BASE_URL.replace('/Api', '');
 const PHOTO_URL = `${BASE_URL_ROOT}/uploads/photo/`;
 
-const MarriageDetailScreen = () => {
-    const route = useRoute<any>();
-    const navigation = useNavigation<any>();
+const MarriageDetailScreen = ({ navigation, route }: any) => {
     const { profile } = route.params;
 
     const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
@@ -29,16 +28,16 @@ const MarriageDetailScreen = () => {
     }, [currentUserId, profile]);
 
     const loadUser = async () => {
-        const uStr = await AsyncStorage.getItem('user');
+        const uStr = await AsyncStorage.getItem('user_id');
         if (uStr) {
-            setCurrentUserId(JSON.parse(uStr).id);
+            setCurrentUserId(uStr);
         }
     };
 
     const checkStatus = async () => {
         if (!currentUserId) return;
         try {
-            const res = await api.get(`/get_proposal_status.php?user_id=${currentUserId}&receiver_id=${profile.id}`);
+            const res = await api.get(`get_proposal_status.php?sender_user_id=${currentUserId}&receiver_profile_id=${profile.id}`);
             if (res.data.status === 'success') {
                 setProposalStatus(res.data.proposal_status);
             }
@@ -47,21 +46,38 @@ const MarriageDetailScreen = () => {
         }
     };
 
+    const isFemale = profile?.gender === 'Female' || profile?.gender === 'female' || profile?.gender === 'F';
+
+    useFocusEffect(
+        React.useCallback(() => {
+            if (isFemale) {
+                ScreenCapture.preventScreenCaptureAsync().catch(console.warn);
+            }
+            return () => {
+                if (isFemale) {
+                    ScreenCapture.allowScreenCaptureAsync().catch(console.warn);
+                }
+            };
+        }, [isFemale])
+    );
+
     const checkPaymentAndNavigate = async () => {
         if (!currentUserId) return;
 
         try {
-            const fd = new FormData();
-            fd.append('user_id', currentUserId);
-            fd.append('receiver_id', profile.id);
+            const payload = {
+                user_id: currentUserId,
+                receiver_id: profile.id,
+                platform: 'marriage'
+            };
 
-            const res = await api.post('/check_chat_payment.php', fd);
+            const res = await api.post('check_chat_payment.php', payload);
 
             if (res.data.status === 'success') {
                 if (res.data.paid) {
-                    navigation.navigate('Chat', { receiver: { id: profile.id, name: profile.full_name, profile_photo: profile.photo } });
+                    navigation.navigate('Chat', { receiver: { id: profile.id, name: profile.full_name, profile_photo: profile.photo }, platform: 'marriage' });
                 } else {
-                    const paymentUrl = `${API_BASE_URL.replace('/Api', '')}/${res.data.payment_url}`;
+                    const paymentUrl = getFullPaymentUrl(res.data.payment_url);
                     Alert.alert(
                         "Payment Required",
                         "You need to pay to chat with this profile.",
@@ -88,11 +104,12 @@ const MarriageDetailScreen = () => {
 
         setLoading(true);
         try {
-            const formData = new FormData();
-            formData.append('user_id', currentUserId);
-            formData.append('receiver_id', profile.id);
+            const payload = {
+                user_id: currentUserId,
+                receiver_id: profile.id
+            };
 
-            const res = await api.post('/send_proposal.php', formData);
+            const res = await api.post('send_proposal.php', payload);
             if (res.data.status === 'success') {
                 Alert.alert("Success", "Proposal Sent Successfully!");
                 setProposalStatus('pending');

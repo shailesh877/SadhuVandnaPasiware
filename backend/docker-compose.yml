@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # 1. Redis Server
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  # 2. Main PHP API (Replaces: php -S 0.0.0.0:8000 -t Api)
+  api-server:
+    build: 
+      context: .
+      dockerfile: Dockerfile.php
+    ports:
+      - "8000:80"
+    volumes:
+      - ./Api:/var/www/html
+    depends_on:
+      - redis
+
+  # 3. Queue Worker (Replaces: php Api/worker.php)
+  php-worker:
+    build: 
+      context: .
+      dockerfile: Dockerfile.php
+    command: php /var/www/html/worker.php
+    volumes:
+      - ./Api:/var/www/html
+    depends_on:
+      - redis
+
+  # 4. Notification Worker (Replaces: php Api/notification_worker.php)
+  php-notification-worker:
+    build: 
+      context: .
+      dockerfile: Dockerfile.php
+    command: php /var/www/html/notification_worker.php
+    volumes:
+      - ./Api:/var/www/html
+    depends_on:
+      - redis
+
+  # 5. Socket Server (Replaces: node server/index.js)
+  socket-server:
+    build: 
+      context: .
+      dockerfile: Dockerfile.node
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./server:/app
+    depends_on:
+      - redis

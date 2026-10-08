@@ -28,12 +28,7 @@ const CommentsScreen = ({ route, navigation }: any) => {
 
     const fetchComments = async () => {
         try {
-            // Updated to match `get_posts.php` logic
-            const formData = new FormData();
-            formData.append('action', 'fetch_comments');
-            formData.append('id', postId); // PHP expects 'id' as post_id
-
-            const res = await api.post('/get_posts.php', formData);
+            const res = await api.get(`get_posts.php?action=fetch_comments&id=${postId}`);
 
             if (Array.isArray(res.data)) {
                 setComments(res.data);
@@ -56,13 +51,14 @@ const CommentsScreen = ({ route, navigation }: any) => {
 
         setSending(true);
         try {
-            const formData = new FormData();
-            formData.append('action', 'comment');
-            formData.append('id', postId);
-            formData.append('user_id', user.id);
-            formData.append('comment', newComment);
+            const payload = {
+                action: 'comment',
+                id: postId,
+                user_id: user.id,
+                comment: newComment
+            };
 
-            const res = await api.post('/get_posts.php', formData);
+            const res = await api.post('like_comment_action.php', payload);
             if (res.data.ok || res.data.status === 'success' || res.data.ok === true) {
                 setNewComment('');
                 fetchComments(); // Refresh list

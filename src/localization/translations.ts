@@ -14,6 +14,9 @@ export const translations = {
         delete: "Delete",
         edit: "Edit",
         share: "Share",
+        create: "Create",
+        choose_type: "Choose type",
+        reel: "Reel",
 
         // Navigation / Tabs
         home: "Home",
@@ -23,6 +26,8 @@ export const translations = {
         requests: "Requests",
         notifications: "Notifications",
         menu: "Menu",
+        reels: "Reels",
+        news: "News",
 
         // Settings Screen
         language: "Language",
@@ -120,6 +125,9 @@ export const translations = {
         delete: "हटाएं",
         edit: "संपादित करें",
         share: "साझा करें",
+        create: "बनाएं",
+        choose_type: "प्रकार चुनें",
+        reel: "रील्स",
 
         // Navigation
         home: "होम",
@@ -129,6 +137,8 @@ export const translations = {
         requests: "अनुरोध",
         notifications: "सूचनाएं",
         menu: "मेन्यू",
+        reels: "रील्स",
+        news: "न्यूज़",
 
         // Settings
         language: "भाषा",
@@ -226,6 +236,9 @@ export const translations = {
         delete: "ડિલીટ",
         edit: "ફેરફાર",
         share: "શેર કરો",
+        create: "બનાવો",
+        choose_type: "પ્રકાર પસંદ કરો",
+        reel: "રીલ્સ",
 
         // Navigation
         home: "હોમ",
@@ -235,6 +248,8 @@ export const translations = {
         requests: "વિનંતીઓ",
         notifications: "સૂચનાઓ",
         menu: "મેનુ",
+        reels: "રીલ્સ",
+        news: "સમાચાર",
 
         // Settings
         language: "ભાષા",

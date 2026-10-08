@@ -4,12 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import api, { API_BASE_URL } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 
 const BASE_URL_ROOT = API_BASE_URL.replace('/Api', '');
 
-const NotificationScreen = () => {
-    const navigation = useNavigation<any>();
+const NotificationScreen = ({ navigation }: any) => {
     const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -27,6 +25,8 @@ const NotificationScreen = () => {
             const res = await api.get(`/fetch_notifications.php?user_id=${user.id}`);
             if (res.data.status === 'success') {
                 setNotifications(res.data.data);
+                // Mark system notifications as seen automatically
+                await api.post('/mark_notification_seen.php', `user_id=${user.id}`);
             }
         } catch (error) {
             console.error(error);
@@ -51,20 +51,17 @@ const NotificationScreen = () => {
                 }
             });
         } else if (item.type === 'request') {
-            navigation.navigate('RequestScreen');
-        } else if (item.type === 'like' || item.type === 'comment') {
-            // Ideally go to Post Detail. For now, go to Public Profile of the interactor?
-            // Or just alert. 
-            // Let's try to navigate to PublicProfile of the user who liked/commented.
-            // But we don't have their USER_ID in the data directly? 
-            // Wait, fetch_notifications.php for Likes selects `l.user_id`. YES.
-            // item.type is 'like', we assume data has post_id. 
-            // But to nav to user, we need the user_id of the liker.
-            // Re-checking PHP... `l.user_id` is selected but not put in `data` array?
-            // Ah, I put `post_id` in `data`. I should put `user_id` too?
-            // Actually `l.user_id` is select in the query. But where is it mapped?
-            // It's not mapped to 'data'. It's lost! 
-            // I should update PHP to include `user_id` in `data`.
+            navigation.navigate('Requests');
+        } else if (item.type === 'follow') {
+            navigation.navigate('PublicProfile', { userId: item.sender_id });
+        } else if (item.type === 'news') {
+            navigation.navigate('MainTabs', { screen: 'News' });
+        } else if (item.type === 'like' || item.type === 'comment' || item.type === 'post') {
+            if (item.data && item.data.postId) {
+                navigation.navigate('PostDetail', { postId: String(item.data.postId) });
+            } else if (item.data && item.data.user_id) {
+                navigation.navigate('PublicProfile', { userId: item.data.user_id });
+            }
         }
     };
 
@@ -72,8 +69,11 @@ const NotificationScreen = () => {
         switch (type) {
             case 'message': return <Ionicons name="chatbubble-ellipses" size={24} color="#3b82f6" />;
             case 'request': return <Ionicons name="person-add" size={24} color="#ea580c" />;
+            case 'follow': return <Ionicons name="people" size={24} color="#10b981" />;
+            case 'news': return <Ionicons name="newspaper" size={24} color="#ea580c" />;
             case 'like': return <Ionicons name="heart" size={24} color="#ef4444" />;
             case 'comment': return <Ionicons name="chatbubble" size={24} color="#10b981" />;
+            case 'system': return <Ionicons name="notifications" size={24} color="#f97316" />;
             default: return <Ionicons name="notifications" size={24} color="gray" />;
         }
     };
@@ -88,7 +88,13 @@ const NotificationScreen = () => {
                 {getIcon(item.type)}
             </View>
             <Image
-                source={{ uri: item.image ? `${BASE_URL_ROOT}/uploads/photo/${item.image}` : 'https://via.placeholder.com/50' }}
+                source={{ 
+                    uri: item.image?.startsWith('http') 
+                        ? item.image 
+                        : (item.image?.startsWith('uploads') || item.image?.startsWith('images')
+                            ? `${BASE_URL_ROOT}/${item.image}`
+                            : 'https://via.placeholder.com/50')
+                }}
                 style={styles.avatar}
             />
             <View style={{ flex: 1 }}>
