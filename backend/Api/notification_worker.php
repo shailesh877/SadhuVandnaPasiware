@@ -88,7 +88,8 @@ function deliverNotification($con, $receiver_id, $type, $reference_id, $title, $
     }
     
     // Attempt WebSocket Delivery
-    $ch = curl_init('http://127.0.0.1:3000/api/trigger');
+    $socket_url = getenv('SOCKET_URL') ?: 'http://127.0.0.1:3000';
+    $ch = curl_init($socket_url . '/api/trigger');
     $postPayload = json_encode([
         'receiverId' => $receiver_id,
         'type' => 'bell_notification',

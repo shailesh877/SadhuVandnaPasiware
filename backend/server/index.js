@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 
 const app = express();
+const API_URL = process.env.API_URL || 'http://127.0.0.1:8000';
 app.use(cors());
 app.use(express.json());
 
@@ -43,7 +44,7 @@ io.on('connection', (socket) => {
     try {
       const data = JSON.stringify({ user_id: userId });
       const endpoint = isOnline ? 'update_app_online.php' : 'mark_offline.php';
-      const req = http.request(`http://127.0.0.1:8000/${endpoint}`, {
+      const req = http.request(`${API_URL}/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -149,7 +150,7 @@ io.on('connection', (socket) => {
       formData.append('receiver_id', payload.receiver_id || '');
       formData.append('platform', payload.platform || '');
       
-      await axios.post('http://127.0.0.1:8000/mark_seen.php', formData, {
+      await axios.post(`${API_URL}/mark_seen.php`, formData, {
         headers: formData.getHeaders()
       });
     } catch (e) {
@@ -177,7 +178,7 @@ io.on('connection', (socket) => {
       const endpoint = payload.isGroup ? 'send_group_message.php' : 'send_chat_message.php';
       
       // Node forwards the message to the PHP backend which handles MySQL, Redis, Auth, and WS Broadcast
-      const res = await axios.post(`http://127.0.0.1:8000/${endpoint}`, formData, {
+      const res = await axios.post(`${API_URL}/${endpoint}`, formData, {
         headers: formData.getHeaders()
       });
       

@@ -12,7 +12,7 @@ class RedisConfig {
 
                 $redis = new Redis();
                 // In production, get these from env variables or a config file
-                $host = "127.0.0.1";
+                $host = getenv('REDIS_HOST') ?: "127.0.0.1";
                 $port = 6379;
                 
                 // Connect with 2 seconds timeout
