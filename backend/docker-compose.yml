@@ -91,5 +91,5 @@ networks:
 
 volumes:
   uploads-volume:
-    name: ugoko000c444w0kwwk84coc0_uploads-volume
+    name: ugoko000c444w0kwwk84coc0-uploads-volume
     external: true
